@@ -448,7 +448,6 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                 painter: SkeletonPainter(
                   pose: _currentPose,
                   imageSize: Size(previewSize.height, previewSize.width),
-                  isFrontCamera: _isFrontCamera,
                   skeletonColor: Colors.greenAccent,
                 ),
               ),

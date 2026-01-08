@@ -7,7 +7,6 @@ import '../../domain/models/pose_landmark.dart';
 class SkeletonPainter extends CustomPainter {
   final Pose? pose;
   final Size imageSize;
-  final bool isFrontCamera;
 
   /// Color for the skeleton lines and points.
   final Color skeletonColor;
@@ -21,7 +20,6 @@ class SkeletonPainter extends CustomPainter {
   SkeletonPainter({
     required this.pose,
     required this.imageSize,
-    this.isFrontCamera = false,
     this.skeletonColor = Colors.green,
     this.pointRadius = 6.0,
     this.strokeWidth = 3.0,
@@ -124,7 +122,6 @@ class SkeletonPainter extends CustomPainter {
   @override
   bool shouldRepaint(SkeletonPainter oldDelegate) {
     return pose != oldDelegate.pose ||
-        imageSize != oldDelegate.imageSize ||
-        isFrontCamera != oldDelegate.isFrontCamera;
+        imageSize != oldDelegate.imageSize;
   }
 }
