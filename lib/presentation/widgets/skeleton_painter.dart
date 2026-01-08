@@ -115,13 +115,8 @@ class SkeletonPainter extends CustomPainter {
 
   /// Scale a landmark's normalized coordinates to canvas coordinates.
   Offset _scalePoint(PoseLandmark landmark, Size canvasSize) {
-    double x = landmark.x * canvasSize.width;
+    final x = landmark.x * canvasSize.width;
     final y = landmark.y * canvasSize.height;
-
-    // Mirror x-coordinate for front camera
-    if (isFrontCamera) {
-      x = canvasSize.width - x;
-    }
 
     return Offset(x, y);
   }
