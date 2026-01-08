@@ -116,7 +116,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   }
 
   Future<void> _startMobileCamera(
-      mobile_camera.CameraDescription camera) async {
+    mobile_camera.CameraDescription camera,
+  ) async {
     await _mobileCameraController?.dispose();
 
     _mobileCameraController = mobile_camera.CameraController(
@@ -130,7 +131,9 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
 
     try {
       await _mobileCameraController!.initialize();
-      await _mobileCameraController!.startImageStream(_processMobileCameraImage);
+      await _mobileCameraController!.startImageStream(
+        _processMobileCameraImage,
+      );
 
       setState(() {
         _isLoading = false;
@@ -202,16 +205,9 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
 
     try {
       final rotation = _getMobileImageRotation();
-      final imageSize = Size(
-        image.width.toDouble(),
-        image.height.toDouble(),
-      );
+      final imageSize = Size(image.width.toDouble(), image.height.toDouble());
 
-      final poses = await _poseDetector.detectPoses(
-        image,
-        imageSize,
-        rotation,
-      );
+      final poses = await _poseDetector.detectPoses(image, imageSize, rotation);
 
       if (mounted) {
         setState(() {
@@ -413,10 +409,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                 const Text(
                   'Note: Pose detection requires iOS/Android device. '
                   'macOS shows camera preview only.',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.white70, fontSize: 12),
                 ),
               ],
             ),
@@ -454,11 +447,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
               CustomPaint(
                 painter: SkeletonPainter(
                   pose: _currentPose,
-                  imageSize: Size(
-                    previewSize.height,
-                    previewSize.width,
-                  ),
-                  isFrontCamera: _isFrontCamera,
+                  imageSize: Size(previewSize.height, previewSize.width),
                   skeletonColor: Colors.greenAccent,
                 ),
               ),
