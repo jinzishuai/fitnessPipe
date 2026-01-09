@@ -6,21 +6,29 @@ import '../../domain/models/pose_landmark.dart';
 /// CustomPainter that draws a skeleton overlay on detected pose landmarks.
 class SkeletonPainter extends CustomPainter {
   final Pose? pose;
-  final Size imageSize;
+  final int rotationDegrees;
+  final Size? imageSize;
+  final bool inputsAreRotated;
 
   /// Color for the skeleton lines and points.
   final Color skeletonColor;
-
+  
   /// Size of the landmark points.
   final double pointRadius;
 
   /// Stroke width for the skeleton lines.
   final double strokeWidth;
 
-  SkeletonPainter({
+  /// Scale factor for landmark coordinates.
+  final double coordinateScale;
+
+  const SkeletonPainter({
     required this.pose,
     required this.imageSize,
-    this.skeletonColor = Colors.green,
+    required this.rotationDegrees,
+    this.inputsAreRotated = false,
+    this.skeletonColor = Colors.white,
+    this.coordinateScale = 1.0,
     this.pointRadius = 6.0,
     this.strokeWidth = 3.0,
   });
@@ -112,9 +120,56 @@ class SkeletonPainter extends CustomPainter {
   }
 
   /// Scale a landmark's normalized coordinates to canvas coordinates.
+  /// ML Kit already handles rotation internally when we pass InputImageRotation with correct value.
+  /// However, for iOS we pass rotation0deg, so manual rotation/swapping is needed.
+  /// We also account for aspect-fit scaling (letterboxing).
   Offset _scalePoint(PoseLandmark landmark, Size canvasSize) {
-    final x = landmark.x * canvasSize.width;
-    final y = landmark.y * canvasSize.height;
+    if (imageSize == null) {
+      // Fallback: direct scaling
+      return Offset(
+        landmark.x * canvasSize.width,
+        landmark.y * canvasSize.height,
+      );
+    }
+
+    // When rotated 90 or 270 degrees, the image dimensions are effectively swapped
+    // This applies to the TARGET display aspect ratio
+    final effectiveImageSize = (rotationDegrees == 90 || rotationDegrees == 270)
+        ? Size(imageSize!.height, imageSize!.width)
+        : imageSize!;
+
+    // Calculate the scale factor and offset for aspect-fit
+    final imageAspect = effectiveImageSize.width / effectiveImageSize.height;
+    final canvasAspect = canvasSize.width / canvasSize.height;
+
+    double scale;
+    double offsetX = 0;
+    double offsetY = 0;
+
+    if (imageAspect > canvasAspect) {
+      // Image is wider - fit to width, letterbox top/bottom
+      scale = canvasSize.width / effectiveImageSize.width;
+      offsetY = (canvasSize.height - effectiveImageSize.height * scale) / 2;
+    } else {
+      // Image is taller - fit to height, letterbox left/right
+      scale = canvasSize.height / effectiveImageSize.height;
+      offsetX = (canvasSize.width - effectiveImageSize.width * scale) / 2;
+    }
+
+    double x, y;
+
+    if (!inputsAreRotated && (rotationDegrees == 90 || rotationDegrees == 270)) {
+      // Case: iOS (Coordinates are NOT rotated by ML Kit, but device is rotated)
+      // We need to swap X/Y coordinates manually to match orientation
+      // Note: We use the effective dimensions (swapped) for scaling
+      x = landmark.y * effectiveImageSize.width * scale + offsetX;
+      y = landmark.x * effectiveImageSize.height * scale + offsetY;
+    } else {
+      // Case: Android (Coordinates ARE rotated by ML Kit) OR No Rotation
+      // Direct mapping
+      x = landmark.x * effectiveImageSize.width * scale + offsetX;
+      y = landmark.y * effectiveImageSize.height * scale + offsetY;
+    }
 
     return Offset(x, y);
   }
@@ -122,6 +177,8 @@ class SkeletonPainter extends CustomPainter {
   @override
   bool shouldRepaint(SkeletonPainter oldDelegate) {
     return pose != oldDelegate.pose ||
-        imageSize != oldDelegate.imageSize;
+        rotationDegrees != oldDelegate.rotationDegrees ||
+        imageSize != oldDelegate.imageSize ||
+        inputsAreRotated != oldDelegate.inputsAreRotated;
   }
 }

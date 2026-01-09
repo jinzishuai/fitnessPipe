@@ -27,6 +27,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   // UI state
   bool _isLoading = true;
   String? _errorMessage;
+  Size? _cameraImageSize;
+  int _sensorOrientation = 0;
 
   // Platform-specific camera handling
   final bool _isMacOS = Platform.isMacOS;
@@ -211,6 +213,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
 
       if (mounted) {
         setState(() {
+          _cameraImageSize = imageSize;
           _currentPose = poses.isNotEmpty ? poses.first : null;
         });
       }
@@ -226,7 +229,12 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
 
     final camera = _mobileCameras[_selectedMobileCameraIndex];
     final sensorOrientation = camera.sensorOrientation;
-
+    
+    // Store sensor orientation for skeleton painter
+    _sensorOrientation = sensorOrientation;
+    
+    // On iOS, we force 0 degrees to rely on legacy manual rotation handling in Painter
+    // This matches the behavior that was working correctly before the cross-platform unification
     if (Platform.isIOS) {
       return InputImageRotation.rotation0deg;
     }
@@ -431,27 +439,49 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     }
 
     final previewSize = _mobileCameraController!.value.previewSize!;
-    final aspectRatio = previewSize.height / previewSize.width;
+    // Ensure we always use a portrait aspect ratio (height > width logic)
+    // On Android, previewSize is usually Landscape (w > h), so h/w gives < 1 (Portrait)
+    // On iOS, previewSize might be Portrait (w < h), so h/w gives > 1 (Landscape) - WRONG
+    // So we use min/max to ensure we always get the Portrait ratio (< 1)
+    final double aspectRatio = (previewSize.height < previewSize.width)
+        ? previewSize.height / previewSize.width
+        : previewSize.width / previewSize.height;
+
+    // We want to cover the screen, so we strictly use the screen width as base
+    // and calculate height based on the camera aspect ratio.
+    // FittedBox(BoxFit.cover) will then scale this to fill the screen.
+    // final double contentWidth = MediaQuery.of(context).size.width;
+    // final double contentHeight = contentWidth / aspectRatio;
 
     return Center(
       child: AspectRatio(
         aspectRatio: aspectRatio,
         child: Stack(
-          fit: StackFit.expand,
+          alignment: Alignment.center,
           children: [
             // Camera preview
             mobile_camera.CameraPreview(_mobileCameraController!),
 
             // Skeleton overlay
             if (_currentPose != null)
-              CustomPaint(
-                painter: SkeletonPainter(
-                  pose: _currentPose,
-                  imageSize: Size(previewSize.height, previewSize.width),
-                  skeletonColor: Colors.greenAccent,
+              // Ensure skeleton overlay matches camera preview size exactly
+              AspectRatio(
+                aspectRatio: aspectRatio,
+                child: CustomPaint(
+                  painter: SkeletonPainter(
+                    pose: _currentPose,
+                    rotationDegrees: _sensorOrientation,
+                    // On iOS, we use the legacy "stretch to fill" behavior (imageSize = null)
+                    // which matches the camera preview behavior and worked previously.
+                    // On Android, we need explicit aspect fit (imageSize passed).
+                    imageSize: Platform.isAndroid ? _cameraImageSize : null,
+                    // Force legacy rotation logic for iOS (manual swap)
+                    inputsAreRotated: Platform.isAndroid && _getMobileImageRotation() != InputImageRotation.rotation0deg,
+                    skeletonColor: Colors.greenAccent,
+                  ),
                 ),
               ),
-
+                
             // Pose confidence indicator
             Positioned(
               bottom: 16,
@@ -466,35 +496,35 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _currentPose != null
-                            ? Colors.greenAccent
-                            : Colors.red,
-                      ),
+                 mainAxisSize: MainAxisSize.min,
+                 children: [
+                   Container(
+                     width: 10,
+                     height: 10,
+                     decoration: BoxDecoration(
+                       shape: BoxShape.circle,
+                      color: _currentPose != null
+                          ? Colors.greenAccent
+                          : Colors.red,
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      _currentPose != null
-                          ? 'Pose: ${(_currentPose!.confidence * 100).toStringAsFixed(0)}%'
-                          : 'No pose detected',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                      ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _currentPose != null
+                        ? 'Pose: ${(_currentPose!.confidence * 100).toStringAsFixed(0)}%'
+                        : 'No pose detected',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
+    ),
+  );
   }
 }

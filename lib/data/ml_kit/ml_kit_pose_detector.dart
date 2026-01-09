@@ -51,7 +51,7 @@ class MLKitPoseDetector implements PoseDetector {
     final mlkitPoses = await _detector!.processImage(inputImage);
 
     return mlkitPoses
-        .map((pose) => _convertPose(pose, imageSize))
+        .map((pose) => _convertPose(pose, imageSize, rotation))
         .where((pose) => pose.confidence >= _minConfidence)
         .toList();
   }
@@ -106,9 +106,20 @@ class MLKitPoseDetector implements PoseDetector {
   }
 
   /// Convert ML Kit pose to our domain model.
-  Pose _convertPose(mlkit.Pose mlkitPose, Size imageSize) {
+  Pose _convertPose(mlkit.Pose mlkitPose, Size imageSize, InputImageRotation rotation) {
     final landmarks = <PoseLandmark>[];
     double totalConfidence = 0;
+
+    // When rotated 90 or 270 degrees, ML Kit returns coordinates in rotated space
+    // So we need to normalize by the rotated dimensions
+    final normalizeWidth = (rotation == InputImageRotation.rotation90deg ||
+            rotation == InputImageRotation.rotation270deg)
+        ? imageSize.height
+        : imageSize.width;
+    final normalizeHeight = (rotation == InputImageRotation.rotation90deg ||
+            rotation == InputImageRotation.rotation270deg)
+        ? imageSize.width
+        : imageSize.height;
 
     for (final entry in mlkitPose.landmarks.entries) {
       final mlkitLandmark = entry.value;
@@ -117,8 +128,8 @@ class MLKitPoseDetector implements PoseDetector {
       if (landmarkType != null) {
         landmarks.add(PoseLandmark(
           type: landmarkType,
-          x: mlkitLandmark.x / imageSize.width,
-          y: mlkitLandmark.y / imageSize.height,
+          x: mlkitLandmark.x / normalizeWidth,
+          y: mlkitLandmark.y / normalizeHeight,
           z: mlkitLandmark.z,
           confidence: mlkitLandmark.likelihood,
         ));
