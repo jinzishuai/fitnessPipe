@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:camera/camera.dart' as mobile_camera;
 import 'package:camera_macos/camera_macos.dart';
 import 'package:flutter/material.dart';
+import 'package:native_device_orientation/native_device_orientation.dart';
 
 import '../../data/ml_kit/ml_kit_pose_detector.dart';
 import '../../domain/interfaces/pose_detector.dart';
@@ -29,6 +30,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   String? _errorMessage;
   Size? _cameraImageSize;
   int _sensorOrientation = 0;
+  int _deviceRotation = 0; // 0=portrait, 90=landscape left, 180=portrait upside down, 270=landscape right
 
   // Platform-specific camera handling
   final bool _isMacOS = Platform.isMacOS;
@@ -239,7 +241,19 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
       return InputImageRotation.rotation0deg;
     }
 
-    switch (sensorOrientation) {
+    // On Android, calculate the rotation needed based on device orientation
+    // The rotation tells ML Kit how to interpret the image coordinates.
+    // Formula: rotation = (sensorOrientation - deviceRotation + 360) % 360
+    // This accounts for the difference between sensor orientation and current device orientation.
+    // 
+    // Special case: For portrait upside-down (180°), treat it like normal portrait (0°)
+    // so that both preview and skeleton appear upside-down but aligned with each other.
+    // This is acceptable since: 1) this orientation is rarely used, 2) the skeleton still
+    // aligns with the person in the preview.
+    final effectiveDeviceRotation = (_deviceRotation == 180) ? 0 : _deviceRotation;
+    final rotation = (sensorOrientation - effectiveDeviceRotation + 360) % 360;
+
+    switch (rotation) {
       case 0:
         return InputImageRotation.rotation0deg;
       case 90:
@@ -449,36 +463,172 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     // Landscape aspect ratio is the inverse (> 1)
     final double landscapeAspectRatio = 1 / portraitAspectRatio;
 
-    // Use LayoutBuilder to detect orientation and choose appropriate aspect ratio
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isLandscape = constraints.maxWidth > constraints.maxHeight;
+    // Platform-specific orientation handling:
+    // - iOS: Use simple LayoutBuilder (existing working logic)
+    // - Android: Use NativeDeviceOrientationReader for precise landscape-left vs landscape-right detection
+    
+    if (Platform.isIOS) {
+      // iOS: Use LayoutBuilder with existing rotation logic (already working)
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final isLandscape = constraints.maxWidth > constraints.maxHeight;
+          final double aspectRatio = isLandscape ? landscapeAspectRatio : portraitAspectRatio;
+
+          return Center(
+            child: AspectRatio(
+              aspectRatio: aspectRatio,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Camera preview
+                  mobile_camera.CameraPreview(_mobileCameraController!),
+
+                  // Skeleton overlay
+                  if (_currentPose != null)
+                    AspectRatio(
+                      aspectRatio: aspectRatio,
+                      child: CustomPaint(
+                        painter: SkeletonPainter(
+                          pose: _currentPose,
+                          rotationDegrees: _sensorOrientation,
+                          imageSize: null, // iOS uses legacy stretch-to-fill
+                          inputsAreRotated: false,
+                          skeletonColor: Colors.greenAccent,
+                        ),
+                      ),
+                    ),
+                    
+                  // Pose confidence indicator
+                  Positioned(
+                    bottom: 16,
+                    left: 16,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _currentPose != null
+                                  ? Colors.greenAccent
+                                  : Colors.red,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _currentPose != null
+                                ? 'Pose: ${(_currentPose!.confidence * 100).toStringAsFixed(0)}%'
+                                : 'No pose detected',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    }
+    
+    // Android: Use NativeDeviceOrientationReader for precise device orientation
+    // This is essential for correctly handling landscape-left vs landscape-right
+    return NativeDeviceOrientationReader(
+      useSensor: true,
+      builder: (context) {
+        final nativeOrientation = NativeDeviceOrientationReader.orientation(context);
+        
+        // Convert native orientation to rotation degrees
+        int newDeviceRotation;
+        bool isLandscape;
+        switch (nativeOrientation) {
+          case NativeDeviceOrientation.portraitUp:
+            newDeviceRotation = 0;
+            isLandscape = false;
+            break;
+          case NativeDeviceOrientation.landscapeLeft:
+            newDeviceRotation = 90;
+            isLandscape = true;
+            break;
+          case NativeDeviceOrientation.portraitDown:
+            newDeviceRotation = 180;
+            isLandscape = false;
+            break;
+          case NativeDeviceOrientation.landscapeRight:
+            newDeviceRotation = 270;
+            isLandscape = true;
+            break;
+          default:
+            newDeviceRotation = 0;
+            isLandscape = false;
+        }
+        
         final double aspectRatio = isLandscape ? landscapeAspectRatio : portraitAspectRatio;
 
-        return Center(
+        // Update device rotation state for image processing
+        // Use addPostFrameCallback to avoid setState during build
+        if (_deviceRotation != newDeviceRotation) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _deviceRotation = newDeviceRotation;
+              });
+            }
+          });
+        }
+        // On Android, the camera preview appears upside-down for landscape-right (270°)
+        // because the Android camera plugin doesn't handle this orientation correctly.
+        // We apply a 180° rotation to compensate.
+        final needsRotation = newDeviceRotation == 270;
+        
+        Widget previewWidget = Center(
           child: AspectRatio(
             aspectRatio: aspectRatio,
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // Camera preview
-                mobile_camera.CameraPreview(_mobileCameraController!),
+                // Camera preview - wrapped in Builder to catch any disposal errors during rebuild
+                Builder(
+                  builder: (context) {
+                    try {
+                      if (_mobileCameraController == null || 
+                          !_mobileCameraController!.value.isInitialized) {
+                        return const SizedBox.shrink();
+                      }
+                      return mobile_camera.CameraPreview(_mobileCameraController!);
+                    } catch (e) {
+                      // Camera might be disposed during orientation change
+                      return const SizedBox.shrink();
+                    }
+                  },
+                ),
 
                 // Skeleton overlay
                 if (_currentPose != null)
-                  // Ensure skeleton overlay matches camera preview size exactly
                   AspectRatio(
                     aspectRatio: aspectRatio,
                     child: CustomPaint(
                       painter: SkeletonPainter(
                         pose: _currentPose,
-                        rotationDegrees: _sensorOrientation,
-                        // On iOS, we use the legacy "stretch to fill" behavior (imageSize = null)
-                        // which matches the camera preview behavior and worked previously.
-                        // On Android, we need explicit aspect fit (imageSize passed).
-                        imageSize: Platform.isAndroid ? _cameraImageSize : null,
-                        // Force legacy rotation logic for iOS (manual swap)
-                        inputsAreRotated: Platform.isAndroid && _getMobileImageRotation() != InputImageRotation.rotation0deg,
+                        // Treat 180° (portrait upside-down) as 0° so skeleton aligns with preview
+                        rotationDegrees: (_sensorOrientation - (newDeviceRotation == 180 ? 0 : newDeviceRotation) + 360) % 360,
+                        imageSize: _cameraImageSize,
+                        inputsAreRotated: _getMobileImageRotation() != InputImageRotation.rotation0deg,
                         skeletonColor: Colors.greenAccent,
                       ),
                     ),
@@ -528,6 +678,15 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
             ),
           ),
         );
+        
+        // Apply 180° rotation for landscape-right on Android
+        if (needsRotation) {
+          return Transform.rotate(
+            angle: 3.14159265359, // pi radians = 180 degrees
+            child: previewWidget,
+          );
+        }
+        return previewWidget;
       },
     );
   }
