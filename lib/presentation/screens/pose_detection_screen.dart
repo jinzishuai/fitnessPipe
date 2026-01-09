@@ -472,7 +472,11 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                     child: CustomPaint(
                       painter: SkeletonPainter(
                         pose: _currentPose,
-                        rotationDegrees: _sensorOrientation,
+                        // On Android: when device is landscape, pass 0 (no dimension swap needed)
+                        // because display orientation matches the sensor orientation.
+                        // When device is portrait, use sensor orientation (typically 90° = needs swap)
+                        // On iOS: always use sensor orientation (legacy behavior)
+                        rotationDegrees: Platform.isAndroid && isLandscape ? 0 : _sensorOrientation,
                         // On iOS, we use the legacy "stretch to fill" behavior (imageSize = null)
                         // which matches the camera preview behavior and worked previously.
                         // On Android, we need explicit aspect fit (imageSize passed).
