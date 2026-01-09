@@ -1,0 +1,14 @@
+// Local Development Team Configuration
+// Copy this file to Config.local.xcconfig and replace YOUR_TEAM_ID with your Apple Developer Team ID
+// 
+// To find your Team ID:
+// 1. Open Xcode
+// 2. Go to Xcode > Preferences > Accounts
+// 3. Select your Apple ID
+// 4. Click "Manage Certificates"
+// 5. Your Team ID is shown next to your team name
+//
+// Example:
+// DEVELOPMENT_TEAM = ABC123XYZ
+
+DEVELOPMENT_TEAM = YOUR_TEAM_ID
