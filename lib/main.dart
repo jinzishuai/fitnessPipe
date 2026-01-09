@@ -1,24 +1,9 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'presentation/screens/pose_detection_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // On Android, lock orientation to exclude landscape-right
-  // which causes camera preview issues (upside-down display)
-  if (Platform.isAndroid) {
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-      DeviceOrientation.landscapeLeft,
-      // landscapeRight is explicitly excluded due to camera preview issues
-    ]);
-  }
-  
   runApp(const FitnessPipeApp());
 }
 

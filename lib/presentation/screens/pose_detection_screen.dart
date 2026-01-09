@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:camera/camera.dart' as mobile_camera;
 import 'package:camera_macos/camera_macos.dart';
 import 'package:flutter/material.dart';
+import 'package:native_device_orientation/native_device_orientation.dart';
 
 import '../../data/ml_kit/ml_kit_pose_detector.dart';
 import '../../domain/interfaces/pose_detector.dart';
@@ -456,26 +457,39 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     // Landscape aspect ratio is the inverse (> 1)
     final double landscapeAspectRatio = 1 / portraitAspectRatio;
 
-    // Use LayoutBuilder to detect orientation and choose appropriate aspect ratio
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isLandscape = constraints.maxWidth > constraints.maxHeight;
-        final double aspectRatio = isLandscape ? landscapeAspectRatio : portraitAspectRatio;
-
-        // Determine device rotation based on layout constraints
-        // We use a simple heuristic: landscape = 90° (left), portrait = 0°
-        // For Android, this gives us enough info for the rotation calculation
-        // Note: We can't easily distinguish landscape-left from landscape-right
-        // using just LayoutBuilder, so we use the MediaQuery orientation
-        final orientation = MediaQuery.of(context).orientation;
+    // Use NativeDeviceOrientationReader to get precise device orientation
+    // This is essential for correctly handling landscape-left vs landscape-right on Android
+    return NativeDeviceOrientationReader(
+      useSensor: true,
+      builder: (context) {
+        final nativeOrientation = NativeDeviceOrientationReader.orientation(context);
+        
+        // Convert native orientation to rotation degrees
         int newDeviceRotation;
-        if (orientation == Orientation.landscape) {
-          // Default to landscape left (90°)
-          // The camera preview on Android handles the actual orientation
-          newDeviceRotation = 90;
-        } else {
-          newDeviceRotation = 0;
+        bool isLandscape;
+        switch (nativeOrientation) {
+          case NativeDeviceOrientation.portraitUp:
+            newDeviceRotation = 0;
+            isLandscape = false;
+            break;
+          case NativeDeviceOrientation.landscapeLeft:
+            newDeviceRotation = 90;
+            isLandscape = true;
+            break;
+          case NativeDeviceOrientation.portraitDown:
+            newDeviceRotation = 180;
+            isLandscape = false;
+            break;
+          case NativeDeviceOrientation.landscapeRight:
+            newDeviceRotation = 270;
+            isLandscape = true;
+            break;
+          default:
+            newDeviceRotation = 0;
+            isLandscape = false;
         }
+        
+        final double aspectRatio = isLandscape ? landscapeAspectRatio : portraitAspectRatio;
 
         // Update device rotation state for image processing
         // Use addPostFrameCallback to avoid setState during build
