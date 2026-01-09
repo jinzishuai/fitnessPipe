@@ -527,9 +527,11 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                       painter: SkeletonPainter(
                         pose: _currentPose,
                         // On Android: pass the calculated rotation based on device orientation
+                        // Use newDeviceRotation (local) instead of _deviceRotation (async state)
+                        // to ensure immediate correct orientation
                         // On iOS: always use sensor orientation (legacy behavior)
                         rotationDegrees: Platform.isAndroid 
-                            ? (_sensorOrientation - _deviceRotation + 360) % 360
+                            ? (_sensorOrientation - newDeviceRotation + 360) % 360
                             : _sensorOrientation,
                         // On iOS, we use the legacy "stretch to fill" behavior (imageSize = null)
                         // which matches the camera preview behavior and worked previously.
