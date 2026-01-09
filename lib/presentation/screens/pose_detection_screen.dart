@@ -449,24 +449,24 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     // We want to cover the screen, so we strictly use the screen width as base
     // and calculate height based on the camera aspect ratio.
     // FittedBox(BoxFit.cover) will then scale this to fill the screen.
-    final double contentWidth = MediaQuery.of(context).size.width;
-    final double contentHeight = contentWidth / aspectRatio;
+    // final double contentWidth = MediaQuery.of(context).size.width;
+    // final double contentHeight = contentWidth / aspectRatio;
 
-    return SizedBox.expand(
-      child: FittedBox(
-        fit: BoxFit.cover,
-        child: SizedBox(
-          width: contentWidth,
-          height: contentHeight,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // Camera preview
-              mobile_camera.CameraPreview(_mobileCameraController!),
+    return Center(
+      child: AspectRatio(
+        aspectRatio: aspectRatio,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Camera preview
+            mobile_camera.CameraPreview(_mobileCameraController!),
 
-              // Skeleton overlay
-              if (_currentPose != null)
-                CustomPaint(
+            // Skeleton overlay
+            if (_currentPose != null)
+              // Ensure skeleton overlay matches camera preview size exactly
+              AspectRatio(
+                aspectRatio: aspectRatio,
+                child: CustomPaint(
                   painter: SkeletonPainter(
                     pose: _currentPose,
                     rotationDegrees: _sensorOrientation,
@@ -474,54 +474,51 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                     // Now we pass rotation to ML Kit on both platforms
                     inputsAreRotated: _getMobileImageRotation() != InputImageRotation.rotation0deg,
                     skeletonColor: Colors.greenAccent,
-                    // On iOS, ML Kit sometimes returns coordinates in points (logical pixels)
-                    // relative to the image size, so we need to scale up by density.
-                    coordinateScale: Platform.isIOS ? MediaQuery.of(context).devicePixelRatio : 1.0,
                   ),
-                ),
-                
-              // Pose confidence indicator
-              Positioned(
-                bottom: 16,
-                left: 16,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                   mainAxisSize: MainAxisSize.min,
-                   children: [
-                     Container(
-                       width: 10,
-                       height: 10,
-                       decoration: BoxDecoration(
-                         shape: BoxShape.circle,
-                        color: _currentPose != null
-                            ? Colors.greenAccent
-                            : Colors.red,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      _currentPose != null
-                          ? 'Pose: ${(_currentPose!.confidence * 100).toStringAsFixed(0)}%'
-                          : 'No pose detected',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
                 ),
               ),
+                
+            // Pose confidence indicator
+            Positioned(
+              bottom: 16,
+              left: 16,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                 mainAxisSize: MainAxisSize.min,
+                 children: [
+                   Container(
+                     width: 10,
+                     height: 10,
+                     decoration: BoxDecoration(
+                       shape: BoxShape.circle,
+                      color: _currentPose != null
+                          ? Colors.greenAccent
+                          : Colors.red,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _currentPose != null
+                        ? 'Pose: ${(_currentPose!.confidence * 100).toStringAsFixed(0)}%'
+                        : 'No pose detected',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     ),
   );

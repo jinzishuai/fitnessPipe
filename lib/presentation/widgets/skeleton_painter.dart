@@ -162,13 +162,13 @@ class SkeletonPainter extends CustomPainter {
       // Case: iOS (Coordinates are NOT rotated by ML Kit, but device is rotated)
       // We need to swap X/Y coordinates manually to match orientation
       // Note: We use the effective dimensions (swapped) for scaling
-      x = landmark.y * effectiveImageSize.width * scale * coordinateScale + offsetX;
-      y = landmark.x * effectiveImageSize.height * scale * coordinateScale + offsetY;
+      x = landmark.y * effectiveImageSize.width * scale + offsetX;
+      y = landmark.x * effectiveImageSize.height * scale + offsetY;
     } else {
       // Case: Android (Coordinates ARE rotated by ML Kit) OR No Rotation
       // Direct mapping
-      x = landmark.x * effectiveImageSize.width * scale * coordinateScale + offsetX;
-      y = landmark.y * effectiveImageSize.height * scale * coordinateScale + offsetY;
+      x = landmark.x * effectiveImageSize.width * scale + offsetX;
+      y = landmark.y * effectiveImageSize.height * scale + offsetY;
     }
 
     return Offset(x, y);
