@@ -233,10 +233,11 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     // Store sensor orientation for skeleton painter
     _sensorOrientation = sensorOrientation;
     
-    // On iOS, we also need to respect the sensor orientation
-    // if (Platform.isIOS) {
-    //   return InputImageRotation.rotation0deg;
-    // }
+    // On iOS, we force 0 degrees to rely on legacy manual rotation handling in Painter
+    // This matches the behavior that was working correctly before the cross-platform unification
+    if (Platform.isIOS) {
+      return InputImageRotation.rotation0deg;
+    }
 
     switch (sensorOrientation) {
       case 0:
@@ -470,9 +471,12 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                   painter: SkeletonPainter(
                     pose: _currentPose,
                     rotationDegrees: _sensorOrientation,
-                    imageSize: _cameraImageSize,
-                    // Now we pass rotation to ML Kit on both platforms
-                    inputsAreRotated: _getMobileImageRotation() != InputImageRotation.rotation0deg,
+                    // On iOS, we use the legacy "stretch to fill" behavior (imageSize = null)
+                    // which matches the camera preview behavior and worked previously.
+                    // On Android, we need explicit aspect fit (imageSize passed).
+                    imageSize: Platform.isAndroid ? _cameraImageSize : null,
+                    // Force legacy rotation logic for iOS (manual swap)
+                    inputsAreRotated: Platform.isAndroid && _getMobileImageRotation() != InputImageRotation.rotation0deg,
                     skeletonColor: Colors.greenAccent,
                   ),
                 ),
