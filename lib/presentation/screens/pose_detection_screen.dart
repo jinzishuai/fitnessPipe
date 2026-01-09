@@ -502,8 +502,13 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
             }
           });
         }
-
-        return Center(
+        
+        // On Android in landscape-right (270°), the camera preview appears upside-down
+        // because the Android camera plugin doesn't handle this orientation correctly.
+        // We apply a 180° rotation to compensate.
+        final needsRotation = Platform.isAndroid && newDeviceRotation == 270;
+        
+        Widget previewWidget = Center(
           child: AspectRatio(
             aspectRatio: aspectRatio,
             child: Stack(
@@ -580,6 +585,15 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
             ),
           ),
         );
+        
+        // Apply 180° rotation for landscape-right on Android
+        if (needsRotation) {
+          return Transform.rotate(
+            angle: 3.14159265359, // pi radians = 180 degrees
+            child: previewWidget,
+          );
+        }
+        return previewWidget;
       },
     );
   }
