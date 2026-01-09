@@ -27,6 +27,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   // UI state
   bool _isLoading = true;
   String? _errorMessage;
+  Size? _cameraImageSize;
+  int _sensorOrientation = 0;
 
   // Platform-specific camera handling
   final bool _isMacOS = Platform.isMacOS;
@@ -211,6 +213,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
 
       if (mounted) {
         setState(() {
+          _cameraImageSize = imageSize;
           _currentPose = poses.isNotEmpty ? poses.first : null;
         });
       }
@@ -226,7 +229,10 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
 
     final camera = _mobileCameras[_selectedMobileCameraIndex];
     final sensorOrientation = camera.sensorOrientation;
-
+    
+    // Store sensor orientation for skeleton painter
+    _sensorOrientation = sensorOrientation;
+    
     if (Platform.isIOS) {
       return InputImageRotation.rotation0deg;
     }
@@ -447,7 +453,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
               CustomPaint(
                 painter: SkeletonPainter(
                   pose: _currentPose,
-                  imageSize: Size(previewSize.height, previewSize.width),
+                  rotationDegrees: _sensorOrientation,
+                  imageSize: _cameraImageSize,
                   skeletonColor: Colors.greenAccent,
                 ),
               ),

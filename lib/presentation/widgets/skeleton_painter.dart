@@ -6,7 +6,8 @@ import '../../domain/models/pose_landmark.dart';
 /// CustomPainter that draws a skeleton overlay on detected pose landmarks.
 class SkeletonPainter extends CustomPainter {
   final Pose? pose;
-  final Size imageSize;
+  final int rotationDegrees;
+  final Size? imageSize;
 
   /// Color for the skeleton lines and points.
   final Color skeletonColor;
@@ -19,7 +20,8 @@ class SkeletonPainter extends CustomPainter {
 
   SkeletonPainter({
     required this.pose,
-    required this.imageSize,
+    this.rotationDegrees = 0,
+    this.imageSize,
     this.skeletonColor = Colors.green,
     this.pointRadius = 6.0,
     this.strokeWidth = 3.0,
@@ -112,9 +114,45 @@ class SkeletonPainter extends CustomPainter {
   }
 
   /// Scale a landmark's normalized coordinates to canvas coordinates.
+  /// ML Kit already handles rotation internally when we pass InputImageRotation,
+  /// so the coordinates are already in the display's coordinate space.
+  /// However, we need to account for aspect-fit scaling when the camera image
+  /// is letterboxed to fit the canvas.
   Offset _scalePoint(PoseLandmark landmark, Size canvasSize) {
-    final x = landmark.x * canvasSize.width;
-    final y = landmark.y * canvasSize.height;
+    if (imageSize == null) {
+      // Fallback: direct scaling
+      return Offset(
+        landmark.x * canvasSize.width,
+        landmark.y * canvasSize.height,
+      );
+    }
+
+    // When rotated 90 or 270 degrees, the image dimensions are effectively swapped
+    final effectiveImageSize = (rotationDegrees == 90 || rotationDegrees == 270)
+        ? Size(imageSize!.height, imageSize!.width)
+        : imageSize!;
+
+    // Calculate the scale factor and offset for aspect-fit
+    final imageAspect = effectiveImageSize.width / effectiveImageSize.height;
+    final canvasAspect = canvasSize.width / canvasSize.height;
+
+    double scale;
+    double offsetX = 0;
+    double offsetY = 0;
+
+    if (imageAspect > canvasAspect) {
+      // Image is wider - fit to width, letterbox top/bottom
+      scale = canvasSize.width / effectiveImageSize.width;
+      offsetY = (canvasSize.height - effectiveImageSize.height * scale) / 2;
+    } else {
+      // Image is taller - fit to height, letterbox left/right
+      scale = canvasSize.height / effectiveImageSize.height;
+      offsetX = (canvasSize.width - effectiveImageSize.width * scale) / 2;
+    }
+
+    // Scale from normalized [0,1] to image size, then to canvas size
+    final x = landmark.x * effectiveImageSize.width * scale + offsetX;
+    final y = landmark.y * effectiveImageSize.height * scale + offsetY;
 
     return Offset(x, y);
   }
@@ -122,6 +160,7 @@ class SkeletonPainter extends CustomPainter {
   @override
   bool shouldRepaint(SkeletonPainter oldDelegate) {
     return pose != oldDelegate.pose ||
+        rotationDegrees != oldDelegate.rotationDegrees ||
         imageSize != oldDelegate.imageSize;
   }
 }
