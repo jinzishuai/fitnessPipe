@@ -440,111 +440,91 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
 
     final previewSize = _mobileCameraController!.value.previewSize!;
     
-    // Use LayoutBuilder to get available space and size content appropriately
+    // Camera sensor outputs dimensions (may be landscape: w > h)
+    // Calculate the portrait aspect ratio (< 1) for portrait mode
+    final double portraitAspectRatio = (previewSize.height < previewSize.width)
+        ? previewSize.height / previewSize.width
+        : previewSize.width / previewSize.height;
+    
+    // Landscape aspect ratio is the inverse (> 1)
+    final double landscapeAspectRatio = 1 / portraitAspectRatio;
+
+    // Use LayoutBuilder to detect orientation and choose appropriate aspect ratio
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Camera sensor typically outputs landscape (width > height)
-        // previewSize.width and height correspond to sensor dimensions
-        final double sensorAspect = previewSize.width / previewSize.height;
-        
-        // Available display space
-        final double availableWidth = constraints.maxWidth;
-        final double availableHeight = constraints.maxHeight;
-        final double availableAspect = availableWidth / availableHeight;
-        
-        // Calculate display dimensions to fill available space while maintaining aspect ratio
-        // We want to "cover" the available space (maximize visible area)
-        double displayWidth, displayHeight;
-        
-        if (sensorAspect > availableAspect) {
-          // Camera is wider than available space - fit to height, overflow width
-          displayHeight = availableHeight;
-          displayWidth = availableHeight * sensorAspect;
-        } else {
-          // Camera is taller than available space - fit to width, overflow height
-          displayWidth = availableWidth;
-          displayHeight = availableWidth / sensorAspect;
-        }
+        final isLandscape = constraints.maxWidth > constraints.maxHeight;
+        final double aspectRatio = isLandscape ? landscapeAspectRatio : portraitAspectRatio;
 
         return Center(
-          child: ClipRect(
-            child: SizedBox(
-              width: availableWidth,
-              height: availableHeight,
-              child: OverflowBox(
-                maxWidth: displayWidth,
-                maxHeight: displayHeight,
-                child: SizedBox(
-                  width: displayWidth,
-                  height: displayHeight,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Camera preview - fills the SizedBox
-                      SizedBox.expand(
-                        child: mobile_camera.CameraPreview(_mobileCameraController!),
+          child: AspectRatio(
+            aspectRatio: aspectRatio,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Camera preview
+                mobile_camera.CameraPreview(_mobileCameraController!),
+
+                // Skeleton overlay
+                if (_currentPose != null)
+                  // Ensure skeleton overlay matches camera preview size exactly
+                  AspectRatio(
+                    aspectRatio: aspectRatio,
+                    child: CustomPaint(
+                      painter: SkeletonPainter(
+                        pose: _currentPose,
+                        rotationDegrees: _sensorOrientation,
+                        // On iOS, we use the legacy "stretch to fill" behavior (imageSize = null)
+                        // which matches the camera preview behavior and worked previously.
+                        // On Android, we need explicit aspect fit (imageSize passed).
+                        imageSize: Platform.isAndroid ? _cameraImageSize : null,
+                        // Force legacy rotation logic for iOS (manual swap)
+                        inputsAreRotated: Platform.isAndroid && _getMobileImageRotation() != InputImageRotation.rotation0deg,
+                        skeletonColor: Colors.greenAccent,
                       ),
-
-                      // Skeleton overlay - matches camera preview exactly
-                      if (_currentPose != null)
-                        SizedBox.expand(
-                          child: CustomPaint(
-                            painter: SkeletonPainter(
-                              pose: _currentPose,
-                              rotationDegrees: _sensorOrientation,
-                              // Pass imageSize for proper coordinate mapping
-                              imageSize: _cameraImageSize,
-                              // Force legacy rotation logic for iOS (manual swap)
-                              inputsAreRotated: Platform.isAndroid && _getMobileImageRotation() != InputImageRotation.rotation0deg,
-                              skeletonColor: Colors.greenAccent,
-                            ),
-                          ),
-                        ),
-
-                      // Pose confidence indicator
-                      Positioned(
-                        bottom: 16,
-                        left: 16,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
+                    ),
+                  ),
+                    
+                // Pose confidence indicator
+                Positioned(
+                  bottom: 16,
+                  left: 16,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 10,
+                          height: 10,
                           decoration: BoxDecoration(
-                            color: Colors.black54,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 10,
-                                height: 10,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: _currentPose != null
-                                      ? Colors.greenAccent
-                                      : Colors.red,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                _currentPose != null
-                                    ? 'Pose: ${(_currentPose!.confidence * 100).toStringAsFixed(0)}%'
-                                    : 'No pose detected',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
+                            shape: BoxShape.circle,
+                            color: _currentPose != null
+                                ? Colors.greenAccent
+                                : Colors.red,
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+                        Text(
+                          _currentPose != null
+                              ? 'Pose: ${(_currentPose!.confidence * 100).toStringAsFixed(0)}%'
+                              : 'No pose detected',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
           ),
         );
@@ -552,4 +532,3 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     );
   }
 }
-
