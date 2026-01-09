@@ -438,7 +438,13 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     }
 
     final previewSize = _mobileCameraController!.value.previewSize!;
-    final aspectRatio = previewSize.height / previewSize.width;
+    // Ensure we always use a portrait aspect ratio (height > width logic)
+    // On Android, previewSize is usually Landscape (w > h), so h/w gives < 1 (Portrait)
+    // On iOS, previewSize might be Portrait (w < h), so h/w gives > 1 (Landscape) - WRONG
+    // So we use min/max to ensure we always get the Portrait ratio (< 1)
+    final double aspectRatio = (previewSize.height < previewSize.width)
+        ? previewSize.height / previewSize.width
+        : previewSize.width / previewSize.height;
 
     return Center(
       child: AspectRatio(
