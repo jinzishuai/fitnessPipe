@@ -29,7 +29,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   String? _errorMessage;
   Size? _cameraImageSize;
   int _sensorOrientation = 0;
-  bool _isDeviceLandscape = false;
+  int _deviceRotation = 0; // 0=portrait, 90=landscape left, 180=portrait upside down, 270=landscape right
 
   // Platform-specific camera handling
   final bool _isMacOS = Platform.isMacOS;
@@ -240,14 +240,13 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
       return InputImageRotation.rotation0deg;
     }
 
-    // On Android, when device is in landscape mode, the display orientation
-    // matches the camera sensor orientation, so no rotation is needed.
-    // This ensures ML Kit processes coordinates correctly for landscape display.
-    if (_isDeviceLandscape) {
-      return InputImageRotation.rotation0deg;
-    }
+    // On Android, calculate the rotation needed based on device orientation
+    // The rotation tells ML Kit how to interpret the image coordinates.
+    // Formula: rotation = (sensorOrientation - deviceRotation + 360) % 360
+    // This accounts for the difference between sensor orientation and current device orientation.
+    final rotation = (sensorOrientation - _deviceRotation + 360) % 360;
 
-    switch (sensorOrientation) {
+    switch (rotation) {
       case 0:
         return InputImageRotation.rotation0deg;
       case 90:
@@ -463,13 +462,28 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         final isLandscape = constraints.maxWidth > constraints.maxHeight;
         final double aspectRatio = isLandscape ? landscapeAspectRatio : portraitAspectRatio;
 
-        // Update device orientation state for image processing
+        // Determine device rotation based on layout constraints
+        // We use a simple heuristic: landscape = 90° (left), portrait = 0°
+        // For Android, this gives us enough info for the rotation calculation
+        // Note: We can't easily distinguish landscape-left from landscape-right
+        // using just LayoutBuilder, so we use the MediaQuery orientation
+        final orientation = MediaQuery.of(context).orientation;
+        int newDeviceRotation;
+        if (orientation == Orientation.landscape) {
+          // Default to landscape left (90°)
+          // The camera preview on Android handles the actual orientation
+          newDeviceRotation = 90;
+        } else {
+          newDeviceRotation = 0;
+        }
+
+        // Update device rotation state for image processing
         // Use addPostFrameCallback to avoid setState during build
-        if (_isDeviceLandscape != isLandscape) {
+        if (_deviceRotation != newDeviceRotation) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
               setState(() {
-                _isDeviceLandscape = isLandscape;
+                _deviceRotation = newDeviceRotation;
               });
             }
           });
@@ -492,11 +506,11 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                     child: CustomPaint(
                       painter: SkeletonPainter(
                         pose: _currentPose,
-                        // On Android: when device is landscape, pass 0 (no dimension swap needed)
-                        // because display orientation matches the sensor orientation.
-                        // When device is portrait, use sensor orientation (typically 90° = needs swap)
+                        // On Android: pass the calculated rotation based on device orientation
                         // On iOS: always use sensor orientation (legacy behavior)
-                        rotationDegrees: Platform.isAndroid && isLandscape ? 0 : _sensorOrientation,
+                        rotationDegrees: Platform.isAndroid 
+                            ? (_sensorOrientation - _deviceRotation + 360) % 360
+                            : _sensorOrientation,
                         // On iOS, we use the legacy "stretch to fill" behavior (imageSize = null)
                         // which matches the camera preview behavior and worked previously.
                         // On Android, we need explicit aspect fit (imageSize passed).
