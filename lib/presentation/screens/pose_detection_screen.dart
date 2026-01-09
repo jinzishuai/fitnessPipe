@@ -446,49 +446,58 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         ? previewSize.height / previewSize.width
         : previewSize.width / previewSize.height;
 
-    return Center(
-      child: AspectRatio(
-        aspectRatio: aspectRatio,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Camera preview
-            mobile_camera.CameraPreview(_mobileCameraController!),
+    // We want to cover the screen, so we strictly use the screen width as base
+    // and calculate height based on the camera aspect ratio.
+    // FittedBox(BoxFit.cover) will then scale this to fill the screen.
+    final double contentWidth = MediaQuery.of(context).size.width;
+    final double contentHeight = contentWidth / aspectRatio;
 
-            // Skeleton overlay
-            if (_currentPose != null)
-              CustomPaint(
-                painter: SkeletonPainter(
-                  pose: _currentPose,
-                  rotationDegrees: _sensorOrientation,
-                  imageSize: _cameraImageSize,
-                  // Now we pass rotation to ML Kit on both platforms
-                  inputsAreRotated: _getMobileImageRotation() != InputImageRotation.rotation0deg,
-                  skeletonColor: Colors.greenAccent,
-                ),
-              ),
+    return SizedBox.expand(
+      child: FittedBox(
+        fit: BoxFit.cover,
+        child: SizedBox(
+          width: contentWidth,
+          height: contentHeight,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Camera preview
+              mobile_camera.CameraPreview(_mobileCameraController!),
 
-            // Pose confidence indicator
-            Positioned(
-              bottom: 16,
-              left: 16,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
+              // Skeleton overlay
+              if (_currentPose != null)
+                CustomPaint(
+                  painter: SkeletonPainter(
+                    pose: _currentPose,
+                    rotationDegrees: _sensorOrientation,
+                    imageSize: _cameraImageSize,
+                    // Now we pass rotation to ML Kit on both platforms
+                    inputsAreRotated: _getMobileImageRotation() != InputImageRotation.rotation0deg,
+                    skeletonColor: Colors.greenAccent,
+                  ),
                 ),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
+                
+              // Pose confidence indicator
+              Positioned(
+                bottom: 16,
+                left: 16,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                   mainAxisSize: MainAxisSize.min,
+                   children: [
+                     Container(
+                       width: 10,
+                       height: 10,
+                       decoration: BoxDecoration(
+                         shape: BoxShape.circle,
                         color: _currentPose != null
                             ? Colors.greenAccent
                             : Colors.red,
@@ -511,6 +520,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }
