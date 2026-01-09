@@ -233,9 +233,10 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     // Store sensor orientation for skeleton painter
     _sensorOrientation = sensorOrientation;
     
-    if (Platform.isIOS) {
-      return InputImageRotation.rotation0deg;
-    }
+    // On iOS, we also need to respect the sensor orientation
+    // if (Platform.isIOS) {
+    //   return InputImageRotation.rotation0deg;
+    // }
 
     switch (sensorOrientation) {
       case 0:
@@ -455,9 +456,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                   pose: _currentPose,
                   rotationDegrees: _sensorOrientation,
                   imageSize: _cameraImageSize,
-                  // On Android, we pass rotation to ML Kit, so coordinates are already rotated.
-                  // On iOS, we pass 0 to ML Kit, so coordinates are not rotated.
-                  inputsAreRotated: Platform.isAndroid,
+                  // Now we pass rotation to ML Kit on both platforms
+                  inputsAreRotated: _getMobileImageRotation() != InputImageRotation.rotation0deg,
                   skeletonColor: Colors.greenAccent,
                 ),
               ),
