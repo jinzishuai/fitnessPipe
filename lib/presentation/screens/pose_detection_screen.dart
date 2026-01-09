@@ -455,6 +455,9 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                   pose: _currentPose,
                   rotationDegrees: _sensorOrientation,
                   imageSize: _cameraImageSize,
+                  // On Android, we pass rotation to ML Kit, so coordinates are already rotated.
+                  // On iOS, we pass 0 to ML Kit, so coordinates are not rotated.
+                  inputsAreRotated: Platform.isAndroid,
                   skeletonColor: Colors.greenAccent,
                 ),
               ),
