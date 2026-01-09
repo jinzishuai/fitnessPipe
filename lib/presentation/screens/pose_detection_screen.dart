@@ -29,6 +29,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   String? _errorMessage;
   Size? _cameraImageSize;
   int _sensorOrientation = 0;
+  bool _isDeviceLandscape = false;
 
   // Platform-specific camera handling
   final bool _isMacOS = Platform.isMacOS;
@@ -236,6 +237,13 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     // On iOS, we force 0 degrees to rely on legacy manual rotation handling in Painter
     // This matches the behavior that was working correctly before the cross-platform unification
     if (Platform.isIOS) {
+      return InputImageRotation.rotation0deg;
+    }
+
+    // On Android, when device is in landscape mode, the display orientation
+    // matches the camera sensor orientation, so no rotation is needed.
+    // This ensures ML Kit processes coordinates correctly for landscape display.
+    if (_isDeviceLandscape) {
       return InputImageRotation.rotation0deg;
     }
 
@@ -454,6 +462,18 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
       builder: (context, constraints) {
         final isLandscape = constraints.maxWidth > constraints.maxHeight;
         final double aspectRatio = isLandscape ? landscapeAspectRatio : portraitAspectRatio;
+
+        // Update device orientation state for image processing
+        // Use addPostFrameCallback to avoid setState during build
+        if (_isDeviceLandscape != isLandscape) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _isDeviceLandscape = isLandscape;
+              });
+            }
+          });
+        }
 
         return Center(
           child: AspectRatio(
