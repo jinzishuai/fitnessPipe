@@ -245,7 +245,13 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     // The rotation tells ML Kit how to interpret the image coordinates.
     // Formula: rotation = (sensorOrientation - deviceRotation + 360) % 360
     // This accounts for the difference between sensor orientation and current device orientation.
-    final rotation = (sensorOrientation - _deviceRotation + 360) % 360;
+    // 
+    // Special case: For portrait upside-down (180°), treat it like normal portrait (0°)
+    // so that both preview and skeleton appear upside-down but aligned with each other.
+    // This is acceptable since: 1) this orientation is rarely used, 2) the skeleton still
+    // aligns with the person in the preview.
+    final effectiveDeviceRotation = (_deviceRotation == 180) ? 0 : _deviceRotation;
+    final rotation = (sensorOrientation - effectiveDeviceRotation + 360) % 360;
 
     switch (rotation) {
       case 0:
@@ -540,11 +546,11 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                       painter: SkeletonPainter(
                         pose: _currentPose,
                         // On Android: pass the calculated rotation based on device orientation
-                        // Use newDeviceRotation (local) instead of _deviceRotation (async state)
-                        // to ensure immediate correct orientation
+                        // Treat 180° (portrait upside-down) as 0° so skeleton aligns with
+                        // the upside-down preview
                         // On iOS: always use sensor orientation (legacy behavior)
                         rotationDegrees: Platform.isAndroid 
-                            ? (_sensorOrientation - newDeviceRotation + 360) % 360
+                            ? (_sensorOrientation - (newDeviceRotation == 180 ? 0 : newDeviceRotation) + 360) % 360
                             : _sensorOrientation,
                         // On iOS, we use the legacy "stretch to fill" behavior (imageSize = null)
                         // which matches the camera preview behavior and worked previously.
