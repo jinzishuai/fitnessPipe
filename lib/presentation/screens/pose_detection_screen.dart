@@ -502,12 +502,12 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
             }
           });
         }
-        // On Android, the camera preview appears upside-down for these orientations:
-        // - Portrait upside-down (180°)
-        // - Landscape-right (270°)
+        // On Android, the camera preview appears upside-down for landscape-right (270°)
+        // because the Android camera plugin doesn't handle this orientation correctly.
         // We apply a 180° rotation to compensate.
-        final needsRotation = Platform.isAndroid && 
-            (newDeviceRotation == 180 || newDeviceRotation == 270);
+        // Note: Portrait upside-down (180°) is not specially handled - if the device
+        // rotates to 180°, the preview will appear upside-down (aligned with skeleton)
+        final needsRotation = Platform.isAndroid && newDeviceRotation == 270;
         
         Widget previewWidget = Center(
           child: AspectRatio(
@@ -515,8 +515,21 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // Camera preview
-                mobile_camera.CameraPreview(_mobileCameraController!),
+                // Camera preview - wrapped in Builder to catch any disposal errors during rebuild
+                Builder(
+                  builder: (context) {
+                    try {
+                      if (_mobileCameraController == null || 
+                          !_mobileCameraController!.value.isInitialized) {
+                        return const SizedBox.shrink();
+                      }
+                      return mobile_camera.CameraPreview(_mobileCameraController!);
+                    } catch (e) {
+                      // Camera might be disposed during orientation change
+                      return const SizedBox.shrink();
+                    }
+                  },
+                ),
 
                 // Skeleton overlay
                 if (_currentPose != null)
