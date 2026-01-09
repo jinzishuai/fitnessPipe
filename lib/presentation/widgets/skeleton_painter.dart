@@ -19,12 +19,16 @@ class SkeletonPainter extends CustomPainter {
   /// Stroke width for the skeleton lines.
   final double strokeWidth;
 
-  SkeletonPainter({
+  /// Scale factor for landmark coordinates.
+  final double coordinateScale;
+
+  const SkeletonPainter({
     required this.pose,
-    this.rotationDegrees = 0,
-    this.imageSize,
+    required this.imageSize,
+    required this.rotationDegrees,
     this.inputsAreRotated = false,
-    this.skeletonColor = Colors.green,
+    this.skeletonColor = Colors.white,
+    this.coordinateScale = 1.0,
     this.pointRadius = 6.0,
     this.strokeWidth = 3.0,
   });
@@ -158,13 +162,13 @@ class SkeletonPainter extends CustomPainter {
       // Case: iOS (Coordinates are NOT rotated by ML Kit, but device is rotated)
       // We need to swap X/Y coordinates manually to match orientation
       // Note: We use the effective dimensions (swapped) for scaling
-      x = landmark.y * effectiveImageSize.width * scale + offsetX;
-      y = landmark.x * effectiveImageSize.height * scale + offsetY;
+      x = landmark.y * effectiveImageSize.width * scale * coordinateScale + offsetX;
+      y = landmark.x * effectiveImageSize.height * scale * coordinateScale + offsetY;
     } else {
       // Case: Android (Coordinates ARE rotated by ML Kit) OR No Rotation
       // Direct mapping
-      x = landmark.x * effectiveImageSize.width * scale + offsetX;
-      y = landmark.y * effectiveImageSize.height * scale + offsetY;
+      x = landmark.x * effectiveImageSize.width * scale * coordinateScale + offsetX;
+      y = landmark.y * effectiveImageSize.height * scale * coordinateScale + offsetY;
     }
 
     return Offset(x, y);

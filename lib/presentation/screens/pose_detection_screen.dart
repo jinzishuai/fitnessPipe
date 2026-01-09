@@ -474,6 +474,9 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                     // Now we pass rotation to ML Kit on both platforms
                     inputsAreRotated: _getMobileImageRotation() != InputImageRotation.rotation0deg,
                     skeletonColor: Colors.greenAccent,
+                    // On iOS, ML Kit sometimes returns coordinates in points (logical pixels)
+                    // relative to the image size, so we need to scale up by density.
+                    coordinateScale: Platform.isIOS ? MediaQuery.of(context).devicePixelRatio : 1.0,
                   ),
                 ),
                 
