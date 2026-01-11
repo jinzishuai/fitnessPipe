@@ -162,59 +162,69 @@ class LateralRaiseAngles {
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Idle
+    [*] --> Waiting
     
-    Idle --> Down: Arms detected at sides
-    Down --> Rising: Angle increasing
+    Waiting --> Down: Arms at sides for > 0.5s
+    Down --> Rising: Angle increasing > 25°
     Rising --> Up: Angle >= 80°
-    Up --> Falling: Angle decreasing
-    Falling --> Down: Angle <= 20°
+    Up --> Falling: Angle decreasing < 75°
+    Falling --> Down: Angle <= 20° (REP COUNTED)
     
-    Down --> Idle: Lost tracking
+    Down --> Waiting: Lost tracking for > 2s
     Rising --> Down: Aborted (angle drops before reaching top)
     
-    note right of Down: Rep starts here
-    note right of Up: Rep counted when<br/>transitioning to Falling
+    note right of Waiting: Ready state - user getting into position
+    note right of Down: Rep cycle starts here
+    note right of Falling: Rep counted when returning to Down
 ```
 
 ### State Definitions
 
 | State | Condition | Description |
 |-------|-----------|-------------|
-| **Idle** | No pose detected | Waiting for person |
-| **Down** | Angle < 20° | Arms at sides, ready position |
-| **Rising** | Angle increasing, 20° < angle < 80° | Lifting phase |
+| **Waiting** | No stable pose or user not in position | Getting ready |
+| **Down** | Angle < 20° held for 0.5s | Arms at sides, ready to start |
+| **Rising** | Angle increasing, 25° < angle < 80° | Lifting phase |
 | **Up** | Angle >= 80° | Top of movement |
-| **Falling** | Angle decreasing, 20° < angle < 80° | Lowering phase |
+| **Falling** | Angle decreasing, 20° < angle < 75° | Lowering phase |
 
 ### Transition Logic
 
 ```dart
-enum LateralRaisePhase { idle, down, rising, up, falling }
+enum LateralRaisePhase { waiting, down, rising, up, falling }
 
 class LateralRaiseStateMachine {
-  LateralRaisePhase _phase = LateralRaisePhase.idle;
+  LateralRaisePhase _phase = LateralRaisePhase.waiting;
   int _repCount = 0;
   double _lastAngle = 0;
+  DateTime? _stableStartTime;  // For ready state detection
   
-  static const double _bottomThreshold = 20.0;  // degrees
-  static const double _topThreshold = 80.0;     // degrees
-  static const double _hysteresis = 5.0;        // prevent jitter
+  // Thresholds with hysteresis (different entry/exit values)
+  static const double _bottomThreshold = 20.0;    // degrees
+  static const double _risingThreshold = 25.0;    // exit Down (hysteresis)
+  static const double _topThreshold = 80.0;       // enter Up
+  static const double _fallingThreshold = 75.0;   // exit Up (hysteresis)
+  static const Duration _readyHoldTime = Duration(milliseconds: 500);
   
-  /// Process a new angle reading
-  RepEvent? processAngle(double angle) {
+  RepEvent? processAngle(double angle, DateTime timestamp) {
     RepEvent? event;
     
     switch (_phase) {
-      case LateralRaisePhase.idle:
+      case LateralRaisePhase.waiting:
+        // Ready state: user must hold arms down for _readyHoldTime
         if (angle < _bottomThreshold) {
-          _phase = LateralRaisePhase.down;
-          event = RepEvent.exerciseStarted;
+          _stableStartTime ??= timestamp;
+          if (timestamp.difference(_stableStartTime!) >= _readyHoldTime) {
+            _phase = LateralRaisePhase.down;
+            event = RepEvent.exerciseStarted;
+          }
+        } else {
+          _stableStartTime = null;  // Reset if arms not down
         }
         break;
         
       case LateralRaisePhase.down:
-        if (angle > _bottomThreshold + _hysteresis) {
+        if (angle > _risingThreshold) {  // Hysteresis: 25° not 20°
           _phase = LateralRaisePhase.rising;
         }
         break;
@@ -229,7 +239,7 @@ class LateralRaiseStateMachine {
         break;
         
       case LateralRaisePhase.up:
-        if (angle < _topThreshold - _hysteresis) {
+        if (angle < _fallingThreshold) {  // Hysteresis: 75° not 80°
           _phase = LateralRaisePhase.falling;
         }
         break;
@@ -370,13 +380,51 @@ if (_canChangeState() && angle >= _topThreshold) {
 }
 ```
 
-### 6.4 Summary of Temporal Parameters
+### 6.4 Velocity Detection (Optional Enhancement)
+
+Track angular velocity to detect momentum/swinging:
+
+```dart
+class VelocityTracker {
+  double? _lastAngle;
+  DateTime? _lastTime;
+  
+  /// Returns angular velocity in degrees per second
+  double? getVelocity(double currentAngle, DateTime now) {
+    if (_lastAngle == null || _lastTime == null) {
+      _lastAngle = currentAngle;
+      _lastTime = now;
+      return null;
+    }
+    
+    final deltaAngle = currentAngle - _lastAngle!;
+    final deltaSeconds = now.difference(_lastTime!).inMilliseconds / 1000.0;
+    
+    _lastAngle = currentAngle;
+    _lastTime = now;
+    
+    return deltaSeconds > 0 ? deltaAngle / deltaSeconds : null;
+  }
+}
+
+// Usage: Flag suspiciously fast movement (likely swinging)
+static const double _maxVelocity = 300.0;  // degrees/second
+
+if (velocity != null && velocity.abs() > _maxVelocity) {
+  // User might be swinging arms using momentum
+  // For MVP: just note it; for future: form warning
+}
+```
+
+### 6.5 Summary of Temporal Parameters
 
 | Parameter | Default | Purpose |
 |-----------|---------|---------|
 | `minRepDuration` | 500ms | Reject impossibly fast reps |
 | `maxRepDuration` | 5s | Timeout stalled/incomplete reps |
 | `debounceTime` | 100ms | Prevent jitter at thresholds |
+| `readyHoldTime` | 500ms | Time to hold start position |
+| `maxVelocity` | 300°/s | Detect momentum swinging (optional) |
 
 ---
 
