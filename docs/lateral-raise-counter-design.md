@@ -15,6 +15,11 @@
 | **Arm requirement** | Both arms must move together |
 | **MVP scope** | Just rep counts (no form feedback) |
 | **Thresholds** | Hardcode defaults, but design for easy exposure later |
+| **App entry point** | Dropdown menu to select "Lateral Raise" from exercise list |
+| **UI display** | Rep counter + phase + debug angle, overlay on camera preview |
+| **Session management** | Manual Reset button (sufficient for MVP) |
+| **Tests** | Part of MVP, can be follow-up issue/PR |
+| **PoseFrame model** | Use `Map<LandmarkId, Landmark>` pattern |
 
 ---
 
@@ -482,23 +487,63 @@ flowchart TB
 ### Input
 
 ```dart
-/// Minimal input for lateral raise counting
-class PoseFrame {
-  final Landmark leftShoulder;
-  final Landmark rightShoulder;
-  final Landmark leftElbow;
-  final Landmark rightElbow;
-  final Landmark leftHip;
-  final Landmark rightHip;
-  final DateTime timestamp;
+/// Standard landmark identifiers (matches MediaPipe 33)
+enum LandmarkId {
+  // Required for lateral raise
+  leftShoulder, rightShoulder,
+  leftElbow, rightElbow,
+  leftHip, rightHip,
+  
+  // Full set available for other exercises
+  nose,
+  leftEyeInner, leftEye, leftEyeOuter,
+  rightEyeInner, rightEye, rightEyeOuter,
+  leftEar, rightEar,
+  mouthLeft, mouthRight,
+  leftWrist, rightWrist,
+  leftPinky, rightPinky,
+  leftIndex, rightIndex,
+  leftThumb, rightThumb,
+  leftKnee, rightKnee,
+  leftAnkle, rightAnkle,
+  leftHeel, rightHeel,
+  leftFootIndex, rightFootIndex,
 }
 
+/// A single point in normalized 3D space
 class Landmark {
   final double x;          // 0.0 - 1.0 normalized
   final double y;          // 0.0 - 1.0 normalized
+  final double z;          // Relative depth
   final double confidence; // 0.0 - 1.0
   
+  const Landmark({
+    required this.x,
+    required this.y,
+    this.z = 0,
+    required this.confidence,
+  });
+  
   bool get isVisible => confidence > 0.5;
+}
+
+/// A frame of pose data (provider-agnostic)
+class PoseFrame {
+  final Map<LandmarkId, Landmark> landmarks;
+  final DateTime timestamp;
+  
+  const PoseFrame({
+    required this.landmarks,
+    required this.timestamp,
+  });
+  
+  /// Get a specific landmark
+  Landmark? operator [](LandmarkId id) => landmarks[id];
+  
+  /// Check if all required landmarks are present and visible
+  bool hasLandmarks(Set<LandmarkId> required) {
+    return required.every((id) => landmarks[id]?.isVisible ?? false);
+  }
 }
 ```
 
@@ -701,34 +746,326 @@ Record sample pose sequences for:
 
 ---
 
-## 12. Implementation Plan
+## 12. UI Integration
 
-### Phase 1: Core Logic (in `packages/fitness_counter/`)
+### 12.1 Exercise Selector (Dropdown Menu)
 
-1. [ ] Create `Landmark` and `PoseFrame` models
-2. [ ] Implement `calculateShoulderAngle()` function
-3. [ ] Implement `AngleSmoother` class
-4. [ ] Implement `LateralRaiseStateMachine` class
-5. [ ] Implement `LateralRaiseCounter` main class
-6. [ ] Write unit tests
+Add a dropdown to the existing camera screen to select the exercise:
 
-### Phase 2: Integration (in `lib/`)
+```dart
+class ExerciseSelectorDropdown extends StatelessWidget {
+  final ExerciseType? selectedExercise;
+  final ValueChanged<ExerciseType?> onChanged;
+  
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButton<ExerciseType>(
+      value: selectedExercise,
+      hint: Text('Select Exercise'),
+      items: [
+        DropdownMenuItem(
+          value: ExerciseType.lateralRaise,
+          child: Text('Lateral Raise'),
+        ),
+        // Future exercises will be added here
+      ],
+      onChanged: onChanged,
+    );
+  }
+}
 
-1. [ ] Create adapter to convert `Pose` → `PoseFrame`
-2. [ ] Connect counter to pose detection stream
-3. [ ] Add rep count display UI widget
-4. [ ] Add visual phase indicator (optional)
+enum ExerciseType {
+  lateralRaise,
+  // squat,     // Future
+  // pushup,    // Future
+}
+```
 
-### Phase 3: Polish
+### 12.2 Counter Overlay (On Camera Preview)
 
-1. [ ] Tune thresholds with real user testing
-2. [ ] Add haptic feedback on rep complete
-3. [ ] Add audio feedback option
-4. [ ] Record sample videos for demo
+Display rep count, phase, and angle overlaid on the camera:
+
+```dart
+class RepCounterOverlay extends StatelessWidget {
+  final int repCount;
+  final LateralRaisePhase phase;
+  final double currentAngle;  // Debug info
+  
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 20,
+      left: 20,
+      child: Container(
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.black54,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Rep count (large)
+            Text(
+              '$repCount',
+              style: TextStyle(
+                fontSize: 48,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            Text(
+              'reps',
+              style: TextStyle(fontSize: 16, color: Colors.white70),
+            ),
+            SizedBox(height: 8),
+            
+            // Phase indicator
+            _buildPhaseChip(phase),
+            
+            SizedBox(height: 4),
+            
+            // Debug: current angle
+            Text(
+              'Angle: ${currentAngle.toStringAsFixed(1)}°',
+              style: TextStyle(fontSize: 12, color: Colors.white54),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildPhaseChip(LateralRaisePhase phase) {
+    final (label, color) = switch (phase) {
+      LateralRaisePhase.waiting => ('Ready...', Colors.grey),
+      LateralRaisePhase.down => ('Down', Colors.blue),
+      LateralRaisePhase.rising => ('Rising ↑', Colors.orange),
+      LateralRaisePhase.up => ('Up!', Colors.green),
+      LateralRaisePhase.falling => ('Lowering ↓', Colors.orange),
+    };
+    
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(label, style: TextStyle(color: Colors.white)),
+    );
+  }
+}
+```
+
+### 12.3 Screen Layout
+
+```
+┌────────────────────────────────────┐
+│  ┌──────────────────┐              │
+│  │ Lateral Raise  ▼ │  ← Dropdown  │
+│  └──────────────────┘              │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │                              │  │
+│  │                              │  │
+│  │      CAMERA PREVIEW          │  │
+│  │                              │  │
+│  │  ┌─────────┐                 │  │
+│  │  │  12     │  ← Overlay      │  │
+│  │  │  reps   │                 │  │
+│  │  │ Rising ↑│                 │  │
+│  │  │ 45.2°   │                 │  │
+│  │  └─────────┘                 │  │
+│  │                              │  │
+│  │     (skeleton overlay)       │  │
+│  │                              │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│  [ Reset ]                         │
+└────────────────────────────────────┘
+```
+
+### 12.4 Integration with Pose Stream
+
+```dart
+class PoseDetectionScreen extends StatefulWidget {
+  // ... existing code
+}
+
+class _PoseDetectionScreenState extends State<PoseDetectionScreen> {
+  ExerciseType? _selectedExercise;
+  LateralRaiseCounter? _counter;
+  int _repCount = 0;
+  LateralRaisePhase _phase = LateralRaisePhase.waiting;
+  double _currentAngle = 0;
+  
+  @override
+  void initState() {
+    super.initState();
+    // ... existing camera init
+  }
+  
+  void _onExerciseSelected(ExerciseType? type) {
+    setState(() {
+      _selectedExercise = type;
+      if (type == ExerciseType.lateralRaise) {
+        _counter = LateralRaiseCounter();
+      } else {
+        _counter = null;
+      }
+      _repCount = 0;
+    });
+  }
+  
+  void _onPoseDetected(Pose pose) {
+    // Convert app's Pose to counter's PoseFrame
+    if (_counter != null && _selectedExercise != null) {
+      final frame = _poseAdapter.convert(pose);
+      final event = _counter!.processPose(frame);
+      
+      setState(() {
+        _currentAngle = _counter!.state.currentAngle;
+        _phase = _counter!.state.phase;
+        
+        if (event is RepCompleted) {
+          _repCount = event.totalReps;
+          // Optional: haptic feedback
+          HapticFeedback.mediumImpact();
+        }
+      });
+    }
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          // Camera preview (existing)
+          CameraPreview(...),
+          
+          // Skeleton overlay (existing)
+          SkeletonOverlay(...),
+          
+          // Exercise selector (top)
+          Positioned(
+            top: 50,
+            left: 16,
+            child: ExerciseSelectorDropdown(
+              selectedExercise: _selectedExercise,
+              onChanged: _onExerciseSelected,
+            ),
+          ),
+          
+          // Rep counter overlay
+          if (_selectedExercise != null)
+            RepCounterOverlay(
+              repCount: _repCount,
+              phase: _phase,
+              currentAngle: _currentAngle,
+            ),
+          
+          // Reset button
+          Positioned(
+            bottom: 20,
+            left: 16,
+            child: ElevatedButton(
+              onPressed: () {
+                _counter?.reset();
+                setState(() => _repCount = 0);
+              },
+              child: Text('Reset'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+```
 
 ---
 
-## 13. Summary
+## 13. Implementation Plan
+
+### Phase 1: Package Setup (in `packages/fitness_counter/`)
+
+| Task | File | Description |
+|------|------|-------------|
+| 1.1 | `pubspec.yaml` | Create package with no dependencies |
+| 1.2 | `lib/src/models/landmark.dart` | `Landmark`, `LandmarkId` enum |
+| 1.3 | `lib/src/models/pose_frame.dart` | `PoseFrame` class |
+| 1.4 | `lib/src/models/counter_event.dart` | `RepEvent`, `RepCompleted`, `PhaseChanged` |
+| 1.5 | `lib/src/core/angle_calculator.dart` | `calculateShoulderAngle()` function |
+| 1.6 | `lib/src/core/smoothing.dart` | `AngleSmoother` class (EMA) |
+| 1.7 | `lib/src/exercises/lateral_raise.dart` | `LateralRaiseCounter`, state machine |
+| 1.8 | `lib/fitness_counter.dart` | Public API exports |
+
+### Phase 2: Unit Tests (in `packages/fitness_counter/test/`)
+
+| Task | File | Description |
+|------|------|-------------|
+| 2.1 | `angle_calculator_test.dart` | Test angle calculation with known values |
+| 2.2 | `smoothing_test.dart` | Test EMA reduces variance |
+| 2.3 | `lateral_raise_test.dart` | Test state machine transitions, rep counting |
+
+### Phase 3: App Integration (in `lib/`)
+
+| Task | File | Description |
+|------|------|-------------|
+| 3.1 | `pubspec.yaml` | Add `path: packages/fitness_counter` dependency |
+| 3.2 | `lib/core/adapters/pose_adapter.dart` | Convert `Pose` → `PoseFrame` |
+| 3.3 | `lib/presentation/widgets/exercise_selector.dart` | Dropdown widget |
+| 3.4 | `lib/presentation/widgets/rep_counter_overlay.dart` | Overlay widget |
+| 3.5 | `lib/presentation/screens/pose_detection_screen.dart` | Integrate counter + UI |
+
+### Phase 4: Manual Testing & Tuning
+
+| Task | Description |
+|------|-------------|
+| 4.1 | Test on physical device with real lateral raises |
+| 4.2 | Tune thresholds if needed |
+| 4.3 | Verify haptic feedback on rep complete |
+
+---
+
+## 14. Verification Plan
+
+### Unit Tests (Automated)
+
+Run from the package directory:
+```bash
+cd packages/fitness_counter
+flutter test
+```
+
+**Test cases:**
+- `angle_calculator_test.dart`: Arms at 0°, 45°, 90° produce expected angles
+- `smoothing_test.dart`: Noisy input produces smoother output with lower variance
+- `lateral_raise_test.dart`:
+  - Complete rep cycle → `RepCompleted` event
+  - Partial rep (doesn't reach top) → no event
+  - Too fast rep → rejected
+  - Waiting state requires 0.5s hold
+
+### Manual Testing
+
+**Prerequisites:**
+- Physical device with camera (iOS or Android)
+- Ability to stand in view of camera
+
+**Steps:**
+1. Run the app on a physical device
+2. Select "Lateral Raise" from dropdown
+3. Stand with arms at sides for 0.5s → Should see "Ready" phase
+4. Raise arms to shoulder height → Phase should change: Down → Rising → Up
+5. Lower arms back down → Phase: Falling → Down, rep count = 1
+6. Repeat 5 times → rep count should be 5
+7. Tap "Reset" → rep count should be 0
+
+---
+
+## 15. Summary
 
 This design provides a clean, modular lateral raise counter that:
 
@@ -737,5 +1074,7 @@ This design provides a clean, modular lateral raise counter that:
 - **Handles noise** via EMA smoothing
 - **Provides reliable counting** via a well-defined state machine
 - **Is testable** with clear unit test strategies
+- **Has clear UI** with exercise selector and overlay
 
 **Ready for implementation!**
+
