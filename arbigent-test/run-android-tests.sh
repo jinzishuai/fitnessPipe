@@ -111,20 +111,14 @@ main() {
     log_info ""
     log_info "=== Test 1: Upright (Portrait) ==="
     "$ADB_PATH" shell settings put system accelerometer_rotation 1 # Enable auto-rotate
-    "$ADB_PATH" shell settings put system user_rotation 0
 
-    # Auto-rotate is now handled by the arbigent yaml setup if needed, 
-    # but we can leave it or remove it. The user asked to remove "user_rotation".
-    # I should remove this line if I want to be purely relying on the YAML for landscape,
-    # but for Portrait it might be good. However, default is usually 1.
-    # I'll remove it to be consistent with "remove ... code".
     sleep 2
     
-    # if run_arbigent_test "$SCRIPT_DIR/android-portrait.yaml" "Portrait Test"; then
-    #     test_results+=("Portrait: PASS")
-    # else
-    #     test_results+=("Portrait: FAIL")
-    # fi
+    if run_arbigent_test "$SCRIPT_DIR/android-portrait.yaml" "Portrait Test"; then
+        test_results+=("Portrait: PASS")
+    else
+        test_results+=("Portrait: FAIL")
+    fi
     
     # Test 2: Landscape-Left (rotate 3x clockwise = 270°)
     log_info ""
