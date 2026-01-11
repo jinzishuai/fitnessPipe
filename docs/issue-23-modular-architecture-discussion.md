@@ -2,588 +2,217 @@
 
 > **Issue**: [Architecture: modular separation of counter and pose estimation](https://github.com/jinzishuai/fitnessPipe/issues/23)  
 > **Created**: 2026-01-11  
-> **Author**: Architecture Discussion Document
+> **Status**: ✅ Design Approved
+
+---
+
+## Confirmed Decisions
+
+| Decision | Choice |
+|----------|--------|
+| **Language** | Pure Dart |
+| **Code Organization** | Separate package in same repo (`packages/fitness_counter/`) |
+| **Landmark Strategy** | Package defines all 33, each exercise declares its minimum required set |
+| **Interface** | Counter defines its own `PoseFrame` type (not the app's `Pose` model) |
 
 ---
 
 ## 1. Problem Statement
 
-The issue proposes that the **rep counter code should be independent of the human pose estimation code**, enabling:
-- Use of the same counter logic against both MediaPipe and Apple Vision implementations
+The rep counter code should be **independent of the human pose estimation code**, enabling:
+- Use of the same counter logic against both ML Kit and Apple Vision implementations
 - Easy swapping between different pose estimation backends
 - Flexibility to experiment with different ML approaches without rewriting business logic
 
 ---
 
-## 2. Current Architecture Analysis
+## 2. Architecture Overview
 
-### What We Already Have
+### The Key Insight
 
-Looking at the existing codebase, we already have a **good foundation** for abstraction:
-
-```
-lib/
-├── domain/
-│   ├── interfaces/
-│   │   └── pose_detector.dart      ← Abstract PoseDetector interface
-│   └── models/
-│       ├── pose.dart               ← Provider-agnostic Pose model
-│       └── pose_landmark.dart      ← Provider-agnostic landmarks
-└── data/
-    └── ml_kit/
-        └── ml_kit_pose_detector.dart  ← ML Kit implementation
-```
-
-The `Pose` and `PoseLandmark` models are already **provider-agnostic** — they don't depend on ML Kit or any specific framework. This is the correct abstraction layer for the counter to consume.
-
-### The Key Question
-
-The counter code (not yet implemented) will need to:
-1. Receive pose data
-2. Calculate angles between joints
-3. Track state transitions (up position → down position → rep complete)
-4. Count repetitions
-
-**The question is: What interface should the counter depend on?**
-
----
-
-## 3. Architecture Options
-
-### Option A: Counter Consumes `Pose` Directly (Recommended)
+The counter package should define its **own models** (`PoseFrame`, `Landmark`, `LandmarkId`) that are completely independent of any pose provider. The main app is responsible for converting from the provider's format to the counter's format.
 
 ```mermaid
 graph LR
-    subgraph "Pose Providers"
-        MLKit[ML Kit Provider]
-        Vision[Apple Vision Provider]
-        MediaPipe[MediaPipe Provider]
+    subgraph "Main App"
+        subgraph "Pose Providers"
+            MLKit[ML Kit]
+            Vision[Apple Vision]
+        end
+        Adapter[Pose Adapter]
     end
     
-    subgraph "Canonical Model"
-        Pose[Pose Model]
+    subgraph "fitness_counter Package"
+        PoseFrame[PoseFrame]
+        Counter[Exercise Counter]
+        Events[RepEvent]
     end
     
-    subgraph "Counter"
-        Counter[Rep Counter]
-    end
-    
-    MLKit --> |converts to| Pose
-    Vision --> |converts to| Pose
-    MediaPipe --> |converts to| Pose
-    Pose --> Counter
+    MLKit --> Adapter
+    Vision --> Adapter
+    Adapter --> |"converts to"| PoseFrame
+    PoseFrame --> Counter
+    Counter --> Events
 ```
 
-**How it works:**
-- Each pose provider converts its native output to the canonical `Pose` model
-- The counter only knows about `Pose` — it's completely decoupled from the provider
-- Adding a new provider requires only implementing the conversion
+### Why This Matters
 
-**Pros:**
-- ✅ Simple and clear
-- ✅ We already have this structure in place
-- ✅ `Pose` model is already provider-agnostic
-- ✅ Easy to unit test counter with mock poses
-
-**Cons:**
-- ⚠️ Assumes all providers produce compatible landmark indices (they do — MediaPipe standard is universal)
+1. **Complete decoupling**: The `fitness_counter` package has **zero dependencies** on ML Kit, Apple Vision, or the main app's models
+2. **Testability**: Unit tests can create `PoseFrame` objects directly without any pose provider
+3. **Flexibility**: Each exercise can declare exactly which landmarks it needs
+4. **Clean API boundary**: The package defines a stable contract that won't change when we swap providers
 
 ---
 
-### Option B: Counter Consumes an Abstract `PoseData` Interface
+## 3. Per-Exercise Landmark Requirements
 
-```mermaid
-graph LR
-    subgraph "Pose Providers"
-        MLKit[ML Kit Provider]
-        Vision[Apple Vision Provider]
-    end
-    
-    subgraph "Abstraction"
-        PoseData["PoseData Interface<br/>(getLandmark, getAngle)"]
-    end
-    
-    subgraph "Counter"
-        Counter[Rep Counter]
-    end
-    
-    MLKit --> |implements| PoseData
-    Vision --> |implements| PoseData
-    PoseData --> Counter
-```
+Each exercise counter declares which landmarks it needs. The package defines **all possible landmarks** (MediaPipe 33), but exercises only use what they require.
 
-**How it works:**
-- Define an abstract interface that exposes **only what the counter needs**
-- Each provider directly implements this interface
-- Counter codes against the interface
-
-**Pros:**
-- ✅ Providers have flexibility in internal representation
-- ✅ Interface Segregation Principle (counter only sees what it needs)
-
-**Cons:**
-- ⚠️ More complex to implement
-- ⚠️ We'd lose the convenience of having a unified `Pose` model
-- ⚠️ Testing becomes harder (need to mock the interface, not just create Pose objects)
-
----
-
-### Option C: Event-Driven Architecture with Streams
-
-```mermaid
-graph TB
-    subgraph "Pose Providers"
-        Provider[Active Provider]
-    end
-    
-    subgraph "Event Bus"
-        Stream["Stream<Pose>"]
-    end
-    
-    subgraph "Consumers"
-        Counter[Rep Counter]
-        Skeleton[Skeleton Renderer]
-        FormChecker[Form Analyzer]
-    end
-    
-    Provider --> |emits| Stream
-    Stream --> Counter
-    Stream --> Skeleton
-    Stream --> FormChecker
-```
-
-**How it works:**
-- Pose providers emit `Pose` events to a stream
-- Multiple consumers (counter, skeleton renderer, form analyzer) subscribe
-- Decoupling via stream makes adding/removing consumers trivial
-
-**Pros:**
-- ✅ Highly decoupled
-- ✅ Easy to add new consumers
-- ✅ Natural fit for real-time camera processing
-
-**Cons:**
-- ⚠️ More infrastructure to set up
-- ⚠️ Debugging stream subscriptions can be tricky
-- ⚠️ May be overkill for current app complexity
-
----
-
-## 4. Questions for You
-
-Before proceeding, I'd like your input on these design decisions:
-
-### Question 1: Pose Provider Strategy
-
-Which pose estimation backends do you want to support?
-
-| Provider | Platform Support | Notes |
-|----------|-----------------|-------|
-| **ML Kit** | iOS, Android | ✅ Already implemented |
-| **Apple Vision** | iOS, macOS | Native, potentially better on Apple Silicon |
-| **MediaPipe (Direct)** | All | Via FFI, more complex but full control |
-
-**Are you planning to support Apple Vision as a pose provider?** If so, this becomes more critical to get right now.
-
----
-
-### Question 2: Landmark Compatibility
-
-Different providers may output different landmark sets:
-
-| Provider | Landmark Count | Standard |
-|----------|---------------|----------|
-| ML Kit / MediaPipe | 33 | MediaPipe Pose |
-| Apple Vision | 19 (body) + hands + face | Apple VNHumanBodyPoseObservation |
-
-**How should we handle landmark differences?**
-
-A) **Map Apple Vision to MediaPipe format** (lose some Apple-specific landmarks)
-B) **Define a minimal common set** (only landmarks needed for exercises)
-C) **Support both schemas** with adapters
-
----
-
-### Question 3: Counter Input Granularity
-
-What should the counter receive?
-
-A) **Raw Pose** — Counter calculates its own angles and positions
-B) **Processed JointAngles** — Pre-calculated angles per frame
-C) **Both** — Pose for flexibility, with helper utilities for angle calculation
+### Full Landmark Enum (in package)
 
 ```dart
-// Option A: Counter receives Pose
-class RepCounter {
-  void processPose(Pose pose) {
-    final elbowAngle = _calculateAngle(
-      pose.getLandmark(LandmarkType.shoulder),
-      pose.getLandmark(LandmarkType.elbow),
-      pose.getLandmark(LandmarkType.wrist),
-    );
-    // ... state machine logic
-  }
-}
-
-// Option B: Counter receives pre-calculated angles
-class RepCounter {
-  void processAngles(JointAngles angles) {
-    if (angles.elbow < 90) {
-      // ... state machine logic  
-    }
-  }
-}
-```
-
----
-
-### Question 4: Multiple Exercise Support
-
-Should the counter architecture support:
-
-A) **One exercise at a time** (user selects exercise before workout)
-B) **Auto-detection** (system detects which exercise user is doing)
-C) **Both** (auto-detect with ability to lock to specific exercise)
-
-This affects whether we need an exercise classifier before the counter.
-
----
-
-### Question 5: State Persistence
-
-Should the counter maintain state across:
-
-A) **Session only** (resets when screen changes)
-B) **Workout session** (persists during a defined workout)
-C) **App lifetime** (resume counts even after app restart)
-
----
-
-## 5. Recommended Approach
-
-Based on my analysis, I recommend:
-
-1. **Keep the existing `Pose` model as the canonical interface** — it's already provider-agnostic
-2. **Add an Apple Vision provider** that converts to the same `Pose` model
-3. **Build the counter against `Pose`** — no new abstractions needed
-4. **Use dependency injection** to swap providers (we could use `get_it` as mentioned in architecture.md)
-
-This gives us the modular separation requested in the issue with minimal additional complexity.
-
----
-
-## 6. Next Steps (After Your Input)
-
-1. Document the final architecture decision
-2. Define the provider interface contract more precisely
-3. Create the Apple Vision pose detector (if needed)
-4. Implement the rep counter with the agreed interface
-5. Add unit tests for the counter using mock poses
-
----
-
-> **Please review the questions above and share your thoughts. Your answers will shape the implementation plan.**
-
----
-
-## 7. Code Organization: Separate Repo?
-
-This is a key architectural decision. Let me lay out the options:
-
-### Option A: Monorepo (Keep in FitnessPipe)
-
-```
-fitnessPipe/
-├── lib/
-│   ├── core/
-│   │   └── counter/              ← Counter logic lives here
-│   │       ├── rep_counter.dart
-│   │       ├── exercise_state_machine.dart
-│   │       └── angle_calculator.dart
-│   ├── domain/
-│   │   └── models/               ← Shared models
-│   └── data/
-│       └── ml_kit/
-```
-
-**Pros:**
-- ✅ Simpler development workflow
-- ✅ Easier refactoring across boundaries
-- ✅ No package versioning overhead
-
-**Cons:**
-- ⚠️ Harder to reuse in other projects
-- ⚠️ Tighter coupling temptation
-
----
-
-### Option B: Separate Package (Same Repo, Published)
-
-```
-fitnessPipe/
-├── packages/
-│   └── fitness_counter/          ← Standalone Dart/Flutter package
-│       ├── lib/
-│       │   ├── src/
-│       │   │   ├── rep_counter.dart
-│       │   │   └── state_machine.dart
-│       │   └── fitness_counter.dart  ← Public API
-│       ├── pubspec.yaml
-│       └── test/
-├── lib/                          ← Main app consumes the package
-└── pubspec.yaml                  ← depends on path: packages/fitness_counter
-```
-
-**Pros:**
-- ✅ Clear API boundary enforced by package structure
-- ✅ Can publish to pub.dev later
-- ✅ Easy to test in isolation
-- ✅ Single repo, simpler CI
-
-**Cons:**
-- ⚠️ Slightly more setup
-
----
-
-### Option C: Completely Separate Repository
-
-```
-# Repo 1: fitness-counter
-fitness-counter/
-├── lib/
-│   └── fitness_counter.dart
-├── pubspec.yaml
-└── test/
-
-# Repo 2: fitnessPipe (consumes via pub)
-fitnessPipe/
-├── pubspec.yaml  # depends on: fitness_counter: ^1.0.0
-└── lib/
-```
-
-**Pros:**
-- ✅ Maximum reusability (other apps can use it)
-- ✅ Forces clean API design
-- ✅ Independent versioning and release cycle
-
-**Cons:**
-- ⚠️ More overhead (two repos, coordinated releases)
-- ⚠️ Harder to iterate quickly in early development
-- ⚠️ Need to publish (or use git dependency)
-
----
-
-### My Recommendation
-
-**Start with Option B (separate package, same repo)**, then extract to separate repo later if needed.
-
-This gives you:
-- Clean boundaries from day one
-- Easy local development
-- Option to publish when stable
-
----
-
-## 8. Input/Output Interface Design
-
-This is the most important part. The counter package should define a **minimal, stable contract**.
-
-### Input: What Goes In?
-
-#### Option 1: Raw Landmark Positions (Minimal)
-
-```dart
-/// A single point in 3D space with confidence
-class Landmark {
-  final double x;      // 0.0 - 1.0 normalized
-  final double y;      // 0.0 - 1.0 normalized  
-  final double z;      // Relative depth
-  final double confidence;
-}
-
-/// Named landmarks the counter cares about
-class PoseFrame {
-  final Map<String, Landmark> landmarks;
-  final DateTime timestamp;
-  
-  Landmark? get leftShoulder => landmarks['left_shoulder'];
-  Landmark? get leftElbow => landmarks['left_elbow'];
-  // ... etc
-}
-```
-
-**Pros:** Maximum flexibility, works with any pose provider
-**Cons:** Counter must calculate angles internally
-
-#### Option 2: Pre-Calculated Angles
-
-```dart
-/// Joint angles already calculated
-class JointAngles {
-  final double? leftElbow;    // degrees 0-180
-  final double? rightElbow;
-  final double? leftKnee;
-  final double? rightKnee;
-  final double? leftHip;
-  final double? rightHip;
-  final DateTime timestamp;
-}
-```
-
-**Pros:** Simpler counter logic, provider does the math
-**Cons:** Less flexible, provider must know which angles matter
-
-#### Option 3: Hybrid (Recommended)
-
-```dart
-/// Input to the counter - provider-agnostic
-class PoseFrame {
-  /// Raw landmarks for flexibility
-  final Map<LandmarkId, Landmark> landmarks;
-  
-  /// Timestamp for temporal analysis
-  final DateTime timestamp;
-  
-  /// Frame dimensions (for aspect ratio awareness)
-  final Size frameSize;
-}
-
-/// Standard landmark identifiers (subset of MediaPipe 33)
+/// Full set available (matches MediaPipe 33)
 enum LandmarkId {
+  // Face
+  nose, 
+  leftEyeInner, leftEye, leftEyeOuter,
+  rightEyeInner, rightEye, rightEyeOuter,
+  leftEar, rightEar,
+  mouthLeft, mouthRight,
+  
+  // Upper body
   leftShoulder, rightShoulder,
   leftElbow, rightElbow,
   leftWrist, rightWrist,
+  
+  // Hands
+  leftPinky, rightPinky,
+  leftIndex, rightIndex,
+  leftThumb, rightThumb,
+  
+  // Core
   leftHip, rightHip,
+  
+  // Lower body
   leftKnee, rightKnee,
   leftAnkle, rightAnkle,
-  // Only include what's needed for exercise counting
+  leftHeel, rightHeel,
+  leftFootIndex, rightFootIndex,
 }
 ```
 
-**Why this works:**
-- Only 12-16 landmarks needed (not all 33)
-- Apple Vision can map to this subset
-- MediaPipe/ML Kit provides superset
-- Counter library provides angle calculation utilities
-
----
-
-### Output: What Comes Out?
+### Exercise-Specific Requirements
 
 ```dart
-/// Events emitted by the counter
-abstract class CounterEvent {}
-
-class RepCompleted extends CounterEvent {
-  final int totalReps;
-  final Duration repDuration;
-  final double quality;  // 0.0 - 1.0 form score
+/// Base interface for exercise counters
+abstract class ExerciseCounter {
+  /// Landmarks this exercise requires
+  Set<LandmarkId> get requiredLandmarks;
+  
+  /// Process a pose frame
+  RepEvent? processPose(PoseFrame frame);
+  
+  /// Current state
+  CounterState get state;
+  
+  /// Reset counter
+  void reset();
 }
 
-class ExerciseStarted extends CounterEvent {
-  final ExerciseType exercise;
+/// Lateral Raise only needs 6 landmarks
+class LateralRaiseCounter extends ExerciseCounter {
+  @override
+  Set<LandmarkId> get requiredLandmarks => {
+    LandmarkId.leftShoulder, LandmarkId.rightShoulder,
+    LandmarkId.leftElbow, LandmarkId.rightElbow,
+    LandmarkId.leftHip, LandmarkId.rightHip,
+  };
+  
+  // ... implementation
 }
 
-class ExercisePaused extends CounterEvent {
-  final Duration pauseDuration;
+/// Squat needs hips, knees, ankles
+class SquatCounter extends ExerciseCounter {
+  @override
+  Set<LandmarkId> get requiredLandmarks => {
+    LandmarkId.leftHip, LandmarkId.rightHip,
+    LandmarkId.leftKnee, LandmarkId.rightKnee,
+    LandmarkId.leftAnkle, LandmarkId.rightAnkle,
+  };
 }
 
-class PhaseChanged extends CounterEvent {
-  final ExercisePhase phase;  // up, down, transition
-}
-
-/// State query (not event-driven)
-class CounterState {
-  final ExerciseType? activeExercise;
-  final int repCount;
-  final ExercisePhase currentPhase;
-  final double currentAngle;  // Primary angle being tracked
+/// Yoga pose might need head tracking
+class TreePoseCounter extends ExerciseCounter {
+  @override
+  Set<LandmarkId> get requiredLandmarks => {
+    LandmarkId.nose,  // Head position for balance
+    LandmarkId.leftShoulder, LandmarkId.rightShoulder,
+    LandmarkId.leftHip, LandmarkId.rightHip,
+    LandmarkId.leftKnee, LandmarkId.rightKnee,
+    LandmarkId.leftAnkle, LandmarkId.rightAnkle,
+  };
 }
 ```
 
+### Benefits of This Approach
+
+| Benefit | Description |
+|---------|-------------|
+| **Extensibility** | New exercises can request any landmarks they need |
+| **Validation** | Counter can check if all required landmarks are present |
+| **Minimal coupling** | Exercises only depend on what they need |
+| **Provider flexibility** | Works with any provider that can supply the required landmarks |
+
 ---
 
-## 9. Language Choice
+## 4. The Adapter Pattern
 
-### Option A: Pure Dart (Recommended for Flutter Integration)
+The main app converts from the pose provider's format to the counter's `PoseFrame`:
 
 ```dart
-// Package: fitness_counter (pure Dart, no Flutter dependency)
-library fitness_counter;
+/// In the main app (NOT in the fitness_counter package)
+import 'package:fitness_counter/fitness_counter.dart';
+import '../domain/models/pose.dart' as app;
 
-export 'src/rep_counter.dart';
-export 'src/models/pose_frame.dart';
-export 'src/models/counter_event.dart';
+class PoseAdapter {
+  /// Convert app's Pose to counter's PoseFrame
+  PoseFrame convert(app.Pose pose) {
+    final landmarks = <LandmarkId, Landmark>{};
+    
+    for (final poseLandmark in pose.landmarks) {
+      final id = _mapLandmarkType(poseLandmark.type);
+      if (id != null) {
+        landmarks[id] = Landmark(
+          x: poseLandmark.x,
+          y: poseLandmark.y,
+          z: poseLandmark.z,
+          confidence: poseLandmark.confidence,
+        );
+      }
+    }
+    
+    return PoseFrame(
+      landmarks: landmarks,
+      timestamp: pose.timestamp,
+    );
+  }
+  
+  LandmarkId? _mapLandmarkType(app.LandmarkType type) {
+    // Map app's LandmarkType to counter's LandmarkId
+    const mapping = {
+      app.LandmarkType.nose: LandmarkId.nose,
+      app.LandmarkType.leftShoulder: LandmarkId.leftShoulder,
+      app.LandmarkType.rightShoulder: LandmarkId.rightShoulder,
+      // ... etc
+    };
+    return mapping[type];
+  }
+}
 ```
 
-**Pros:**
-- ✅ Native integration with FitnessPipe (Flutter/Dart)
-- ✅ No bridging overhead
-- ✅ Single language codebase
-- ✅ Easy to test
-- ✅ Works on all Flutter platforms
-
-**Cons:**
-- ⚠️ Can't reuse in non-Dart projects (Swift-only iOS, Kotlin-only Android)
-
 ---
 
-### Option B: Platform-Native (Swift/Kotlin)
-
-Implement counter twice:
-- `ios/RepCounter.swift`
-- `android/RepCounter.kt`
-
-**Pros:**
-- ✅ Could integrate with native-only apps
-- ✅ No Dart runtime needed
-
-**Cons:**
-- ❌ Duplicate logic, maintenance burden
-- ❌ Inconsistent behavior risk
-- ❌ Doesn't make sense for a Flutter app
-
----
-
-### Option C: Shared Native Core (C++/Rust via FFI)
-
-```
-fitness-counter-core/     ← C++ or Rust library
-├── src/
-│   └── rep_counter.cpp
-└── bindings/
-    ├── dart/            ← FFI bindings for Flutter
-    ├── swift/           ← Swift wrapper
-    └── kotlin/          ← Kotlin/JNI wrapper
-```
-
-**Pros:**
-- ✅ Single implementation, multiple platforms
-- ✅ Maximum performance
-- ✅ Could be used outside Flutter ecosystem
-
-**Cons:**
-- ❌ Much more complex to build and maintain
-- ❌ FFI overhead for simple logic
-- ❌ Overkill for angle calculations and state machines
-
----
-
-### My Recommendation: **Pure Dart Package**
-
-Given that:
-1. FitnessPipe is a Flutter app
-2. The counter logic is mostly math (angles) and state machines
-3. No heavy computation that needs native performance
-4. You want fast iteration
-
-**A pure Dart package is the pragmatic choice.**
-
-If you later want to reuse in a non-Flutter context, the logic is simple enough to port.
-
----
-
-## 10. Proposed Package Structure
+## 5. Package Structure
 
 ```
 packages/fitness_counter/
@@ -591,21 +220,20 @@ packages/fitness_counter/
 │   ├── fitness_counter.dart          ← Public API exports
 │   └── src/
 │       ├── models/
-│       │   ├── landmark.dart         ← Input: Landmark, PoseFrame
-│       │   ├── landmark_id.dart      ← Enum of landmark identifiers
-│       │   └── counter_event.dart    ← Output: RepCompleted, etc.
-│       ├── exercises/
-│       │   ├── exercise_definition.dart
-│       │   ├── squat.dart
-│       │   └── pushup.dart
+│       │   ├── landmark.dart         ← Landmark, LandmarkId
+│       │   ├── pose_frame.dart       ← PoseFrame
+│       │   └── counter_event.dart    ← RepEvent, RepCompleted, etc.
 │       ├── core/
-│       │   ├── rep_counter.dart      ← Main API entry point
-│       │   ├── state_machine.dart    ← Rep detection FSM
-│       │   └── angle_calculator.dart ← Geometric utilities
-│       └── utils/
-│           └── smoothing.dart        ← Signal smoothing
+│       │   ├── exercise_counter.dart ← Abstract base class
+│       │   ├── angle_calculator.dart ← Geometric utilities
+│       │   ├── state_machine.dart    ← Generic rep detection FSM
+│       │   └── smoothing.dart        ← Signal smoothing (EMA)
+│       └── exercises/
+│           ├── lateral_raise.dart    ← LateralRaiseCounter
+│           ├── squat.dart            ← SquatCounter (future)
+│           └── pushup.dart           ← PushupCounter (future)
 ├── test/
-│   ├── rep_counter_test.dart
+│   ├── lateral_raise_test.dart
 │   ├── angle_calculator_test.dart
 │   └── fixtures/
 │       └── sample_poses.dart         ← Test data
@@ -616,36 +244,375 @@ packages/fitness_counter/
 
 ---
 
-## 11. Updated Questions
+## 6. Input/Output Contract
 
-Based on your input, here are refined questions:
+### Input: PoseFrame
 
-### Q1: Repository Strategy
-Do you prefer:
-- **A)** Separate package in same repo (`packages/fitness_counter/`)
-- **B)** Completely separate repository (e.g., `jinzishuai/fitness-counter`)
+```dart
+/// A single point in normalized 3D space
+class Landmark {
+  final double x;          // 0.0 - 1.0 normalized
+  final double y;          // 0.0 - 1.0 normalized
+  final double z;          // Relative depth
+  final double confidence; // 0.0 - 1.0
+  
+  bool get isVisible => confidence > 0.5;
+}
 
-### Q2: Landmark Set
-Which landmarks should the counter require as input? (I suggest a minimal set of ~12)
+/// A frame of pose data
+class PoseFrame {
+  final Map<LandmarkId, Landmark> landmarks;
+  final DateTime timestamp;
+  
+  /// Check if all required landmarks are present and visible
+  bool hasLandmarks(Set<LandmarkId> required) {
+    return required.every((id) => 
+      landmarks[id]?.isVisible ?? false
+    );
+  }
+}
+```
 
-| Landmark | Needed For |
-|----------|------------|
-| Shoulders | Push-up, plank alignment |
-| Elbows | Push-up depth |
-| Wrists | Push-up, jumping jack |
-| Hips | Squat, lunge, plank |
-| Knees | Squat, lunge |
-| Ankles | Squat, jumping jack |
+### Output: RepEvent
 
-### Q3: Output Events
-What information do you want when a rep completes?
-- Just count?
-- Rep duration?
-- Form quality score?
-- Phase breakdown (time in up/down position)?
+```dart
+/// Events emitted by the counter
+sealed class RepEvent {}
 
-### Q4: Exercise Definitions
-Should exercise definitions be:
-- **A)** Built into the package (squat, pushup, etc.)
-- **B)** Configurable by the app (define your own exercises)
-- **C)** Both (built-in defaults + custom support)
+class ExerciseStarted extends RepEvent {}
+
+class RepCompleted extends RepEvent {
+  final int totalReps;
+  final Duration repDuration;
+  final double peakAngle;
+}
+
+class PhaseChanged extends RepEvent {
+  final ExercisePhase phase;
+  final double currentAngle;
+}
+```
+
+---
+
+## 7. Time Series & Motion Buffer
+
+Real-world pose data is noisy and arrives as a stream of frames. We need temporal analysis to:
+1. **Smooth noisy signals** — Filter out jitter
+2. **Track motion direction** — Is the angle increasing or decreasing?
+3. **Calculate velocity** — How fast is the movement?
+4. **Validate rep timing** — Reject impossibly fast/slow reps
+5. **Detect momentum** — Is the user swinging or controlling the weight?
+
+### 7.1 Motion Buffer (Sliding Window)
+
+Keep track of the last N frames to analyze motion over time:
+
+```dart
+class MotionBuffer {
+  final int maxSize;
+  final Queue<FrameSnapshot> _buffer = Queue();
+  
+  MotionBuffer({this.maxSize = 30}); // ~1 second at 30fps
+  
+  void addFrame(PoseFrame frame, double primaryAngle) {
+    _buffer.add(FrameSnapshot(
+      timestamp: frame.timestamp,
+      angle: primaryAngle,
+    ));
+    
+    // Keep buffer size bounded
+    while (_buffer.length > maxSize) {
+      _buffer.removeFirst();
+    }
+  }
+  
+  /// Get frames from the last N milliseconds
+  List<FrameSnapshot> getWindow(Duration duration) {
+    final cutoff = DateTime.now().subtract(duration);
+    return _buffer.where((f) => f.timestamp.isAfter(cutoff)).toList();
+  }
+  
+  /// Clear the buffer (on exercise reset)
+  void clear() => _buffer.clear();
+}
+
+class FrameSnapshot {
+  final DateTime timestamp;
+  final double angle;
+  
+  const FrameSnapshot({
+    required this.timestamp,
+    required this.angle,
+  });
+}
+```
+
+### 7.2 Velocity Calculation
+
+Use the motion buffer to calculate angular velocity:
+
+```dart
+class VelocityCalculator {
+  /// Calculate velocity using the last few frames
+  /// Returns degrees per second (positive = increasing, negative = decreasing)
+  double? calculateVelocity(MotionBuffer buffer, {int frameWindow = 5}) {
+    final frames = buffer.getWindow(Duration(milliseconds: 200));
+    if (frames.length < 2) return null;
+    
+    // Use first and last of the window
+    final first = frames.first;
+    final last = frames.last;
+    
+    final deltaAngle = last.angle - first.angle;
+    final deltaTime = last.timestamp.difference(first.timestamp).inMilliseconds / 1000.0;
+    
+    if (deltaTime <= 0) return null;
+    return deltaAngle / deltaTime;  // degrees/second
+  }
+  
+  /// Moving direction based on recent velocity
+  MovementDirection getDirection(double velocity) {
+    if (velocity > 10) return MovementDirection.rising;
+    if (velocity < -10) return MovementDirection.falling;
+    return MovementDirection.stationary;
+  }
+}
+
+enum MovementDirection { rising, falling, stationary }
+```
+
+### 7.3 Signal Smoothing (EMA)
+
+Apply Exponential Moving Average to reduce noise:
+
+```dart
+class AngleSmoother {
+  double _smoothedAngle = 0;
+  final double alpha;  // 0.0-1.0, higher = more responsive, more noise
+  
+  AngleSmoother({this.alpha = 0.3});
+  
+  double smooth(double rawAngle) {
+    _smoothedAngle = alpha * rawAngle + (1 - alpha) * _smoothedAngle;
+    return _smoothedAngle;
+  }
+  
+  void reset() => _smoothedAngle = 0;
+}
+```
+
+### 7.4 Temporal Validation
+
+Use timing to validate reps and transitions:
+
+```dart
+class TemporalValidator {
+  DateTime? _repStartTime;
+  DateTime? _lastStateChange;
+  
+  // Timing thresholds
+  static const Duration minRepDuration = Duration(milliseconds: 500);
+  static const Duration maxRepDuration = Duration(seconds: 5);
+  static const Duration debounceTime = Duration(milliseconds: 100);
+  static const Duration readyHoldTime = Duration(milliseconds: 500);
+  
+  /// Call when rep cycle starts (entering Rising phase)
+  void onRepStart() {
+    _repStartTime = DateTime.now();
+  }
+  
+  /// Validate if a rep completion should be counted
+  ValidationResult validateRepCompletion() {
+    if (_repStartTime == null) {
+      return ValidationResult.rejected('No rep in progress');
+    }
+    
+    final duration = DateTime.now().difference(_repStartTime!);
+    
+    if (duration < minRepDuration) {
+      return ValidationResult.rejected('Too fast (${duration.inMilliseconds}ms)');
+    }
+    
+    if (duration > maxRepDuration) {
+      return ValidationResult.rejected('Timed out');
+    }
+    
+    return ValidationResult.accepted(duration);
+  }
+  
+  /// Debounce state transitions to prevent jitter
+  bool canChangeState() {
+    if (_lastStateChange == null) return true;
+    return DateTime.now().difference(_lastStateChange!) > debounceTime;
+  }
+  
+  void onStateChange() {
+    _lastStateChange = DateTime.now();
+  }
+  
+  /// Check if user has held a position long enough
+  bool hasHeldPosition(DateTime? holdStart, Duration required) {
+    if (holdStart == null) return false;
+    return DateTime.now().difference(holdStart) >= required;
+  }
+}
+
+class ValidationResult {
+  final bool isValid;
+  final String? reason;
+  final Duration? duration;
+  
+  const ValidationResult.accepted(this.duration) 
+      : isValid = true, reason = null;
+  const ValidationResult.rejected(this.reason) 
+      : isValid = false, duration = null;
+}
+```
+
+### 7.5 How Timing Affects Counting
+
+The state machine uses temporal information at key decision points:
+
+```mermaid
+sequenceDiagram
+    participant Pose as Pose Stream
+    participant Buffer as Motion Buffer
+    participant SM as State Machine
+    participant Validator as Temporal Validator
+    participant Event as Rep Event
+
+    Pose->>Buffer: Add frame (angle, timestamp)
+    Buffer->>SM: Smoothed angle + velocity
+    
+    Note over SM: State: Waiting
+    SM->>Validator: Has held down position for 0.5s?
+    Validator-->>SM: Yes
+    SM->>SM: Transition to Down
+    SM->>Validator: onStateChange()
+    
+    Note over SM: State: Down → Rising
+    SM->>Validator: canChangeState()? (debounce)
+    Validator-->>SM: Yes
+    SM->>Validator: onRepStart()
+    SM->>SM: Transition to Rising
+    
+    Note over SM: State: Rising → Up → Falling → Down
+    SM->>Validator: validateRepCompletion()
+    Validator-->>SM: Accepted (1.2s)
+    SM->>Event: RepCompleted(duration: 1.2s)
+```
+
+### 7.6 Velocity-Based Decisions (Advanced)
+
+Use velocity to make smarter counting decisions:
+
+```dart
+class SmartStateMachine {
+  final MotionBuffer _buffer;
+  final VelocityCalculator _velocityCalc;
+  
+  RepEvent? processFrame(PoseFrame frame, double angle) {
+    _buffer.addFrame(frame, angle);
+    
+    final velocity = _velocityCalc.calculateVelocity(_buffer);
+    final direction = _velocityCalc.getDirection(velocity ?? 0);
+    
+    // Example: Only count transition to Rising if actually moving up
+    if (_phase == Phase.down && angle > risingThreshold) {
+      if (direction == MovementDirection.rising) {
+        // Genuine upward motion - start counting
+        _phase = Phase.rising;
+      } else {
+        // Angle crossed threshold but not actively moving up
+        // Might be noise or partial movement - wait
+      }
+    }
+    
+    // Example: Detect swinging (too fast)
+    if (velocity != null && velocity.abs() > 300) {
+      // User is swinging the weight, not controlling it
+      // Could flag for form feedback (future feature)
+    }
+    
+    return null;
+  }
+}
+```
+
+### 7.7 Summary: Time-Based Parameters
+
+| Parameter | Default | Purpose |
+|-----------|---------|---------|
+| `bufferSize` | 30 frames | ~1 second of history |
+| `smoothingAlpha` | 0.3 | EMA noise filter strength |
+| `minRepDuration` | 500ms | Reject impossibly fast reps |
+| `maxRepDuration` | 5s | Timeout incomplete reps |
+| `debounceTime` | 100ms | Prevent state jitter |
+| `readyHoldTime` | 500ms | Time to hold start position |
+| `velocityWindow` | 200ms | Window for velocity calculation |
+| `maxVelocity` | 300°/s | Flag momentum-based swinging |
+
+---
+
+## 8. Language Choice: Pure Dart ✅
+
+Given that:
+1. FitnessPipe is a Flutter app
+2. The counter logic is mostly math (angles) and state machines
+3. No heavy computation requiring native performance
+4. Want fast iteration
+
+**A pure Dart package is the pragmatic choice.**
+
+---
+
+## 9. Code Organization: Separate Package in Same Repo ✅
+
+```
+fitnessPipe/
+├── packages/
+│   └── fitness_counter/          ← Standalone Dart package
+│       ├── lib/
+│       ├── test/
+│       └── pubspec.yaml
+├── lib/                          ← Main app consumes the package
+└── pubspec.yaml                  ← depends on path: packages/fitness_counter
+```
+
+**Benefits:**
+- ✅ Clear API boundary enforced by package structure
+- ✅ Can publish to pub.dev later
+- ✅ Easy to test in isolation
+- ✅ Single repo, simpler CI
+
+---
+
+## 10. How This Answers the Original Questions
+
+| Question | Answer |
+|----------|--------|
+| **Consume Pose directly?** | No — counter defines its own `PoseFrame` type |
+| **12 landmarks enough?** | Package defines all 33, each exercise picks what it needs |
+| **Provider differences?** | Adapter in main app handles conversion |
+| **Counter input granularity?** | Raw landmarks; counter calculates angles internally |
+| **Output events?** | `RepCompleted` with count, duration, peak angle |
+| **Exercise definitions** | Per-exercise counter classes, each with its own requirements |
+
+---
+
+## 11. Next Steps
+
+1. [x] Finalize architecture decisions (this document)
+2. [ ] Create `packages/fitness_counter/` package structure
+3. [ ] Implement `Landmark`, `PoseFrame`, `LandmarkId` models
+4. [ ] Implement `LateralRaiseCounter` per the lateral raise design doc
+5. [ ] Create adapter in main app to convert `Pose` → `PoseFrame`
+6. [ ] Add unit tests for the counter
+7. [ ] Integrate with the app UI
+
+---
+
+## Related Documents
+
+- [Lateral Raise Counter Design](./lateral-raise-counter-design.md) — Detailed algorithm for the MVP exercise
