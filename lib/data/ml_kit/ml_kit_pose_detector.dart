@@ -106,17 +106,23 @@ class MLKitPoseDetector implements PoseDetector {
   }
 
   /// Convert ML Kit pose to our domain model.
-  Pose _convertPose(mlkit.Pose mlkitPose, Size imageSize, InputImageRotation rotation) {
+  Pose _convertPose(
+    mlkit.Pose mlkitPose,
+    Size imageSize,
+    InputImageRotation rotation,
+  ) {
     final landmarks = <PoseLandmark>[];
     double totalConfidence = 0;
 
     // When rotated 90 or 270 degrees, ML Kit returns coordinates in rotated space
     // So we need to normalize by the rotated dimensions
-    final normalizeWidth = (rotation == InputImageRotation.rotation90deg ||
+    final normalizeWidth =
+        (rotation == InputImageRotation.rotation90deg ||
             rotation == InputImageRotation.rotation270deg)
         ? imageSize.height
         : imageSize.width;
-    final normalizeHeight = (rotation == InputImageRotation.rotation90deg ||
+    final normalizeHeight =
+        (rotation == InputImageRotation.rotation90deg ||
             rotation == InputImageRotation.rotation270deg)
         ? imageSize.width
         : imageSize.height;
@@ -126,19 +132,22 @@ class MLKitPoseDetector implements PoseDetector {
       final landmarkType = _convertLandmarkType(entry.key);
 
       if (landmarkType != null) {
-        landmarks.add(PoseLandmark(
-          type: landmarkType,
-          x: mlkitLandmark.x / normalizeWidth,
-          y: mlkitLandmark.y / normalizeHeight,
-          z: mlkitLandmark.z,
-          confidence: mlkitLandmark.likelihood,
-        ));
+        landmarks.add(
+          PoseLandmark(
+            type: landmarkType,
+            x: mlkitLandmark.x / normalizeWidth,
+            y: mlkitLandmark.y / normalizeHeight,
+            z: mlkitLandmark.z,
+            confidence: mlkitLandmark.likelihood,
+          ),
+        );
         totalConfidence += mlkitLandmark.likelihood;
       }
     }
 
-    final avgConfidence =
-        landmarks.isEmpty ? 0.0 : totalConfidence / landmarks.length;
+    final avgConfidence = landmarks.isEmpty
+        ? 0.0
+        : totalConfidence / landmarks.length;
 
     return Pose(
       landmarks: landmarks,
