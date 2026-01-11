@@ -12,7 +12,7 @@ class SkeletonPainter extends CustomPainter {
 
   /// Color for the skeleton lines and points.
   final Color skeletonColor;
-  
+
   /// Size of the landmark points.
   final double pointRadius;
 
@@ -158,7 +158,8 @@ class SkeletonPainter extends CustomPainter {
 
     double x, y;
 
-    if (!inputsAreRotated && (rotationDegrees == 90 || rotationDegrees == 270)) {
+    if (!inputsAreRotated &&
+        (rotationDegrees == 90 || rotationDegrees == 270)) {
       // Case: iOS (Coordinates are NOT rotated by ML Kit, but device is rotated)
       // We need to swap X/Y coordinates manually to match orientation
       // Note: We use the effective dimensions (swapped) for scaling

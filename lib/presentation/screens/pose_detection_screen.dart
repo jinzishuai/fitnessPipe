@@ -30,7 +30,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   String? _errorMessage;
   Size? _cameraImageSize;
   int _sensorOrientation = 0;
-  int _deviceRotation = 0; // 0=portrait, 90=landscape left, 180=portrait upside down, 270=landscape right
+  int _deviceRotation =
+      0; // 0=portrait, 90=landscape left, 180=portrait upside down, 270=landscape right
 
   // Platform-specific camera handling
   final bool _isMacOS = Platform.isMacOS;
@@ -231,10 +232,10 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
 
     final camera = _mobileCameras[_selectedMobileCameraIndex];
     final sensorOrientation = camera.sensorOrientation;
-    
+
     // Store sensor orientation for skeleton painter
     _sensorOrientation = sensorOrientation;
-    
+
     // On iOS, we force 0 degrees to rely on legacy manual rotation handling in Painter
     // This matches the behavior that was working correctly before the cross-platform unification
     if (Platform.isIOS) {
@@ -245,12 +246,14 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     // The rotation tells ML Kit how to interpret the image coordinates.
     // Formula: rotation = (sensorOrientation - deviceRotation + 360) % 360
     // This accounts for the difference between sensor orientation and current device orientation.
-    // 
+    //
     // Special case: For portrait upside-down (180°), treat it like normal portrait (0°)
     // so that both preview and skeleton appear upside-down but aligned with each other.
     // This is acceptable since: 1) this orientation is rarely used, 2) the skeleton still
     // aligns with the person in the preview.
-    final effectiveDeviceRotation = (_deviceRotation == 180) ? 0 : _deviceRotation;
+    final effectiveDeviceRotation = (_deviceRotation == 180)
+        ? 0
+        : _deviceRotation;
     final rotation = (sensorOrientation - effectiveDeviceRotation + 360) % 360;
 
     switch (rotation) {
@@ -265,16 +268,6 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
       default:
         return InputImageRotation.rotation0deg;
     }
-  }
-
-  bool get _isFrontCamera {
-    if (_isMacOS) {
-      // macOS cameras are typically front-facing
-      return true;
-    }
-    if (_mobileCameras.isEmpty) return false;
-    return _mobileCameras[_selectedMobileCameraIndex].lensDirection ==
-        mobile_camera.CameraLensDirection.front;
   }
 
   int get _cameraCount {
@@ -453,26 +446,28 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     }
 
     final previewSize = _mobileCameraController!.value.previewSize!;
-    
+
     // Camera sensor outputs dimensions (may be landscape: w > h)
     // Calculate the portrait aspect ratio (< 1) for portrait mode
     final double portraitAspectRatio = (previewSize.height < previewSize.width)
         ? previewSize.height / previewSize.width
         : previewSize.width / previewSize.height;
-    
+
     // Landscape aspect ratio is the inverse (> 1)
     final double landscapeAspectRatio = 1 / portraitAspectRatio;
 
     // Platform-specific orientation handling:
     // - iOS: Use simple LayoutBuilder (existing working logic)
     // - Android: Use NativeDeviceOrientationReader for precise landscape-left vs landscape-right detection
-    
+
     if (Platform.isIOS) {
       // iOS: Use LayoutBuilder with existing rotation logic (already working)
       return LayoutBuilder(
         builder: (context, constraints) {
           final isLandscape = constraints.maxWidth > constraints.maxHeight;
-          final double aspectRatio = isLandscape ? landscapeAspectRatio : portraitAspectRatio;
+          final double aspectRatio = isLandscape
+              ? landscapeAspectRatio
+              : portraitAspectRatio;
 
           return Center(
             child: AspectRatio(
@@ -497,7 +492,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                         ),
                       ),
                     ),
-                    
+
                   // Pose confidence indicator
                   Positioned(
                     bottom: 16,
@@ -545,14 +540,16 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         },
       );
     }
-    
+
     // Android: Use NativeDeviceOrientationReader for precise device orientation
     // This is essential for correctly handling landscape-left vs landscape-right
     return NativeDeviceOrientationReader(
       useSensor: true,
       builder: (context) {
-        final nativeOrientation = NativeDeviceOrientationReader.orientation(context);
-        
+        final nativeOrientation = NativeDeviceOrientationReader.orientation(
+          context,
+        );
+
         // Convert native orientation to rotation degrees
         int newDeviceRotation;
         bool isLandscape;
@@ -577,8 +574,10 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
             newDeviceRotation = 0;
             isLandscape = false;
         }
-        
-        final double aspectRatio = isLandscape ? landscapeAspectRatio : portraitAspectRatio;
+
+        final double aspectRatio = isLandscape
+            ? landscapeAspectRatio
+            : portraitAspectRatio;
 
         // Update device rotation state for image processing
         // Use addPostFrameCallback to avoid setState during build
@@ -595,7 +594,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         // because the Android camera plugin doesn't handle this orientation correctly.
         // We apply a 180° rotation to compensate.
         final needsRotation = newDeviceRotation == 270;
-        
+
         Widget previewWidget = Center(
           child: AspectRatio(
             aspectRatio: aspectRatio,
@@ -606,11 +605,13 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                 Builder(
                   builder: (context) {
                     try {
-                      if (_mobileCameraController == null || 
+                      if (_mobileCameraController == null ||
                           !_mobileCameraController!.value.isInitialized) {
                         return const SizedBox.shrink();
                       }
-                      return mobile_camera.CameraPreview(_mobileCameraController!);
+                      return mobile_camera.CameraPreview(
+                        _mobileCameraController!,
+                      );
                     } catch (e) {
                       // Camera might be disposed during orientation change
                       return const SizedBox.shrink();
@@ -626,14 +627,22 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                       painter: SkeletonPainter(
                         pose: _currentPose,
                         // Treat 180° (portrait upside-down) as 0° so skeleton aligns with preview
-                        rotationDegrees: (_sensorOrientation - (newDeviceRotation == 180 ? 0 : newDeviceRotation) + 360) % 360,
+                        rotationDegrees:
+                            (_sensorOrientation -
+                                (newDeviceRotation == 180
+                                    ? 0
+                                    : newDeviceRotation) +
+                                360) %
+                            360,
                         imageSize: _cameraImageSize,
-                        inputsAreRotated: _getMobileImageRotation() != InputImageRotation.rotation0deg,
+                        inputsAreRotated:
+                            _getMobileImageRotation() !=
+                            InputImageRotation.rotation0deg,
                         skeletonColor: Colors.greenAccent,
                       ),
                     ),
                   ),
-                    
+
                 // Pose confidence indicator
                 Positioned(
                   bottom: 16,
@@ -678,7 +687,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
             ),
           ),
         );
-        
+
         // Apply 180° rotation for landscape-right on Android
         if (needsRotation) {
           return Transform.rotate(
