@@ -46,3 +46,5 @@ app.*.map.json
 
 # Kotlin cache
 android/.kotlin/
+arbigent-result
+arbigent-cache

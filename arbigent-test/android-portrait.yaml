@@ -1,0 +1,9 @@
+scenarios:
+  - id: "fitness_pipe_portrait_test"
+    goal: "Open the fitness_pipe app and verify that pose tracking is working correctly. The goal is reached when you can see a skeletal/pose estimation overlay tracking the human subject's joints in portrait mode."
+    initializationMethods:
+      - type: "LaunchApp"
+        packageName: "com.fitnesspipe.fitness_pipe"
+    imageAssertions:
+      - assertionPrompt: "The app is in portrait mode"
+      - assertionPrompt: "A skeletal/pose estimation overlay is visible tracking the person's joints"
