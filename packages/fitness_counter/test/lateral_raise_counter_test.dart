@@ -33,9 +33,9 @@ void main() {
 
     test('skips frames with incomplete landmarks', () {
       final incompletePose = createIncompletePose();
-      
+
       final event = counter.processPose(incompletePose);
-      
+
       expect(event, isNull);
     });
 
@@ -44,15 +44,13 @@ void main() {
       final fastCounter = LateralRaiseCounter(
         readyHoldTime: const Duration(milliseconds: 200),
       );
-      
+
       // Process frames for 300ms (readyHoldTime is 200ms)
       for (int i = 0; i < 4; i++) {
-        fastCounter.processPose(createArmsDownPose(
-          timestamp: DateTime.now(),
-        ));
+        fastCounter.processPose(createArmsDownPose(timestamp: DateTime.now()));
         if (i < 3) await Future.delayed(const Duration(milliseconds: 100));
       }
-      
+
       // Should transition to down
       expect(fastCounter.state.phase, equals(LateralRaisePhase.down));
     });
@@ -64,30 +62,32 @@ void main() {
         minRepDuration: const Duration(milliseconds: 100),
         debounceTime: const Duration(milliseconds: 20),
       );
-      
+
       // Get to down state
       for (int i = 0; i < 2; i++) {
         fastCounter.processPose(createArmsDownPose(timestamp: DateTime.now()));
         await Future.delayed(const Duration(milliseconds: 60));
       }
       expect(fastCounter.state.phase, equals(LateralRaisePhase.down));
-      
+
       // Complete rep: down → rising → up → falling → down
       await Future.delayed(const Duration(milliseconds: 50));
       fastCounter.processPose(createArmsMidRaisePose());
       expect(fastCounter.state.phase, equals(LateralRaisePhase.rising));
-      
+
       await Future.delayed(const Duration(milliseconds: 50));
       fastCounter.processPose(createArmsUpPose());
       expect(fastCounter.state.phase, equals(LateralRaisePhase.up));
-      
+
       await Future.delayed(const Duration(milliseconds: 50));
       fastCounter.processPose(createArmsMidRaisePose());
       expect(fastCounter.state.phase, equals(LateralRaisePhase.falling));
-      
-      await Future.delayed(const Duration(milliseconds: 150)); // Ensure min duration
+
+      await Future.delayed(
+        const Duration(milliseconds: 150),
+      ); // Ensure min duration
       final event = fastCounter.processPose(createArmsDownPose());
-      
+
       expect(event, isA<RepCompleted>());
       expect((event as RepCompleted).totalReps, equals(1));
       expect(fastCounter.state.phase, equals(LateralRaisePhase.down));
@@ -98,20 +98,20 @@ void main() {
       final fastCounter = LateralRaiseCounter(
         readyHoldTime: const Duration(milliseconds: 100),
       );
-      
+
       // Get to down state
       for (int i = 0; i < 2; i++) {
         fastCounter.processPose(createArmsDownPose(timestamp: DateTime.now()));
         await Future.delayed(const Duration(milliseconds: 60));
       }
-      
+
       // Start rising
       fastCounter.processPose(createArmsMidRaisePose());
       expect(fastCounter.state.phase, equals(LateralRaisePhase.rising));
-      
+
       // Go back down without reaching top
       fastCounter.processPose(createArmsDownPose());
-      
+
       // Should return to down phase without counting rep
       expect(fastCounter.state.phase, equals(LateralRaisePhase.down));
       expect(fastCounter.state.repCount, equals(0));
@@ -122,7 +122,7 @@ void main() {
         readyHoldTime: const Duration(milliseconds: 100),
         minRepDuration: const Duration(milliseconds: 100),
       );
-      
+
       // Complete a rep
       for (int i = 0; i < 2; i++) {
         fastCounter.processPose(createArmsDownPose(timestamp: DateTime.now()));
@@ -136,12 +136,12 @@ void main() {
       fastCounter.processPose(createArmsMidRaisePose());
       await Future.delayed(const Duration(milliseconds: 150));
       fastCounter.processPose(createArmsDownPose());
-      
+
       expect(fastCounter.state.repCount, equals(1));
-      
+
       // Reset
       fastCounter.reset();
-      
+
       expect(fastCounter.state.repCount, equals(0));
       expect(fastCounter.state.phase, equals(LateralRaisePhase.waiting));
     });
@@ -151,7 +151,7 @@ void main() {
         readyHoldTime: const Duration(milliseconds: 100),
         minRepDuration: const Duration(milliseconds: 100),
       );
-      
+
       // Complete a rep
       for (int i = 0; i < 2; i++) {
         fastCounter.processPose(createArmsDownPose(timestamp: DateTime.now()));
@@ -165,7 +165,7 @@ void main() {
       fastCounter.processPose(createArmsMidRaisePose());
       await Future.delayed(const Duration(milliseconds: 150));
       final event = fastCounter.processPose(createArmsDownPose());
-      
+
       expect(event, isA<RepCompleted>());
       final repEvent = event as RepCompleted;
       expect(repEvent.peakAngle, greaterThan(60)); // Should be high angle
@@ -174,17 +174,17 @@ void main() {
     test('smoothing reduces jitter', () {
       final downPose1 = createArmsDownPose();
       final downPose2 = createArmsMidRaisePose();
-     
+
       // Process alternating poses (simulating jitter)
       counter.processPose(downPose1);
       final angle1 = counter.state.smoothedAngle;
-      
+
       counter.processPose(downPose2);
       final angle2 = counter.state.smoothedAngle;
-      
+
       counter.processPose(downPose1);
       final angle3 = counter.state.smoothedAngle;
-      
+
       // Smoothed angles should not jump as much as raw angles would
       // The third smoothed angle should be between first and second
       expect(angle3, lessThan(angle2));

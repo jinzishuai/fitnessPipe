@@ -231,7 +231,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         setState(() {
           _cameraImageSize = imageSize;
           _currentPose = poses.isNotEmpty ? poses.first : null;
-         
+
           // Process pose through counter if exercise selected
           if (_currentPose != null && _lateralRaiseCounter != null) {
             _processPoseWithCounter(_currentPose!);

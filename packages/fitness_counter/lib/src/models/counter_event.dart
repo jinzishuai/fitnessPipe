@@ -54,10 +54,7 @@ class PhaseChanged extends RepEvent {
   /// Current angle at the time of phase change.
   final double currentAngle;
 
-  const PhaseChanged({
-    required this.phaseName,
-    required this.currentAngle,
-  });
+  const PhaseChanged({required this.phaseName, required this.currentAngle});
 
   @override
   String toString() =>

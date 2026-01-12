@@ -57,25 +57,25 @@ class LateralRaiseCounter implements ExerciseCounter {
     Duration? minRepDuration,
     Duration? maxRepDuration,
     Duration? debounceTime,
-  })  : bottomThreshold = bottomThreshold ?? 20.0,
-        topThreshold = topThreshold ?? 80.0,
-        risingThreshold = (bottomThreshold ?? 20.0) + 5.0, // Hysteresis
-        fallingThreshold = (topThreshold ?? 80.0) - 5.0, // Hysteresis
-        readyHoldTime = readyHoldTime ?? const Duration(milliseconds: 500),
-        minRepDuration = minRepDuration ?? const Duration(milliseconds: 500),
-        maxRepDuration = maxRepDuration ?? const Duration(seconds: 5),
-        debounceTime = debounceTime ?? const Duration(milliseconds: 100),
-        _smoother = AngleSmoother(alpha: smoothingAlpha);
+  }) : bottomThreshold = bottomThreshold ?? 20.0,
+       topThreshold = topThreshold ?? 80.0,
+       risingThreshold = (bottomThreshold ?? 20.0) + 5.0, // Hysteresis
+       fallingThreshold = (topThreshold ?? 80.0) - 5.0, // Hysteresis
+       readyHoldTime = readyHoldTime ?? const Duration(milliseconds: 500),
+       minRepDuration = minRepDuration ?? const Duration(milliseconds: 500),
+       maxRepDuration = maxRepDuration ?? const Duration(seconds: 5),
+       debounceTime = debounceTime ?? const Duration(milliseconds: 100),
+       _smoother = AngleSmoother(alpha: smoothingAlpha);
 
   @override
   Set<LandmarkId> get requiredLandmarks => {
-        LandmarkId.leftShoulder,
-        LandmarkId.rightShoulder,
-        LandmarkId.leftElbow,
-        LandmarkId.rightElbow,
-        LandmarkId.leftHip,
-        LandmarkId.rightHip,
-      };
+    LandmarkId.leftShoulder,
+    LandmarkId.rightShoulder,
+    LandmarkId.leftElbow,
+    LandmarkId.rightElbow,
+    LandmarkId.leftHip,
+    LandmarkId.rightHip,
+  };
 
   @override
   LateralRaiseState get state => _state;
@@ -220,14 +220,22 @@ class LateralRaiseCounter implements ExerciseCounter {
         // Too fast - likely noise, don't count
         _repStartTime = null;
         _peakAngle = 0.0;
-        return _changePhase(LateralRaisePhase.down, _state.smoothedAngle, timestamp);
+        return _changePhase(
+          LateralRaisePhase.down,
+          _state.smoothedAngle,
+          timestamp,
+        );
       }
 
       if (duration > maxRepDuration) {
         // Timed out - reset
         _repStartTime = null;
         _peakAngle = 0.0;
-        return _changePhase(LateralRaisePhase.waiting, _state.smoothedAngle, timestamp);
+        return _changePhase(
+          LateralRaisePhase.waiting,
+          _state.smoothedAngle,
+          timestamp,
+        );
       }
 
       // Valid rep!
@@ -252,7 +260,11 @@ class LateralRaiseCounter implements ExerciseCounter {
     }
 
     // Shouldn't happen, but fail gracefully
-    return _changePhase(LateralRaisePhase.down, _state.smoothedAngle, timestamp);
+    return _changePhase(
+      LateralRaisePhase.down,
+      _state.smoothedAngle,
+      timestamp,
+    );
   }
 
   RepEvent _changePhase(
@@ -268,10 +280,7 @@ class LateralRaiseCounter implements ExerciseCounter {
       return const ExerciseStarted();
     }
 
-    return PhaseChanged(
-      phaseName: newPhase.name,
-      currentAngle: angle,
-    );
+    return PhaseChanged(phaseName: newPhase.name, currentAngle: angle);
   }
 
   bool _canChangeState(DateTime timestamp) {

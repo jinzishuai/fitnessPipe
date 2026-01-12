@@ -39,10 +39,10 @@ class LateralRaiseState {
 
   /// Initial state when counter is created.
   const LateralRaiseState.initial()
-      : repCount = 0,
-        phase = LateralRaisePhase.waiting,
-        currentAngle = 0.0,
-        smoothedAngle = 0.0;
+    : repCount = 0,
+      phase = LateralRaisePhase.waiting,
+      currentAngle = 0.0,
+      smoothedAngle = 0.0;
 
   /// Create a copy with updated fields.
   LateralRaiseState copyWith({

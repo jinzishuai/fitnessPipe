@@ -33,14 +33,10 @@ void main() {
 
     test('returns ~45 degrees for arms halfway raised', () {
       final shoulder = Landmark(x: 0.5, y: 0.3, confidence: 1.0);
-      
+
       // 45 degree angle: elbow is offset by same amount in x and y
       final offset = 0.1;
-      final elbow = Landmark(
-        x: 0.5 - offset, 
-        y: 0.3 + offset, 
-        confidence: 1.0,
-      );
+      final elbow = Landmark(x: 0.5 - offset, y: 0.3 + offset, confidence: 1.0);
       final hip = Landmark(x: 0.5, y: 0.7, confidence: 1.0);
 
       final angle = calculateShoulderAngle(
@@ -54,7 +50,11 @@ void main() {
 
     test('handles edge case of zero-length arm vector', () {
       final shoulder = Landmark(x: 0.5, y: 0.3, confidence: 1.0);
-      final elbow = Landmark(x: 0.5, y: 0.3, confidence: 1.0); // Same as shoulder
+      final elbow = Landmark(
+        x: 0.5,
+        y: 0.3,
+        confidence: 1.0,
+      ); // Same as shoulder
       final hip = Landmark(x: 0.5, y: 0.7, confidence: 1.0);
 
       final angle = calculateShoulderAngle(
@@ -107,7 +107,11 @@ void main() {
 
     test('returns left angle when only left arm visible', () {
       final leftShoulder = Landmark(x: 0.3, y: 0.3, confidence: 1.0);
-      final leftElbow = Landmark(x: 0.15, y: 0.32, confidence: 1.0); // Nearly horizontal
+      final leftElbow = Landmark(
+        x: 0.15,
+        y: 0.32,
+        confidence: 1.0,
+      ); // Nearly horizontal
       final leftHip = Landmark(x: 0.35, y: 0.7, confidence: 1.0);
 
       final average = calculateAverageShoulderAngle(
@@ -121,7 +125,11 @@ void main() {
 
     test('returns right angle when only right arm visible', () {
       final rightShoulder = Landmark(x: 0.7, y: 0.3, confidence: 1.0);
-      final rightElbow = Landmark(x: 0.85, y: 0.32, confidence: 1.0); // Nearly horizontal
+      final rightElbow = Landmark(
+        x: 0.85,
+        y: 0.32,
+        confidence: 1.0,
+      ); // Nearly horizontal
       final rightHip = Landmark(x: 0.65, y: 0.7, confidence: 1.0);
 
       final average = calculateAverageShoulderAngle(

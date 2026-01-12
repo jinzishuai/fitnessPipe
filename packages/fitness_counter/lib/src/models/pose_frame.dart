@@ -12,10 +12,7 @@ class PoseFrame {
   /// Timestamp when this pose was detected.
   final DateTime timestamp;
 
-  const PoseFrame({
-    required this.landmarks,
-    required this.timestamp,
-  });
+  const PoseFrame({required this.landmarks, required this.timestamp});
 
   /// Get a specific landmark by ID.
   ///

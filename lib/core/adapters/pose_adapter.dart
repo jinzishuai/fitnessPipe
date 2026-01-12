@@ -23,10 +23,7 @@ class PoseAdapter {
       }
     }
 
-    return counter.PoseFrame(
-      landmarks: landmarks,
-      timestamp: pose.timestamp,
-    );
+    return counter.PoseFrame(landmarks: landmarks, timestamp: pose.timestamp);
   }
 
   /// Map app's LandmarkType to counter's LandmarkId.
