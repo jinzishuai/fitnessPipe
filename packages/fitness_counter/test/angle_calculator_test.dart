@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:test/test.dart';
 import 'package:fitness_counter/fitness_counter.dart';
 

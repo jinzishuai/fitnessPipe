@@ -44,7 +44,6 @@ void main() {
       final fastCounter = LateralRaiseCounter(
         readyHoldTime: const Duration(milliseconds: 200),
       );
-      final downPose = createArmsDownPose();
       
       // Process frames for 300ms (readyHoldTime is 200ms)
       for (int i = 0; i < 4; i++) {
