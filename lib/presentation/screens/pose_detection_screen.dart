@@ -276,6 +276,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         _lateralRaiseCounter = LateralRaiseCounter(
           topThreshold: _topThreshold,
           bottomThreshold: _bottomThreshold,
+          readyHoldTime: const Duration(milliseconds: 300),
         );
         _repCount = 0;
         _currentPhase = LateralRaisePhase.waiting;
@@ -305,6 +306,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
           _lateralRaiseCounter = LateralRaiseCounter(
             topThreshold: _topThreshold,
             bottomThreshold: _bottomThreshold,
+            readyHoldTime: const Duration(milliseconds: 300),
           );
           _repCount = 0;
           _currentPhase = LateralRaisePhase.waiting;
