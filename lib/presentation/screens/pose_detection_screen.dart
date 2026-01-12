@@ -2,13 +2,19 @@ import 'dart:io';
 
 import 'package:camera/camera.dart' as mobile_camera;
 import 'package:camera_macos/camera_macos.dart';
+import 'package:fitness_counter/fitness_counter.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:native_device_orientation/native_device_orientation.dart';
 
+import '../../core/adapters/pose_adapter.dart';
 import '../../data/ml_kit/ml_kit_pose_detector.dart';
 import '../../domain/interfaces/pose_detector.dart';
 import '../../domain/models/pose.dart';
+import '../widgets/exercise_selector.dart';
+import '../widgets/rep_counter_overlay.dart';
 import '../widgets/skeleton_painter.dart';
+import '../widgets/threshold_settings_dialog.dart';
 
 /// Main screen for pose detection with camera preview and skeleton overlay.
 class PoseDetectionScreen extends StatefulWidget {
@@ -24,6 +30,18 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   late final PoseDetector _poseDetector;
   Pose? _currentPose;
   bool _isDetecting = false;
+
+  // Exercise counter
+  final _poseAdapter = PoseAdapter();
+  ExerciseType? _selectedExercise;
+  LateralRaiseCounter? _lateralRaiseCounter;
+  int _repCount = 0;
+  LateralRaisePhase _currentPhase = LateralRaisePhase.waiting;
+  double _currentAngle = 0.0;
+
+  // Threshold configuration
+  double _topThreshold = 50.0;
+  double _bottomThreshold = 20.0;
 
   // UI state
   bool _isLoading = true;
@@ -218,6 +236,11 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         setState(() {
           _cameraImageSize = imageSize;
           _currentPose = poses.isNotEmpty ? poses.first : null;
+
+          // Process pose through counter if exercise selected
+          if (_currentPose != null && _lateralRaiseCounter != null) {
+            _processPoseWithCounter(_currentPose!);
+          }
         });
       }
     } catch (e) {
@@ -225,6 +248,81 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     } finally {
       _isDetecting = false;
     }
+  }
+
+  void _processPoseWithCounter(Pose pose) {
+    final poseFrame = _poseAdapter.convert(pose);
+    final event = _lateralRaiseCounter!.processPose(poseFrame);
+
+    // Update UI state - MUST use setState to trigger rebuild
+    setState(() {
+      final state = _lateralRaiseCounter!.state;
+      _repCount = state.repCount;
+      _currentPhase = state.phase;
+      _currentAngle = state.smoothedAngle;
+    });
+
+    // Handle events
+    if (event is RepCompleted) {
+      // Provide haptic feedback on rep completion
+      HapticFeedback.mediumImpact();
+    }
+  }
+
+  void _onExerciseSelected(ExerciseType? type) {
+    setState(() {
+      _selectedExercise = type;
+      if (type == ExerciseType.lateralRaise) {
+        _lateralRaiseCounter = LateralRaiseCounter(
+          topThreshold: _topThreshold,
+          bottomThreshold: _bottomThreshold,
+          readyHoldTime: const Duration(milliseconds: 300),
+        );
+        _repCount = 0;
+        _currentPhase = LateralRaisePhase.waiting;
+        _currentAngle = 0.0;
+      } else {
+        _lateralRaiseCounter = null;
+      }
+    });
+  }
+
+  Future<void> _showThresholdSettings() async {
+    final result = await showDialog<Map<String, double>>(
+      context: context,
+      builder: (context) => ThresholdSettingsDialog(
+        initialTopThreshold: _topThreshold,
+        initialBottomThreshold: _bottomThreshold,
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _topThreshold = result['top']!;
+        _bottomThreshold = result['bottom']!;
+
+        // Recreate counter if exercise is selected
+        if (_selectedExercise == ExerciseType.lateralRaise) {
+          _lateralRaiseCounter = LateralRaiseCounter(
+            topThreshold: _topThreshold,
+            bottomThreshold: _bottomThreshold,
+            readyHoldTime: const Duration(milliseconds: 300),
+          );
+          _repCount = 0;
+          _currentPhase = LateralRaisePhase.waiting;
+          _currentAngle = 0.0;
+        }
+      });
+    }
+  }
+
+  void _resetCounter() {
+    setState(() {
+      _lateralRaiseCounter?.reset();
+      _repCount = 0;
+      _currentPhase = LateralRaisePhase.waiting;
+      _currentAngle = 0.0;
+    });
   }
 
   InputImageRotation _getMobileImageRotation() {
@@ -493,6 +591,54 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                       ),
                     ),
 
+                  // Exercise selector (top left)
+                  Positioned(
+                    top: 16,
+                    left: 16,
+                    child: Row(
+                      children: [
+                        ExerciseSelectorDropdown(
+                          selectedExercise: _selectedExercise,
+                          onChanged: _onExerciseSelected,
+                        ),
+                        if (_selectedExercise == ExerciseType.lateralRaise) ...[
+                          const SizedBox(width: 8),
+                          IconButton(
+                            onPressed: _showThresholdSettings,
+                            icon: const Icon(
+                              Icons.settings,
+                              color: Colors.white,
+                            ),
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.black87,
+                            ),
+                            tooltip: 'Adjust Thresholds',
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  // Rep counter overlay (when exercise selected)
+                  if (_selectedExercise != null)
+                    RepCounterOverlay(
+                      repCount: _repCount,
+                      phase: _currentPhase,
+                      currentAngle: _currentAngle,
+                    ),
+
+                  // Reset button (bottom right)
+                  if (_selectedExercise != null)
+                    Positioned(
+                      bottom: 16,
+                      right: 16,
+                      child: FloatingActionButton(
+                        onPressed: _resetCounter,
+                        backgroundColor: Colors.black87,
+                        child: const Icon(Icons.refresh, color: Colors.white),
+                      ),
+                    ),
+
                   // Pose confidence indicator
                   Positioned(
                     bottom: 16,
@@ -640,6 +786,51 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                             InputImageRotation.rotation0deg,
                         skeletonColor: Colors.greenAccent,
                       ),
+                    ),
+                  ),
+
+                // Exercise selector (top left)
+                Positioned(
+                  top: 16,
+                  left: 16,
+                  child: Row(
+                    children: [
+                      ExerciseSelectorDropdown(
+                        selectedExercise: _selectedExercise,
+                        onChanged: _onExerciseSelected,
+                      ),
+                      if (_selectedExercise == ExerciseType.lateralRaise) ...[
+                        const SizedBox(width: 8),
+                        IconButton(
+                          onPressed: _showThresholdSettings,
+                          icon: const Icon(Icons.settings, color: Colors.white),
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.black87,
+                          ),
+                          tooltip: 'Adjust Thresholds',
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                // Rep counter overlay (when exercise selected)
+                if (_selectedExercise != null)
+                  RepCounterOverlay(
+                    repCount: _repCount,
+                    phase: _currentPhase,
+                    currentAngle: _currentAngle,
+                  ),
+
+                // Reset button (bottom right)
+                if (_selectedExercise != null)
+                  Positioned(
+                    bottom: 16,
+                    right: 16,
+                    child: FloatingActionButton(
+                      onPressed: _resetCounter,
+                      backgroundColor: Colors.black87,
+                      child: const Icon(Icons.refresh, color: Colors.white),
                     ),
                   ),
 

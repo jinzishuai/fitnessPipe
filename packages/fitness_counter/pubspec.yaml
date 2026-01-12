@@ -1,0 +1,13 @@
+name: fitness_counter
+description: Exercise rep counter package with pose-based tracking
+version: 1.0.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.10.4
+
+# Pure Dart package - no dependencies
+dependencies:
+
+dev_dependencies:
+  test: ^1.25.0
