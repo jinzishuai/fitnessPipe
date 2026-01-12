@@ -6,7 +6,7 @@
 
 ### Before Committing Any Code Change
 ```bash
-flutter analyze && flutter test && dart format lib/ test/
+flutter analyze && flutter test && dart format lib/ test/ packages/
 ```
 
 ### Key Constraints
