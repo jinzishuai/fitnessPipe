@@ -14,6 +14,7 @@ import '../../domain/models/pose.dart';
 import '../widgets/exercise_selector.dart';
 import '../widgets/rep_counter_overlay.dart';
 import '../widgets/skeleton_painter.dart';
+import '../widgets/threshold_settings_dialog.dart';
 
 /// Main screen for pose detection with camera preview and skeleton overlay.
 class PoseDetectionScreen extends StatefulWidget {
@@ -37,6 +38,10 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   int _repCount = 0;
   LateralRaisePhase _currentPhase = LateralRaisePhase.waiting;
   double _currentAngle = 0.0;
+
+  // Threshold configuration
+  double _topThreshold = 50.0;
+  double _bottomThreshold = 20.0;
 
   // UI state
   bool _isLoading = true;
@@ -266,7 +271,10 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     setState(() {
       _selectedExercise = type;
       if (type == ExerciseType.lateralRaise) {
-        _lateralRaiseCounter = LateralRaiseCounter();
+        _lateralRaiseCounter = LateralRaiseCounter(
+          topThreshold: _topThreshold,
+          bottomThreshold: _bottomThreshold,
+        );
         _repCount = 0;
         _currentPhase = LateralRaisePhase.waiting;
         _currentAngle = 0.0;
@@ -274,6 +282,34 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         _lateralRaiseCounter = null;
       }
     });
+  }
+
+  Future<void> _showThresholdSettings() async {
+    final result = await showDialog<Map<String, double>>(
+      context: context,
+      builder: (context) => ThresholdSettingsDialog(
+        initialTopThreshold: _topThreshold,
+        initialBottomThreshold: _bottomThreshold,
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _topThreshold = result['top']!;
+        _bottomThreshold = result['bottom']!;
+
+        // Recreate counter if exercise is selected
+        if (_selectedExercise == ExerciseType.lateralRaise) {
+          _lateralRaiseCounter = LateralRaiseCounter(
+            topThreshold: _topThreshold,
+            bottomThreshold: _bottomThreshold,
+          );
+          _repCount = 0;
+          _currentPhase = LateralRaisePhase.waiting;
+          _currentAngle = 0.0;
+        }
+      });
+    }
   }
 
   void _resetCounter() {
@@ -555,9 +591,27 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                   Positioned(
                     top: 16,
                     left: 16,
-                    child: ExerciseSelectorDropdown(
-                      selectedExercise: _selectedExercise,
-                      onChanged: _onExerciseSelected,
+                    child: Row(
+                      children: [
+                        ExerciseSelectorDropdown(
+                          selectedExercise: _selectedExercise,
+                          onChanged: _onExerciseSelected,
+                        ),
+                        if (_selectedExercise == ExerciseType.lateralRaise) ...[
+                          const SizedBox(width: 8),
+                          IconButton(
+                            onPressed: _showThresholdSettings,
+                            icon: const Icon(
+                              Icons.settings,
+                              color: Colors.white,
+                            ),
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.black87,
+                            ),
+                            tooltip: 'Adjust Thresholds',
+                          ),
+                        ],
+                      ],
                     ),
                   ),
 
@@ -735,9 +789,24 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                 Positioned(
                   top: 16,
                   left: 16,
-                  child: ExerciseSelectorDropdown(
-                    selectedExercise: _selectedExercise,
-                    onChanged: _onExerciseSelected,
+                  child: Row(
+                    children: [
+                      ExerciseSelectorDropdown(
+                        selectedExercise: _selectedExercise,
+                        onChanged: _onExerciseSelected,
+                      ),
+                      if (_selectedExercise == ExerciseType.lateralRaise) ...[
+                        const SizedBox(width: 8),
+                        IconButton(
+                          onPressed: _showThresholdSettings,
+                          icon: const Icon(Icons.settings, color: Colors.white),
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.black87,
+                          ),
+                          tooltip: 'Adjust Thresholds',
+                        ),
+                      ],
+                    ],
                   ),
                 ),
 
