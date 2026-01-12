@@ -77,10 +77,9 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
               label: '${bottomThreshold.round()}°',
               onChanged: (value) {
                 setState(() {
-                  bottomThreshold = value;
-                  // Ensure bottom is always lower than top
-                  if (bottomThreshold >= topThreshold - 10) {
-                    bottomThreshold = topThreshold - 10;
+                  // Only allow changing bottom threshold if it stays below top - 10
+                  if (value < topThreshold - 10) {
+                    bottomThreshold = value;
                   }
                 });
               },

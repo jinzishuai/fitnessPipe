@@ -254,11 +254,13 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     final poseFrame = _poseAdapter.convert(pose);
     final event = _lateralRaiseCounter!.processPose(poseFrame);
 
-    // Update UI state
-    final state = _lateralRaiseCounter!.state;
-    _repCount = state.repCount;
-    _currentPhase = state.phase;
-    _currentAngle = state.smoothedAngle;
+    // Update UI state - MUST use setState to trigger rebuild
+    setState(() {
+      final state = _lateralRaiseCounter!.state;
+      _repCount = state.repCount;
+      _currentPhase = state.phase;
+      _currentAngle = state.smoothedAngle;
+    });
 
     // Handle events
     if (event is RepCompleted) {
