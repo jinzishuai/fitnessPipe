@@ -31,64 +31,67 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Threshold Settings'),
-      content: SizedBox(
-        width: 300,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Adjust thresholds based on your range of motion',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-            const SizedBox(height: 24),
+      content: SingleChildScrollView(
+        child: SizedBox(
+          width: 300,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Adjust thresholds based on your range of motion',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 24),
 
-            // Top threshold slider
-            Text('Top Threshold: ${topThreshold.round()}°'),
-            Slider(
-              value: topThreshold,
-              min: 30,
-              max: 90,
-              divisions: 60,
-              label: '${topThreshold.round()}°',
-              onChanged: (value) {
-                setState(() {
-                  topThreshold = value;
-                  // Ensure bottom is always lower than top
-                  if (bottomThreshold >= topThreshold - 10) {
-                    bottomThreshold = topThreshold - 10;
-                  }
-                });
-              },
-            ),
-            const Text(
-              'Angle needed to reach "up" position',
-              style: TextStyle(fontSize: 10, color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
+              // Top threshold slider
+              Text('Top Threshold: ${topThreshold.round()}°'),
+              Slider(
+                value: topThreshold,
+                min: 30,
+                max: 90,
+                divisions: 60,
+                label: '${topThreshold.round()}°',
+                onChanged: (value) {
+                  setState(() {
+                    topThreshold = value;
+                    // Ensure bottom is always lower than top
+                    if (bottomThreshold >= topThreshold - 10) {
+                      bottomThreshold = topThreshold - 10;
+                    }
+                  });
+                },
+              ),
+              const Text(
+                'Angle needed to reach "up" position',
+                style: TextStyle(fontSize: 10, color: Colors.grey),
+              ),
+              const SizedBox(height: 24),
 
-            // Bottom threshold slider
-            Text('Bottom Threshold: ${bottomThreshold.round()}°'),
-            Slider(
-              value: bottomThreshold,
-              min: 10,
-              max: 40,
-              divisions: 30,
-              label: '${bottomThreshold.round()}°',
-              onChanged: (value) {
-                setState(() {
-                  // Only allow changing bottom threshold if it stays below top - 10
-                  if (value <= topThreshold - 10) {
-                    bottomThreshold = value;
-                  }
-                });
-              },
-            ),
-            const Text(
-              'Angle for "down" position',
-              style: TextStyle(fontSize: 10, color: Colors.grey),
-            ),
-          ],
+              // Bottom threshold slider
+              Text('Bottom Threshold: ${bottomThreshold.round()}°'),
+              Slider(
+                value: bottomThreshold,
+                min: 10,
+                max: 40,
+                divisions: 30,
+                label: '${bottomThreshold.round()}°',
+                onChanged: (value) {
+                  setState(() {
+                    // Only allow changing bottom threshold if it stays below top - 10
+                    if (value <= topThreshold - 10) {
+                      bottomThreshold = value;
+                    }
+                  });
+                },
+              ),
+              const Text(
+                'Angle for "down" position',
+                style: TextStyle(fontSize: 10, color: Colors.grey),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
       actions: [
