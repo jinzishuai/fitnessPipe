@@ -78,7 +78,7 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
               onChanged: (value) {
                 setState(() {
                   // Only allow changing bottom threshold if it stays below top - 10
-                  if (value < topThreshold - 10) {
+                  if (value <= topThreshold - 10) {
                     bottomThreshold = value;
                   }
                 });
