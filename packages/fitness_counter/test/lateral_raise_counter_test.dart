@@ -56,13 +56,12 @@ void main() {
       expect(fastCounter.state.phase, equals(LateralRaisePhase.down));
     });
 
-
     // Helper to create a pose with ~50 degrees (between 25 and 75) to trigger falling state
     PoseFrame createArmsFallingPose({DateTime? timestamp}) {
       return createPoseFrame({
         // Left side
         LandmarkId.leftShoulder: (0.3, 0.3),
-        LandmarkId.leftElbow: (0.2, 0.45), 
+        LandmarkId.leftElbow: (0.2, 0.45),
         LandmarkId.leftHip: (0.35, 0.7),
 
         // Right side (mirror)
@@ -87,11 +86,11 @@ void main() {
       // Get to down state - need to hold for readyHoldTime (100ms)
       // Frame 1 at 0ms
       fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
-      
+
       // Frame 2 at 60ms
       currentTime = currentTime.add(const Duration(milliseconds: 60));
       fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
-      
+
       // Frame 3 at 120ms - transitions to down
       currentTime = currentTime.add(const Duration(milliseconds: 60));
       fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
@@ -112,7 +111,9 @@ void main() {
       expect(fastCounter.state.phase, equals(LateralRaisePhase.falling));
 
       currentTime = currentTime.add(const Duration(milliseconds: 50));
-      final event = fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
+      final event = fastCounter.processPose(
+        createArmsDownPose(timestamp: currentTime),
+      );
 
       expect(fastCounter.state.phase, equals(LateralRaisePhase.down));
       expect(fastCounter.state.repCount, equals(1));
@@ -126,7 +127,7 @@ void main() {
         debounceTime: const Duration(milliseconds: 20),
         smoothingAlpha: 1.0,
       );
-      
+
       var currentTime = DateTime.now();
 
       // Get to down state (3 frames)
@@ -167,7 +168,7 @@ void main() {
       fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
       currentTime = currentTime.add(const Duration(milliseconds: 60));
       fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
-      
+
       currentTime = currentTime.add(const Duration(milliseconds: 50));
       fastCounter.processPose(createArmsMidRaisePose(timestamp: currentTime));
       currentTime = currentTime.add(const Duration(milliseconds: 50));
@@ -205,17 +206,19 @@ void main() {
       // Mid raise
       currentTime = currentTime.add(const Duration(milliseconds: 50));
       fastCounter.processPose(createArmsMidRaisePose(timestamp: currentTime));
-      
+
       // Up - create a custom pose with 85 degrees
       currentTime = currentTime.add(const Duration(milliseconds: 50));
       fastCounter.processPose(createArmsUpPose(timestamp: currentTime));
-      
+
       // Finish rep
       currentTime = currentTime.add(const Duration(milliseconds: 50));
       fastCounter.processPose(createArmsFallingPose(timestamp: currentTime));
       currentTime = currentTime.add(const Duration(milliseconds: 50));
-      final event = fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
-      
+      final event = fastCounter.processPose(
+        createArmsDownPose(timestamp: currentTime),
+      );
+
       expect(event, isA<RepCompleted>());
       final completion = event as RepCompleted;
       // Peak angle should be around 85 degrees (allow some variance)

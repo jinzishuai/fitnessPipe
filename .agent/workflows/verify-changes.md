@@ -18,7 +18,7 @@ flutter test
 
 3. Format code:
 ```bash
-dart format lib/ test/ --set-exit-if-changed
+dart format lib/ test/ packages/ --set-exit-if-changed
 ```
 
 If any step fails, fix the issues before proceeding.
