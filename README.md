@@ -198,6 +198,22 @@ flutter test
 flutter test test/unit/pose_detector_test.dart
 ```
 
+### Package Tests (fitness_counter)
+
+The exercise counting logic is isolated in the `packages/fitness_counter` directory. To run logic tests for counters (including lateral raise):
+
+```bash
+cd packages/fitness_counter
+flutter test
+```
+
+To run a specific test file within the package:
+
+```bash
+cd packages/fitness_counter
+flutter test test/lateral_raise_counter_test.dart
+```
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please read [AGENTS.md](AGENTS.md) for development guidelines.

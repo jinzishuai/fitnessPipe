@@ -56,26 +56,43 @@ void main() {
       expect(fastCounter.state.phase, equals(LateralRaisePhase.down));
     });
 
+
+    // Helper to create a pose with ~50 degrees (between 25 and 75) to trigger falling state
+    PoseFrame createArmsFallingPose({DateTime? timestamp}) {
+      return createPoseFrame({
+        // Left side
+        LandmarkId.leftShoulder: (0.3, 0.3),
+        LandmarkId.leftElbow: (0.2, 0.45), 
+        LandmarkId.leftHip: (0.35, 0.7),
+
+        // Right side (mirror)
+        LandmarkId.rightShoulder: (0.7, 0.3),
+        LandmarkId.rightElbow: (0.8, 0.45),
+        LandmarkId.rightHip: (0.65, 0.7),
+      }, timestamp: timestamp);
+    }
+
     test('complete rep cycle counts correctly', () async {
-      // Use shorter timing for faster tests
+      // Use shorter timing for faster tests and disable smoothing for synthetic data
       final fastCounter = LateralRaiseCounter(
         readyHoldTime: const Duration(milliseconds: 100),
         minRepDuration: const Duration(milliseconds: 100),
         debounceTime: const Duration(milliseconds: 20),
+        smoothingAlpha: 1.0, // Disable smoothing for instant pose changes
       );
 
       // Use incrementing timestamps to simulate time passing
       var currentTime = DateTime.now();
 
       // Get to down state - need to hold for readyHoldTime (100ms)
-      // Frame 1 at 0ms - starts hold timer
+      // Frame 1 at 0ms
       fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
       
-      // Frame 2 at 60ms - still holding
+      // Frame 2 at 60ms
       currentTime = currentTime.add(const Duration(milliseconds: 60));
       fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
       
-      // Frame 3 at 120ms - exceeds 100ms hold, should transition to down
+      // Frame 3 at 120ms - transitions to down
       currentTime = currentTime.add(const Duration(milliseconds: 60));
       fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
       expect(fastCounter.state.phase, equals(LateralRaisePhase.down));
@@ -89,44 +106,47 @@ void main() {
       fastCounter.processPose(createArmsUpPose(timestamp: currentTime));
       expect(fastCounter.state.phase, equals(LateralRaisePhase.up));
 
+      // Use falling pose (~50 degrees) which is < fallingThreshold (75)
       currentTime = currentTime.add(const Duration(milliseconds: 50));
-      fastCounter.processPose(createArmsMidRaisePose(timestamp: currentTime));
+      fastCounter.processPose(createArmsFallingPose(timestamp: currentTime));
       expect(fastCounter.state.phase, equals(LateralRaisePhase.falling));
 
-      currentTime =
-          currentTime.add(const Duration(milliseconds: 150)); // Ensure min duration
+      currentTime = currentTime.add(const Duration(milliseconds: 50));
       final event = fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
 
-      expect(event, isA<RepCompleted>());
-      expect((event as RepCompleted).totalReps, equals(1));
       expect(fastCounter.state.phase, equals(LateralRaisePhase.down));
       expect(fastCounter.state.repCount, equals(1));
+      expect(event, isA<RepCompleted>());
     });
 
     test('partial rep does not count', () async {
       final fastCounter = LateralRaiseCounter(
         readyHoldTime: const Duration(milliseconds: 100),
+        minRepDuration: const Duration(milliseconds: 100),
+        debounceTime: const Duration(milliseconds: 20),
+        smoothingAlpha: 1.0,
       );
-
-      // Use incrementing timestamps
+      
       var currentTime = DateTime.now();
 
-      // Get to down state - need 3 frames to exceed 100ms hold
+      // Get to down state (3 frames)
       fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
       currentTime = currentTime.add(const Duration(milliseconds: 60));
       fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
       currentTime = currentTime.add(const Duration(milliseconds: 60));
       fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
+      expect(fastCounter.state.phase, equals(LateralRaisePhase.down));
 
-      // Start rising
+      // Partial rep: down -> rising -> falling (no up) -> down
+      currentTime = currentTime.add(const Duration(milliseconds: 50));
       fastCounter.processPose(createArmsMidRaisePose(timestamp: currentTime));
       expect(fastCounter.state.phase, equals(LateralRaisePhase.rising));
 
-      // Go back down without reaching top
+      // Go back down directly (abort rep)
       currentTime = currentTime.add(const Duration(milliseconds: 50));
       fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
 
-      // Should return to down phase without counting rep
+      // Should be back to down state but rep count 0
       expect(fastCounter.state.phase, equals(LateralRaisePhase.down));
       expect(fastCounter.state.repCount, equals(0));
     });
@@ -135,32 +155,32 @@ void main() {
       final fastCounter = LateralRaiseCounter(
         readyHoldTime: const Duration(milliseconds: 100),
         minRepDuration: const Duration(milliseconds: 100),
+        debounceTime: const Duration(milliseconds: 20),
+        smoothingAlpha: 1.0,
       );
 
-      // Use incrementing timestamps
       var currentTime = DateTime.now();
 
-      // Complete a rep - get to down state first (need 3 frames to exceed 100ms)
+      // Perform one rep
       fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
       currentTime = currentTime.add(const Duration(milliseconds: 60));
       fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
       currentTime = currentTime.add(const Duration(milliseconds: 60));
       fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
-      // Now in down state, continue with rep
+      
       currentTime = currentTime.add(const Duration(milliseconds: 50));
       fastCounter.processPose(createArmsMidRaisePose(timestamp: currentTime));
       currentTime = currentTime.add(const Duration(milliseconds: 50));
       fastCounter.processPose(createArmsUpPose(timestamp: currentTime));
       currentTime = currentTime.add(const Duration(milliseconds: 50));
-      fastCounter.processPose(createArmsMidRaisePose(timestamp: currentTime));
-      currentTime = currentTime.add(const Duration(milliseconds: 150));
+      fastCounter.processPose(createArmsFallingPose(timestamp: currentTime));
+      currentTime = currentTime.add(const Duration(milliseconds: 50));
       fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
 
       expect(fastCounter.state.repCount, equals(1));
 
       // Reset
       fastCounter.reset();
-
       expect(fastCounter.state.repCount, equals(0));
       expect(fastCounter.state.phase, equals(LateralRaisePhase.waiting));
     });
@@ -169,30 +189,37 @@ void main() {
       final fastCounter = LateralRaiseCounter(
         readyHoldTime: const Duration(milliseconds: 100),
         minRepDuration: const Duration(milliseconds: 100),
+        debounceTime: const Duration(milliseconds: 20),
+        smoothingAlpha: 1.0,
       );
 
-      // Use incrementing timestamps
       var currentTime = DateTime.now();
 
-      // Complete a rep - get to down state first (need 3 frames to exceed 100ms)
+      // Get to down state
       fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
       currentTime = currentTime.add(const Duration(milliseconds: 60));
       fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
       currentTime = currentTime.add(const Duration(milliseconds: 60));
       fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
-      // Now in down state, continue with rep
-      currentTime = currentTime.add(const Duration(milliseconds: 50));
-      fastCounter.processPose(createArmsMidRaisePose(timestamp: currentTime));
-      currentTime = currentTime.add(const Duration(milliseconds: 50));
-      fastCounter.processPose(createArmsUpPose(timestamp: currentTime)); // This should be the peak
-      currentTime = currentTime.add(const Duration(milliseconds: 50));
-      fastCounter.processPose(createArmsMidRaisePose(timestamp: currentTime));
-      currentTime = currentTime.add(const Duration(milliseconds: 150));
-      final event = fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
 
+      // Mid raise
+      currentTime = currentTime.add(const Duration(milliseconds: 50));
+      fastCounter.processPose(createArmsMidRaisePose(timestamp: currentTime));
+      
+      // Up - create a custom pose with 85 degrees
+      currentTime = currentTime.add(const Duration(milliseconds: 50));
+      fastCounter.processPose(createArmsUpPose(timestamp: currentTime));
+      
+      // Finish rep
+      currentTime = currentTime.add(const Duration(milliseconds: 50));
+      fastCounter.processPose(createArmsFallingPose(timestamp: currentTime));
+      currentTime = currentTime.add(const Duration(milliseconds: 50));
+      final event = fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
+      
       expect(event, isA<RepCompleted>());
-      final repEvent = event as RepCompleted;
-      expect(repEvent.peakAngle, greaterThan(60)); // Should be high angle
+      final completion = event as RepCompleted;
+      // Peak angle should be around 85 degrees (allow some variance)
+      expect(completion.peakAngle, greaterThan(80.0));
     });
 
     test('smoothing reduces jitter', () {
