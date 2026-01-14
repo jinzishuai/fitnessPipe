@@ -25,8 +25,15 @@ jobs:
       - name: Analyze code
         run: flutter analyze --fatal-infos
 
+      - name: Analyze packages
+        run: |
+          cd packages/fitness_counter
+          flutter analyze --fatal-infos
+
       - name: Check formatting
         run: dart format lib/ test/ packages/ --set-exit-if-changed
 
-      - name: Run tests
-        run: flutter test
+      - name: Run all tests
+        run: |
+          flutter test
+          cd packages/fitness_counter && flutter test
