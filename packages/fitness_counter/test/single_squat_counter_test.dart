@@ -77,12 +77,9 @@ void main() {
       );
 
       final frames = realSingleSquatFrames;
-      int repCount = 0;
-
       for (var frame in frames) {
         final event = counter.processPose(frame);
         if (event is RepCompleted) {
-          repCount = event.totalReps;
           print(
             'Rep completed at ${frame.timestamp}, duration: ${event.repDuration}',
           );
