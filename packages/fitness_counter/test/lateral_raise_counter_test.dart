@@ -64,30 +64,38 @@ void main() {
         debounceTime: const Duration(milliseconds: 20),
       );
 
-      // Get to down state
-      for (int i = 0; i < 2; i++) {
-        fastCounter.processPose(createArmsDownPose(timestamp: DateTime.now()));
-        await Future.delayed(const Duration(milliseconds: 60));
-      }
+      // Use incrementing timestamps to simulate time passing
+      var currentTime = DateTime.now();
+
+      // Get to down state - need to hold for readyHoldTime (100ms)
+      // Frame 1 at 0ms - starts hold timer
+      fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
+      
+      // Frame 2 at 60ms - still holding
+      currentTime = currentTime.add(const Duration(milliseconds: 60));
+      fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
+      
+      // Frame 3 at 120ms - exceeds 100ms hold, should transition to down
+      currentTime = currentTime.add(const Duration(milliseconds: 60));
+      fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
       expect(fastCounter.state.phase, equals(LateralRaisePhase.down));
 
       // Complete rep: down → rising → up → falling → down
-      await Future.delayed(const Duration(milliseconds: 50));
-      fastCounter.processPose(createArmsMidRaisePose());
+      currentTime = currentTime.add(const Duration(milliseconds: 50));
+      fastCounter.processPose(createArmsMidRaisePose(timestamp: currentTime));
       expect(fastCounter.state.phase, equals(LateralRaisePhase.rising));
 
-      await Future.delayed(const Duration(milliseconds: 50));
-      fastCounter.processPose(createArmsUpPose());
+      currentTime = currentTime.add(const Duration(milliseconds: 50));
+      fastCounter.processPose(createArmsUpPose(timestamp: currentTime));
       expect(fastCounter.state.phase, equals(LateralRaisePhase.up));
 
-      await Future.delayed(const Duration(milliseconds: 50));
-      fastCounter.processPose(createArmsMidRaisePose());
+      currentTime = currentTime.add(const Duration(milliseconds: 50));
+      fastCounter.processPose(createArmsMidRaisePose(timestamp: currentTime));
       expect(fastCounter.state.phase, equals(LateralRaisePhase.falling));
 
-      await Future.delayed(
-        const Duration(milliseconds: 150),
-      ); // Ensure min duration
-      final event = fastCounter.processPose(createArmsDownPose());
+      currentTime =
+          currentTime.add(const Duration(milliseconds: 150)); // Ensure min duration
+      final event = fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
 
       expect(event, isA<RepCompleted>());
       expect((event as RepCompleted).totalReps, equals(1));
@@ -100,18 +108,23 @@ void main() {
         readyHoldTime: const Duration(milliseconds: 100),
       );
 
-      // Get to down state
-      for (int i = 0; i < 2; i++) {
-        fastCounter.processPose(createArmsDownPose(timestamp: DateTime.now()));
-        await Future.delayed(const Duration(milliseconds: 60));
-      }
+      // Use incrementing timestamps
+      var currentTime = DateTime.now();
+
+      // Get to down state - need 3 frames to exceed 100ms hold
+      fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
+      currentTime = currentTime.add(const Duration(milliseconds: 60));
+      fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
+      currentTime = currentTime.add(const Duration(milliseconds: 60));
+      fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
 
       // Start rising
-      fastCounter.processPose(createArmsMidRaisePose());
+      fastCounter.processPose(createArmsMidRaisePose(timestamp: currentTime));
       expect(fastCounter.state.phase, equals(LateralRaisePhase.rising));
 
       // Go back down without reaching top
-      fastCounter.processPose(createArmsDownPose());
+      currentTime = currentTime.add(const Duration(milliseconds: 50));
+      fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
 
       // Should return to down phase without counting rep
       expect(fastCounter.state.phase, equals(LateralRaisePhase.down));
@@ -124,19 +137,24 @@ void main() {
         minRepDuration: const Duration(milliseconds: 100),
       );
 
-      // Complete a rep
-      for (int i = 0; i < 2; i++) {
-        fastCounter.processPose(createArmsDownPose(timestamp: DateTime.now()));
-        await Future.delayed(const Duration(milliseconds: 60));
-      }
-      await Future.delayed(const Duration(milliseconds: 50));
-      fastCounter.processPose(createArmsMidRaisePose());
-      await Future.delayed(const Duration(milliseconds: 50));
-      fastCounter.processPose(createArmsUpPose());
-      await Future.delayed(const Duration(milliseconds: 50));
-      fastCounter.processPose(createArmsMidRaisePose());
-      await Future.delayed(const Duration(milliseconds: 150));
-      fastCounter.processPose(createArmsDownPose());
+      // Use incrementing timestamps
+      var currentTime = DateTime.now();
+
+      // Complete a rep - get to down state first (need 3 frames to exceed 100ms)
+      fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
+      currentTime = currentTime.add(const Duration(milliseconds: 60));
+      fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
+      currentTime = currentTime.add(const Duration(milliseconds: 60));
+      fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
+      // Now in down state, continue with rep
+      currentTime = currentTime.add(const Duration(milliseconds: 50));
+      fastCounter.processPose(createArmsMidRaisePose(timestamp: currentTime));
+      currentTime = currentTime.add(const Duration(milliseconds: 50));
+      fastCounter.processPose(createArmsUpPose(timestamp: currentTime));
+      currentTime = currentTime.add(const Duration(milliseconds: 50));
+      fastCounter.processPose(createArmsMidRaisePose(timestamp: currentTime));
+      currentTime = currentTime.add(const Duration(milliseconds: 150));
+      fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
 
       expect(fastCounter.state.repCount, equals(1));
 
@@ -153,19 +171,24 @@ void main() {
         minRepDuration: const Duration(milliseconds: 100),
       );
 
-      // Complete a rep
-      for (int i = 0; i < 2; i++) {
-        fastCounter.processPose(createArmsDownPose(timestamp: DateTime.now()));
-        await Future.delayed(const Duration(milliseconds: 60));
-      }
-      await Future.delayed(const Duration(milliseconds: 50));
-      fastCounter.processPose(createArmsMidRaisePose());
-      await Future.delayed(const Duration(milliseconds: 50));
-      fastCounter.processPose(createArmsUpPose()); // This should be the peak
-      await Future.delayed(const Duration(milliseconds: 50));
-      fastCounter.processPose(createArmsMidRaisePose());
-      await Future.delayed(const Duration(milliseconds: 150));
-      final event = fastCounter.processPose(createArmsDownPose());
+      // Use incrementing timestamps
+      var currentTime = DateTime.now();
+
+      // Complete a rep - get to down state first (need 3 frames to exceed 100ms)
+      fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
+      currentTime = currentTime.add(const Duration(milliseconds: 60));
+      fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
+      currentTime = currentTime.add(const Duration(milliseconds: 60));
+      fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
+      // Now in down state, continue with rep
+      currentTime = currentTime.add(const Duration(milliseconds: 50));
+      fastCounter.processPose(createArmsMidRaisePose(timestamp: currentTime));
+      currentTime = currentTime.add(const Duration(milliseconds: 50));
+      fastCounter.processPose(createArmsUpPose(timestamp: currentTime)); // This should be the peak
+      currentTime = currentTime.add(const Duration(milliseconds: 50));
+      fastCounter.processPose(createArmsMidRaisePose(timestamp: currentTime));
+      currentTime = currentTime.add(const Duration(milliseconds: 150));
+      final event = fastCounter.processPose(createArmsDownPose(timestamp: currentTime));
 
       expect(event, isA<RepCompleted>());
       final repEvent = event as RepCompleted;
