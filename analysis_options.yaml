@@ -28,7 +28,6 @@ analyzer:
   exclude:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
-    - "packages/**/test/**"  # Exclude package test files (have their own dependencies)
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options

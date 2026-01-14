@@ -2,6 +2,7 @@ import 'package:test/test.dart';
 import 'package:fitness_counter/fitness_counter.dart';
 
 import 'fixtures/sample_poses.dart';
+import 'fixtures/real_lateral_raise.dart';
 
 void main() {
   group('LateralRaiseCounter', () {
@@ -191,4 +192,133 @@ void main() {
       expect(angle3, greaterThan(angle1));
     });
   });
+
+  group('LateralRaiseCounter with real video data', () {
+    test('real video data is loaded correctly', () {
+      final frames = realLateralRaiseFrames;
+      final metadata = realLateralRaiseMetadata;
+
+      // Verify fixture was generated
+      expect(frames, isNotEmpty);
+      expect(frames.length, greaterThan(40), reason: 'Should have extracted enough frames');
+      
+      // Verify metadata
+      expect(metadata['source_video'], equals('LateralRaise_One_Rep.mp4'));
+      expect(metadata['duration_seconds'], greaterThan(2.5));
+      expect(metadata['duration_seconds'], lessThan(4.0));
+      expect(metadata['frames_with_pose'], equals(frames.length));
+    });
+
+    test('real video frames have all required landmarks', () {
+      final frames = realLateralRaiseFrames;
+      final requiredLandmarks = {
+        LandmarkId.leftShoulder,
+        LandmarkId.rightShoulder,
+        LandmarkId.leftElbow,
+        LandmarkId.rightElbow,
+        LandmarkId.leftHip,
+        LandmarkId.rightHip,
+      };
+
+      for (var i = 0; i < frames.length; i++) {
+        final frame = frames[i];
+        expect(
+          frame.hasLandmarks(requiredLandmarks),
+          isTrue,
+          reason: 'Frame $i should have all required landmarks',
+        );
+      }
+    });
+
+    test('calculated angles match expected 10-65 degree range', () {
+      final frames = realLateralRaiseFrames;
+      final angles = <double>[];
+
+      // Calculate angles for all frames
+      for (var frame in frames) {
+        final angle = calculateAverageShoulderAngle(
+          leftShoulder: frame[LandmarkId.leftShoulder],
+          leftElbow: frame[LandmarkId.leftElbow],
+          leftHip: frame[LandmarkId.leftHip],
+          rightShoulder: frame[LandmarkId.rightShoulder],
+          rightElbow: frame[LandmarkId.rightElbow],
+          rightHip: frame[LandmarkId.rightHip],
+        );
+        if (angle > 0) {
+          angles.add(angle);
+        }
+      }
+
+      expect(angles, isNotEmpty);
+      final minAngle = angles.reduce((a, b) => a < b ? a : b);
+      final maxAngle = angles.reduce((a, b) => a > b ? a : b);
+
+      // Video analysis showed: 10.8° - 64.4° range
+      expect(minAngle, greaterThan(5.0), reason: 'Min angle should be > 5°');
+      expect(minAngle, lessThan(20.0), reason: 'Min angle should be < 20°');
+      expect(maxAngle, greaterThan(55.0), reason: 'Max angle should be > 55°');
+      expect(maxAngle, lessThan(75.0), reason: 'Max angle should be < 75°');
+      
+      // ignore: avoid_print
+      print('Real video angle range: ${minAngle.toStringAsFixed(1)}° - ${maxAngle.toStringAsFixed(1)}°');
+    });
+
+    test('landmark confidence scores are high', () {
+      final frames = realLateralRaiseFrames;
+      final confidences = <double>[];
+
+      for (var frame in frames) {
+        for (var landmarkId in [
+          LandmarkId.leftShoulder,
+          LandmarkId.rightShoulder,
+          LandmarkId.leftElbow,
+          LandmarkId.rightElbow,
+          LandmarkId.leftHip,
+          LandmarkId.rightHip,
+        ]) {
+          final landmark = frame[landmarkId];
+          if (landmark != null) {
+            confidences.add(landmark.confidence);
+          }
+        }
+      }
+
+      final avgConfidence = confidences.reduce((a, b) => a + b) / confidences.length;
+      expect(avgConfidence, greaterThan(0.8), reason: 'Average confidence should be high');
+      // ignore: avoid_print
+      print('Average landmark confidence: ${(avgConfidence * 100).toStringAsFixed(1)}%');
+    });
+
+    test('angle progression shows clear raise pattern', () {
+      final frames = realLateralRaiseFrames;
+      final angles = <double>[];
+
+      for (var frame in frames) {
+        final angle = calculateAverageShoulderAngle(
+          leftShoulder: frame[LandmarkId.leftShoulder],
+          leftElbow: frame[LandmarkId.leftElbow],
+          leftHip: frame[LandmarkId.leftHip],
+          rightShoulder:  frame[LandmarkId.rightShoulder],
+          rightElbow: frame[LandmarkId.rightElbow],
+          rightHip: frame[LandmarkId.rightHip],
+        );
+        angles.add(angle);
+      }
+
+      // Find the peak
+      final maxAngle = angles.reduce((a, b) => a > b ? a : b);
+      final peakIndex = angles.indexOf(maxAngle);
+
+      // First half should generally be increasing (arms going up)
+      // Second half should generally be decreasing (arms going down)
+      expect(peakIndex, greaterThan(5), reason: 'Peak should not be at the very start');
+      expect(peakIndex, lessThan(angles.length - 5), reason: 'Peak should not be at the very end');
+
+     // Check that we start and end at low angles
+      expect(angles.first, lessThan(25.0), reason: 'Should start with arms down');
+      expect(angles.last, lessThan(25.0), reason: 'Should end with arms down');
+    });
+  });
 }
+
+
