@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 /// Exercise types available for rep counting.
 enum ExerciseType {
-  lateralRaise('Lateral Raise');
+  lateralRaise('Lateral Raise'),
+  singleSquat('Single Squat');
 
   final String displayName;
   const ExerciseType(this.displayName);

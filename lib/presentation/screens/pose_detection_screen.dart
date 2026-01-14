@@ -35,13 +35,18 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   final _poseAdapter = PoseAdapter();
   ExerciseType? _selectedExercise;
   LateralRaiseCounter? _lateralRaiseCounter;
+  SingleSquatCounter? _singleSquatCounter;
   int _repCount = 0;
-  LateralRaisePhase _currentPhase = LateralRaisePhase.waiting;
+  String _phaseLabel = 'Ready';
+  Color _phaseColor = Colors.grey;
   double _currentAngle = 0.0;
 
   // Threshold configuration
   double _topThreshold = 50.0;
   double _bottomThreshold = 20.0;
+  // Squat thresholds (defaults)
+  double _squatTopThreshold = 170.0;
+  double _squatBottomThreshold = 160.0;
 
   // UI state
   bool _isLoading = true;
@@ -238,8 +243,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
           _currentPose = poses.isNotEmpty ? poses.first : null;
 
           // Process pose through counter if exercise selected
-          if (_currentPose != null && _lateralRaiseCounter != null) {
-            _processPoseWithCounter(_currentPose!);
+          if (_currentPose != null) {
+              _processPoseWithCounter(_currentPose!);
           }
         });
       }
@@ -251,15 +256,46 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   }
 
   void _processPoseWithCounter(Pose pose) {
+    if (_selectedExercise == null) return;
+
     final poseFrame = _poseAdapter.convert(pose);
-    final event = _lateralRaiseCounter!.processPose(poseFrame);
+    RepEvent? event;
 
     // Update UI state - MUST use setState to trigger rebuild
     setState(() {
-      final state = _lateralRaiseCounter!.state;
-      _repCount = state.repCount;
-      _currentPhase = state.phase;
-      _currentAngle = state.smoothedAngle;
+      if (_selectedExercise == ExerciseType.lateralRaise && _lateralRaiseCounter != null) {
+        event = _lateralRaiseCounter!.processPose(poseFrame);
+        final state = _lateralRaiseCounter!.state;
+        _repCount = state.repCount;
+        _currentAngle = state.smoothedAngle;
+        
+        // Map LateralRaisePhase to UI
+        final (label, color) = switch (state.phase) {
+          LateralRaisePhase.waiting => ('Ready...', Colors.grey),
+          LateralRaisePhase.down => ('Down', Colors.blue),
+          LateralRaisePhase.rising => ('Rising ↑', Colors.orange),
+          LateralRaisePhase.up => ('Up!', Colors.green),
+          LateralRaisePhase.falling => ('Lowering ↓', Colors.orange),
+        };
+        _phaseLabel = label;
+        _phaseColor = color;
+      } else if (_selectedExercise == ExerciseType.singleSquat && _singleSquatCounter != null) {
+        event = _singleSquatCounter!.processPose(poseFrame);
+        final state = _singleSquatCounter!.state;
+        _repCount = state.repCount;
+        _currentAngle = state.smoothedAngle;
+
+         // Map SingleSquatPhase to UI
+        final (label, color) = switch (state.phase) {
+          SingleSquatPhase.waiting => ('Ready...', Colors.grey),
+          SingleSquatPhase.standing => ('Standing', Colors.blue),
+          SingleSquatPhase.descending => ('Descending ↓', Colors.orange),
+          SingleSquatPhase.bottom => ('Bottom!', Colors.green),
+          SingleSquatPhase.ascending => ('Ascending ↑', Colors.orange),
+        };
+        _phaseLabel = label;
+        _phaseColor = color;
+      }
     });
 
     // Handle events
@@ -272,46 +308,78 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   void _onExerciseSelected(ExerciseType? type) {
     setState(() {
       _selectedExercise = type;
+      _lateralRaiseCounter = null;
+      _singleSquatCounter = null;
+      _repCount = 0;
+      _phaseLabel = 'Ready';
+      _phaseColor = Colors.grey;
+      _currentAngle = 0.0;
+
       if (type == ExerciseType.lateralRaise) {
         _lateralRaiseCounter = LateralRaiseCounter(
           topThreshold: _topThreshold,
           bottomThreshold: _bottomThreshold,
           readyHoldTime: const Duration(milliseconds: 300),
         );
-        _repCount = 0;
-        _currentPhase = LateralRaisePhase.waiting;
-        _currentAngle = 0.0;
-      } else {
-        _lateralRaiseCounter = null;
+      } else if (type == ExerciseType.singleSquat) {
+        _singleSquatCounter = SingleSquatCounter(
+            topThreshold: _squatTopThreshold,
+            bottomThreshold: _squatBottomThreshold,
+        );
       }
     });
   }
 
   Future<void> _showThresholdSettings() async {
+    // Determine which thresholds to show based on selected exercise
+    if (_selectedExercise == null) return;
+
+    double currentTop;
+    double currentBottom;
+    if (_selectedExercise == ExerciseType.lateralRaise) {
+        currentTop = _topThreshold;
+        currentBottom = _bottomThreshold;
+    } else {
+        currentTop = _squatTopThreshold;
+        currentBottom = _squatBottomThreshold;
+    }
+
     final result = await showDialog<Map<String, double>>(
       context: context,
       builder: (context) => ThresholdSettingsDialog(
-        initialTopThreshold: _topThreshold,
-        initialBottomThreshold: _bottomThreshold,
+        initialTopThreshold: currentTop,
+        initialBottomThreshold: currentBottom,
       ),
     );
 
     if (result != null) {
       setState(() {
-        _topThreshold = result['top']!;
-        _bottomThreshold = result['bottom']!;
+        final newTop = result['top']!;
+        final newBottom = result['bottom']!;
 
-        // Recreate counter if exercise is selected
+        // Update appropriate thresholds and recreate counter
         if (_selectedExercise == ExerciseType.lateralRaise) {
-          _lateralRaiseCounter = LateralRaiseCounter(
-            topThreshold: _topThreshold,
-            bottomThreshold: _bottomThreshold,
-            readyHoldTime: const Duration(milliseconds: 300),
-          );
-          _repCount = 0;
-          _currentPhase = LateralRaisePhase.waiting;
-          _currentAngle = 0.0;
+            _topThreshold = newTop;
+            _bottomThreshold = newBottom;
+             _lateralRaiseCounter = LateralRaiseCounter(
+                topThreshold: _topThreshold,
+                bottomThreshold: _bottomThreshold,
+                readyHoldTime: const Duration(milliseconds: 300),
+            );
+        } else if (_selectedExercise == ExerciseType.singleSquat) {
+             _squatTopThreshold = newTop;
+             _squatBottomThreshold = newBottom;
+             _singleSquatCounter = SingleSquatCounter(
+                topThreshold: _squatTopThreshold,
+                bottomThreshold: _squatBottomThreshold,
+            );
         }
+        
+        // Reset state
+        _repCount = 0;
+        _phaseLabel = 'Ready';
+        _phaseColor = Colors.grey;
+        _currentAngle = 0.0;
       });
     }
   }
@@ -319,8 +387,10 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   void _resetCounter() {
     setState(() {
       _lateralRaiseCounter?.reset();
+      _singleSquatCounter?.reset();
       _repCount = 0;
-      _currentPhase = LateralRaisePhase.waiting;
+      _phaseLabel = 'Ready';
+      _phaseColor = Colors.grey;
       _currentAngle = 0.0;
     });
   }
@@ -623,7 +693,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                   if (_selectedExercise != null)
                     RepCounterOverlay(
                       repCount: _repCount,
-                      phase: _currentPhase,
+                      phaseLabel: _phaseLabel,
+                      phaseColor: _phaseColor,
                       currentAngle: _currentAngle,
                     ),
 
@@ -818,7 +889,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                 if (_selectedExercise != null)
                   RepCounterOverlay(
                     repCount: _repCount,
-                    phase: _currentPhase,
+                    phaseLabel: _phaseLabel,
+                    phaseColor: _phaseColor,
                     currentAngle: _currentAngle,
                   ),
 
