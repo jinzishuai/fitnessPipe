@@ -244,7 +244,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
 
           // Process pose through counter if exercise selected
           if (_currentPose != null) {
-              _processPoseWithCounter(_currentPose!);
+            _processPoseWithCounter(_currentPose!);
           }
         });
       }
@@ -263,12 +263,13 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
 
     // Update UI state - MUST use setState to trigger rebuild
     setState(() {
-      if (_selectedExercise == ExerciseType.lateralRaise && _lateralRaiseCounter != null) {
+      if (_selectedExercise == ExerciseType.lateralRaise &&
+          _lateralRaiseCounter != null) {
         event = _lateralRaiseCounter!.processPose(poseFrame);
         final state = _lateralRaiseCounter!.state;
         _repCount = state.repCount;
         _currentAngle = state.smoothedAngle;
-        
+
         // Map LateralRaisePhase to UI
         final (label, color) = switch (state.phase) {
           LateralRaisePhase.waiting => ('Ready...', Colors.grey),
@@ -279,13 +280,14 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         };
         _phaseLabel = label;
         _phaseColor = color;
-      } else if (_selectedExercise == ExerciseType.singleSquat && _singleSquatCounter != null) {
+      } else if (_selectedExercise == ExerciseType.singleSquat &&
+          _singleSquatCounter != null) {
         event = _singleSquatCounter!.processPose(poseFrame);
         final state = _singleSquatCounter!.state;
         _repCount = state.repCount;
         _currentAngle = state.smoothedAngle;
 
-         // Map SingleSquatPhase to UI
+        // Map SingleSquatPhase to UI
         final (label, color) = switch (state.phase) {
           SingleSquatPhase.waiting => ('Ready...', Colors.grey),
           SingleSquatPhase.standing => ('Standing', Colors.blue),
@@ -323,8 +325,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         );
       } else if (type == ExerciseType.singleSquat) {
         _singleSquatCounter = SingleSquatCounter(
-            topThreshold: _squatTopThreshold,
-            bottomThreshold: _squatBottomThreshold,
+          topThreshold: _squatTopThreshold,
+          bottomThreshold: _squatBottomThreshold,
         );
       }
     });
@@ -337,11 +339,11 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     double currentTop;
     double currentBottom;
     if (_selectedExercise == ExerciseType.lateralRaise) {
-        currentTop = _topThreshold;
-        currentBottom = _bottomThreshold;
+      currentTop = _topThreshold;
+      currentBottom = _bottomThreshold;
     } else {
-        currentTop = _squatTopThreshold;
-        currentBottom = _squatBottomThreshold;
+      currentTop = _squatTopThreshold;
+      currentBottom = _squatBottomThreshold;
     }
 
     final result = await showDialog<Map<String, double>>(
@@ -359,22 +361,22 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
 
         // Update appropriate thresholds and recreate counter
         if (_selectedExercise == ExerciseType.lateralRaise) {
-            _topThreshold = newTop;
-            _bottomThreshold = newBottom;
-             _lateralRaiseCounter = LateralRaiseCounter(
-                topThreshold: _topThreshold,
-                bottomThreshold: _bottomThreshold,
-                readyHoldTime: const Duration(milliseconds: 300),
-            );
+          _topThreshold = newTop;
+          _bottomThreshold = newBottom;
+          _lateralRaiseCounter = LateralRaiseCounter(
+            topThreshold: _topThreshold,
+            bottomThreshold: _bottomThreshold,
+            readyHoldTime: const Duration(milliseconds: 300),
+          );
         } else if (_selectedExercise == ExerciseType.singleSquat) {
-             _squatTopThreshold = newTop;
-             _squatBottomThreshold = newBottom;
-             _singleSquatCounter = SingleSquatCounter(
-                topThreshold: _squatTopThreshold,
-                bottomThreshold: _squatBottomThreshold,
-            );
+          _squatTopThreshold = newTop;
+          _squatBottomThreshold = newBottom;
+          _singleSquatCounter = SingleSquatCounter(
+            topThreshold: _squatTopThreshold,
+            bottomThreshold: _squatBottomThreshold,
+          );
         }
-        
+
         // Reset state
         _repCount = 0;
         _phaseLabel = 'Ready';

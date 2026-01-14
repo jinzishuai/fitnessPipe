@@ -1,4 +1,3 @@
-
 import '../core/angle_calculator.dart';
 import '../core/exercise_counter.dart';
 import '../core/smoothing.dart';
@@ -45,26 +44,26 @@ class SingleSquatCounter implements ExerciseCounter {
     Duration? minRepDuration,
     Duration? maxRepDuration,
     Duration? debounceTime,
-  })  : topThreshold = topThreshold ?? 170.0,
-        bottomThreshold = bottomThreshold ?? 160.0,
-        descendingThreshold = (topThreshold ?? 170.0) - 5.0,
-        ascendingThreshold = (bottomThreshold ?? 160.0) + 5.0,
-        readyHoldTime = readyHoldTime ?? const Duration(milliseconds: 500),
-        minRepDuration = minRepDuration ?? const Duration(milliseconds: 500),
-        maxRepDuration = maxRepDuration ?? const Duration(seconds: 5),
-        debounceTime = debounceTime ?? const Duration(milliseconds: 100),
-        _leftSmoother = AngleSmoother(alpha: smoothingAlpha),
-        _rightSmoother = AngleSmoother(alpha: smoothingAlpha);
+  }) : topThreshold = topThreshold ?? 170.0,
+       bottomThreshold = bottomThreshold ?? 160.0,
+       descendingThreshold = (topThreshold ?? 170.0) - 5.0,
+       ascendingThreshold = (bottomThreshold ?? 160.0) + 5.0,
+       readyHoldTime = readyHoldTime ?? const Duration(milliseconds: 500),
+       minRepDuration = minRepDuration ?? const Duration(milliseconds: 500),
+       maxRepDuration = maxRepDuration ?? const Duration(seconds: 5),
+       debounceTime = debounceTime ?? const Duration(milliseconds: 100),
+       _leftSmoother = AngleSmoother(alpha: smoothingAlpha),
+       _rightSmoother = AngleSmoother(alpha: smoothingAlpha);
 
   @override
   Set<LandmarkId> get requiredLandmarks => {
-        LandmarkId.leftHip,
-        LandmarkId.leftKnee,
-        LandmarkId.leftAnkle,
-        LandmarkId.rightHip,
-        LandmarkId.rightKnee,
-        LandmarkId.rightAnkle,
-      };
+    LandmarkId.leftHip,
+    LandmarkId.leftKnee,
+    LandmarkId.leftAnkle,
+    LandmarkId.rightHip,
+    LandmarkId.rightKnee,
+    LandmarkId.rightAnkle,
+  };
 
   @override
   SingleSquatState get state => _state;
@@ -185,10 +184,10 @@ class SingleSquatCounter implements ExerciseCounter {
   }
 
   RepEvent? _processBottom(double angle) {
-     if (angle < _minAngle) {
+    if (angle < _minAngle) {
       _minAngle = angle;
     }
-    
+
     if (angle > ascendingThreshold) {
       // Starting to go up
       return _changePhase(SingleSquatPhase.ascending, angle, DateTime.now());
@@ -202,7 +201,7 @@ class SingleSquatCounter implements ExerciseCounter {
       return _completeRep(timestamp);
     } else if (angle < bottomThreshold) {
       // Went back down
-       return _changePhase(SingleSquatPhase.bottom, angle, timestamp);
+      return _changePhase(SingleSquatPhase.bottom, angle, timestamp);
     }
     return null;
   }

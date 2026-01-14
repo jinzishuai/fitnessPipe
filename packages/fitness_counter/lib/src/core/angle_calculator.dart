@@ -147,11 +147,19 @@ double calculateAverageKneeAngle({
   double? rightAngle;
 
   if (leftHip != null && leftKnee != null && leftAnkle != null) {
-    leftAngle = calculateKneeAngle(hip: leftHip, knee: leftKnee, ankle: leftAnkle);
+    leftAngle = calculateKneeAngle(
+      hip: leftHip,
+      knee: leftKnee,
+      ankle: leftAnkle,
+    );
   }
 
   if (rightHip != null && rightKnee != null && rightAnkle != null) {
-    rightAngle = calculateKneeAngle(hip: rightHip, knee: rightKnee, ankle: rightAnkle);
+    rightAngle = calculateKneeAngle(
+      hip: rightHip,
+      knee: rightKnee,
+      ankle: rightAnkle,
+    );
   }
 
   if (leftAngle != null && rightAngle != null) {

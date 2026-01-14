@@ -34,7 +34,7 @@ class _PoseVisualizerPageState extends State<PoseVisualizerPage> {
   bool isPlaying = false;
 
   final List<PoseFrame> frames = realLateralRaiseFrames;
-  
+
   @override
   void initState() {
     super.initState();
@@ -43,7 +43,7 @@ class _PoseVisualizerPageState extends State<PoseVisualizerPage> {
 
   void _playAnimation() async {
     if (!isPlaying) return;
-    
+
     await Future.delayed(const Duration(milliseconds: 100));
     if (mounted && isPlaying) {
       setState(() {
@@ -77,7 +77,7 @@ class _PoseVisualizerPageState extends State<PoseVisualizerPage> {
   Widget build(BuildContext context) {
     final frame = frames[currentFrame];
     final angle = _calculateAngle(frame);
-    
+
     // Calculate all angles for the graph
     final angles = frames.map((f) => _calculateAngle(f)).toList();
     final minAngle = angles.reduce((a, b) => a < b ? a : b);
@@ -101,7 +101,7 @@ class _PoseVisualizerPageState extends State<PoseVisualizerPage> {
               ),
             ),
           ),
-          
+
           // Angle graph
           Expanded(
             child: Container(
@@ -118,7 +118,7 @@ class _PoseVisualizerPageState extends State<PoseVisualizerPage> {
               ),
             ),
           ),
-          
+
           // Controls
           Container(
             padding: const EdgeInsets.all(16),
@@ -130,10 +130,13 @@ class _PoseVisualizerPageState extends State<PoseVisualizerPage> {
                         style: const TextStyle(fontSize: 16)),
                     const SizedBox(width: 20),
                     Text('Angle: ${angle.toStringAsFixed(1)}°',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
                     const SizedBox(width: 20),
-                    Text('Range: ${minAngle.toStringAsFixed(1)}° - ${maxAngle.toStringAsFixed(1)}°',
-                        style: const TextStyle(fontSize: 14, color: Colors.grey)),
+                    Text(
+                        'Range: ${minAngle.toStringAsFixed(1)}° - ${maxAngle.toStringAsFixed(1)}°',
+                        style:
+                            const TextStyle(fontSize: 14, color: Colors.grey)),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -185,14 +188,22 @@ class PosePainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     // Draw skeleton connections
-    _drawConnection(canvas, size, paint, LandmarkId.leftShoulder, LandmarkId.leftElbow);
-    _drawConnection(canvas, size, paint, LandmarkId.leftElbow, LandmarkId.leftWrist);
-    _drawConnection(canvas, size, paint, LandmarkId.rightShoulder, LandmarkId.rightElbow);
-    _drawConnection(canvas, size, paint, LandmarkId.rightElbow, LandmarkId.rightWrist);
-    _drawConnection(canvas, size, paint, LandmarkId.leftShoulder, LandmarkId.leftHip);
-    _drawConnection(canvas, size, paint, LandmarkId.rightShoulder, LandmarkId.rightHip);
-    _drawConnection(canvas, size, paint, LandmarkId.leftHip, LandmarkId.rightHip);
-    _drawConnection(canvas, size, paint, LandmarkId.leftShoulder, LandmarkId.rightShoulder);
+    _drawConnection(
+        canvas, size, paint, LandmarkId.leftShoulder, LandmarkId.leftElbow);
+    _drawConnection(
+        canvas, size, paint, LandmarkId.leftElbow, LandmarkId.leftWrist);
+    _drawConnection(
+        canvas, size, paint, LandmarkId.rightShoulder, LandmarkId.rightElbow);
+    _drawConnection(
+        canvas, size, paint, LandmarkId.rightElbow, LandmarkId.rightWrist);
+    _drawConnection(
+        canvas, size, paint, LandmarkId.leftShoulder, LandmarkId.leftHip);
+    _drawConnection(
+        canvas, size, paint, LandmarkId.rightShoulder, LandmarkId.rightHip);
+    _drawConnection(
+        canvas, size, paint, LandmarkId.leftHip, LandmarkId.rightHip);
+    _drawConnection(
+        canvas, size, paint, LandmarkId.leftShoulder, LandmarkId.rightShoulder);
 
     // Draw landmarks
     for (final landmark in frame.landmarks.values) {
@@ -201,10 +212,11 @@ class PosePainter extends CustomPainter {
     }
   }
 
-  void _drawConnection(Canvas canvas, Size size, Paint paint, LandmarkId from, LandmarkId to) {
+  void _drawConnection(
+      Canvas canvas, Size size, Paint paint, LandmarkId from, LandmarkId to) {
     final fromLandmark = frame[from];
     final toLandmark = frame[to];
-    
+
     if (fromLandmark != null && toLandmark != null) {
       final p1 = _scalePoint(fromLandmark.x, fromLandmark.y, size);
       final p2 = _scalePoint(toLandmark.x, toLandmark.y, size);
@@ -255,7 +267,7 @@ class AngleGraphPainter extends CustomPainter {
       final x = (i / (angles.length - 1)) * size.width;
       final normalizedAngle = (angles[i] - minAngle) / (maxAngle - minAngle);
       final y = size.height - (normalizedAngle * size.height);
-      
+
       if (i == 0) {
         path.moveTo(x, y);
       } else {

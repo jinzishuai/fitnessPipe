@@ -106,10 +106,10 @@ class SingleSquatState {
 
   /// Initial state when counter is created.
   const SingleSquatState.initial()
-      : repCount = 0,
-        phase = SingleSquatPhase.waiting,
-        currentAngle = 180.0,
-        smoothedAngle = 180.0;
+    : repCount = 0,
+      phase = SingleSquatPhase.waiting,
+      currentAngle = 180.0,
+      smoothedAngle = 180.0;
 
   /// Create a copy with updated fields.
   SingleSquatState copyWith({
@@ -127,6 +127,7 @@ class SingleSquatState {
   }
 
   @override
-  String toString() => 'SingleSquatState(reps: $repCount, phase: $phase, '
+  String toString() =>
+      'SingleSquatState(reps: $repCount, phase: $phase, '
       'angle: ${smoothedAngle.toStringAsFixed(1)}°)';
 }
