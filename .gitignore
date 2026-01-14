@@ -47,4 +47,10 @@ app.*.map.json
 # Kotlin cache
 android/.kotlin/
 arbigent-result
-arbigent-cachepackages/fitness_counter/test/fixtures/pose_landmarker.task
+arbigent-cache
+
+# Test fixtures - large model files
+packages/fitness_counter/test/fixtures/pose_landmarker.task
+
+# Build artifacts (anywhere in tree)
+**/build/
