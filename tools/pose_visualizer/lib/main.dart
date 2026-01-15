@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fitness_counter/fitness_counter.dart';
 import 'real_lateral_raise.dart';
+import 'real_single_squat.dart';
 
 void main() {
   runApp(const PoseVisualizerApp());
@@ -22,6 +23,22 @@ class PoseVisualizerApp extends StatelessWidget {
   }
 }
 
+class ExerciseData {
+  final String name;
+  final List<PoseFrame> frames;
+  final double Function(PoseFrame) calculateAngle;
+  final double minValues;
+  final double maxValues;
+
+  ExerciseData({
+    required this.name,
+    required this.frames,
+    required this.calculateAngle,
+    this.minValues = 0,
+    this.maxValues = 180,
+  });
+}
+
 class PoseVisualizerPage extends StatefulWidget {
   const PoseVisualizerPage({super.key});
 
@@ -32,12 +49,52 @@ class PoseVisualizerPage extends StatefulWidget {
 class _PoseVisualizerPageState extends State<PoseVisualizerPage> {
   int currentFrame = 0;
   bool isPlaying = false;
-
-  final List<PoseFrame> frames = realLateralRaiseFrames;
+  late ExerciseData selectedExercise;
+  late List<ExerciseData> exercises;
 
   @override
   void initState() {
     super.initState();
+    
+    exercises = [
+      ExerciseData(
+        name: 'Lateral Raise',
+        frames: realLateralRaiseFrames,
+        calculateAngle: (frame) => calculateAverageShoulderAngle(
+          leftShoulder: frame[LandmarkId.leftShoulder],
+          leftElbow: frame[LandmarkId.leftElbow],
+          leftHip: frame[LandmarkId.leftHip],
+          rightShoulder: frame[LandmarkId.rightShoulder],
+          rightElbow: frame[LandmarkId.rightElbow],
+          rightHip: frame[LandmarkId.rightHip],
+        ),
+      ),
+      ExerciseData(
+        name: 'Single Squat',
+        frames: realSingleSquatFrames,
+        calculateAngle: (frame) {
+           // Using calculateAverageKneeAngle which we added to fitness_counter
+           // We need to pass the required landmarks.
+           // Note: calculateAverageKneeAngle might look for specific landmarks 
+           // let's double check its signature.
+           // It likely takes (leftHip, leftKnee, leftAnkle, rightHip, rightKnee, rightAnkle)
+           // But wait, allow me to just use the one that takes named params if available
+           // checking angle_calculator.dart from memory/previous reads:
+           // it has calculateAverageKneeAngle({required leftHip, ..., required rightAnkle})
+           
+           return calculateAverageKneeAngle(
+              leftHip: frame[LandmarkId.leftHip],
+              leftKnee: frame[LandmarkId.leftKnee],
+              leftAnkle: frame[LandmarkId.leftAnkle],
+              rightHip: frame[LandmarkId.rightHip],
+              rightKnee: frame[LandmarkId.rightKnee],
+              rightAnkle: frame[LandmarkId.rightAnkle],
+           );
+        },
+      ),
+    ];
+    
+    selectedExercise = exercises[0];
     _playAnimation();
   }
 
@@ -47,7 +104,7 @@ class _PoseVisualizerPageState extends State<PoseVisualizerPage> {
     await Future.delayed(const Duration(milliseconds: 100));
     if (mounted && isPlaying) {
       setState(() {
-        currentFrame = (currentFrame + 1) % frames.length;
+        currentFrame = (currentFrame + 1) % selectedExercise.frames.length;
       });
       _playAnimation();
     }
@@ -61,32 +118,50 @@ class _PoseVisualizerPageState extends State<PoseVisualizerPage> {
       _playAnimation();
     }
   }
-
-  double _calculateAngle(PoseFrame frame) {
-    return calculateAverageShoulderAngle(
-      leftShoulder: frame[LandmarkId.leftShoulder],
-      leftElbow: frame[LandmarkId.leftElbow],
-      leftHip: frame[LandmarkId.leftHip],
-      rightShoulder: frame[LandmarkId.rightShoulder],
-      rightElbow: frame[LandmarkId.rightElbow],
-      rightHip: frame[LandmarkId.rightHip],
-    );
+  
+  void _onExerciseChanged(ExerciseData? newValue) {
+      if (newValue != null) {
+          setState(() {
+              selectedExercise = newValue;
+              currentFrame = 0;
+              isPlaying = false;
+          });
+      }
   }
 
   @override
   Widget build(BuildContext context) {
-    final frame = frames[currentFrame];
-    final angle = _calculateAngle(frame);
+    final frames = selectedExercise.frames;
+    final frame = frames.isNotEmpty ? frames[currentFrame] : PoseFrame(landmarks: {}, timestamp: DateTime.now());
+    // Safe guard if empty frames
+    if (frames.isEmpty) return const Scaffold(body: Center(child: Text("No frames")));
+
+    final angle = selectedExercise.calculateAngle(frame);
 
     // Calculate all angles for the graph
-    final angles = frames.map((f) => _calculateAngle(f)).toList();
-    final minAngle = angles.reduce((a, b) => a < b ? a : b);
-    final maxAngle = angles.reduce((a, b) => a > b ? a : b);
+    final angles = frames.map((f) => selectedExercise.calculateAngle(f)).toList();
+    final minAngle = angles.isEmpty ? 0.0 : angles.reduce((a, b) => a < b ? a : b);
+    final maxAngle = angles.isEmpty ? 0.0 : angles.reduce((a, b) => a > b ? a : b);
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('Pose Data Visualizer'),
+        actions: [
+            DropdownButton<ExerciseData>(
+                value: selectedExercise,
+                icon: const Icon(Icons.arrow_downward),
+                elevation: 16,
+                onChanged: _onExerciseChanged,
+                items: exercises.map<DropdownMenuItem<ExerciseData>>((ExerciseData value) {
+                    return DropdownMenuItem<ExerciseData>(
+                        value: value,
+                        child: Text(value.name),
+                    );
+                }).toList(),
+            ),
+            const SizedBox(width: 16),
+        ],
       ),
       body: Column(
         children: [
@@ -147,7 +222,7 @@ class _PoseVisualizerPageState extends State<PoseVisualizerPage> {
                         value: currentFrame.toDouble(),
                         min: 0,
                         max: (frames.length - 1).toDouble(),
-                        divisions: frames.length - 1,
+                        divisions: frames.length > 1 ? frames.length - 1 : 1,
                         onChanged: (value) {
                           setState(() {
                             currentFrame = value.toInt();
@@ -178,6 +253,8 @@ class PosePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (frame.landmarks.isEmpty) return;
+    
     final paint = Paint()
       ..color = Colors.green
       ..strokeWidth = 2
@@ -204,6 +281,16 @@ class PosePainter extends CustomPainter {
         canvas, size, paint, LandmarkId.leftHip, LandmarkId.rightHip);
     _drawConnection(
         canvas, size, paint, LandmarkId.leftShoulder, LandmarkId.rightShoulder);
+        
+    // Legs
+    _drawConnection(
+        canvas, size, paint, LandmarkId.leftHip, LandmarkId.leftKnee);
+    _drawConnection(
+        canvas, size, paint, LandmarkId.leftKnee, LandmarkId.leftAnkle);
+    _drawConnection(
+        canvas, size, paint, LandmarkId.rightHip, LandmarkId.rightKnee);
+    _drawConnection(
+        canvas, size, paint, LandmarkId.rightKnee, LandmarkId.rightAnkle);
 
     // Draw landmarks
     for (final landmark in frame.landmarks.values) {
@@ -260,12 +347,15 @@ class AngleGraphPainter extends CustomPainter {
     final textPainter = TextPainter(
       textDirection: TextDirection.ltr,
     );
+    
+    if (angles.isEmpty) return;
 
     // Draw angle line
     final path = Path();
     for (int i = 0; i < angles.length; i++) {
       final x = (i / (angles.length - 1)) * size.width;
-      final normalizedAngle = (angles[i] - minAngle) / (maxAngle - minAngle);
+      final range = maxAngle - minAngle;
+      final normalizedAngle = range == 0 ? 0.5 : (angles[i] - minAngle) / range;
       final y = size.height - (normalizedAngle * size.height);
 
       if (i == 0) {
@@ -302,5 +392,5 @@ class AngleGraphPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(AngleGraphPainter oldDelegate) =>
-      oldDelegate.currentFrame != currentFrame;
+      oldDelegate.currentFrame != currentFrame || oldDelegate.angles != angles;
 }
