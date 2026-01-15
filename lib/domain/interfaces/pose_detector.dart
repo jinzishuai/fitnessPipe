@@ -43,4 +43,3 @@ abstract class PoseDetector {
   /// Whether the detector has been initialized.
   bool get isInitialized;
 }
-

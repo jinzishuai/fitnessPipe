@@ -55,7 +55,7 @@ class _PoseVisualizerPageState extends State<PoseVisualizerPage> {
   @override
   void initState() {
     super.initState();
-    
+
     exercises = [
       ExerciseData(
         name: 'Lateral Raise',
@@ -73,27 +73,27 @@ class _PoseVisualizerPageState extends State<PoseVisualizerPage> {
         name: 'Single Squat',
         frames: realSingleSquatFrames,
         calculateAngle: (frame) {
-           // Using calculateAverageKneeAngle which we added to fitness_counter
-           // We need to pass the required landmarks.
-           // Note: calculateAverageKneeAngle might look for specific landmarks 
-           // let's double check its signature.
-           // It likely takes (leftHip, leftKnee, leftAnkle, rightHip, rightKnee, rightAnkle)
-           // But wait, allow me to just use the one that takes named params if available
-           // checking angle_calculator.dart from memory/previous reads:
-           // it has calculateAverageKneeAngle({required leftHip, ..., required rightAnkle})
-           
-           return calculateAverageKneeAngle(
-              leftHip: frame[LandmarkId.leftHip],
-              leftKnee: frame[LandmarkId.leftKnee],
-              leftAnkle: frame[LandmarkId.leftAnkle],
-              rightHip: frame[LandmarkId.rightHip],
-              rightKnee: frame[LandmarkId.rightKnee],
-              rightAnkle: frame[LandmarkId.rightAnkle],
-           );
+          // Using calculateAverageKneeAngle which we added to fitness_counter
+          // We need to pass the required landmarks.
+          // Note: calculateAverageKneeAngle might look for specific landmarks
+          // let's double check its signature.
+          // It likely takes (leftHip, leftKnee, leftAnkle, rightHip, rightKnee, rightAnkle)
+          // But wait, allow me to just use the one that takes named params if available
+          // checking angle_calculator.dart from memory/previous reads:
+          // it has calculateAverageKneeAngle({required leftHip, ..., required rightAnkle})
+
+          return calculateAverageKneeAngle(
+            leftHip: frame[LandmarkId.leftHip],
+            leftKnee: frame[LandmarkId.leftKnee],
+            leftAnkle: frame[LandmarkId.leftAnkle],
+            rightHip: frame[LandmarkId.rightHip],
+            rightKnee: frame[LandmarkId.rightKnee],
+            rightAnkle: frame[LandmarkId.rightAnkle],
+          );
         },
       ),
     ];
-    
+
     selectedExercise = exercises[0];
     _playAnimation();
   }
@@ -118,49 +118,56 @@ class _PoseVisualizerPageState extends State<PoseVisualizerPage> {
       _playAnimation();
     }
   }
-  
+
   void _onExerciseChanged(ExerciseData? newValue) {
-      if (newValue != null) {
-          setState(() {
-              selectedExercise = newValue;
-              currentFrame = 0;
-              isPlaying = false;
-          });
-      }
+    if (newValue != null) {
+      setState(() {
+        selectedExercise = newValue;
+        currentFrame = 0;
+        isPlaying = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final frames = selectedExercise.frames;
-    final frame = frames.isNotEmpty ? frames[currentFrame] : PoseFrame(landmarks: {}, timestamp: DateTime.now());
+    final frame = frames.isNotEmpty
+        ? frames[currentFrame]
+        : PoseFrame(landmarks: {}, timestamp: DateTime.now());
     // Safe guard if empty frames
-    if (frames.isEmpty) return const Scaffold(body: Center(child: Text("No frames")));
+    if (frames.isEmpty)
+      return const Scaffold(body: Center(child: Text("No frames")));
 
     final angle = selectedExercise.calculateAngle(frame);
 
     // Calculate all angles for the graph
-    final angles = frames.map((f) => selectedExercise.calculateAngle(f)).toList();
-    final minAngle = angles.isEmpty ? 0.0 : angles.reduce((a, b) => a < b ? a : b);
-    final maxAngle = angles.isEmpty ? 0.0 : angles.reduce((a, b) => a > b ? a : b);
+    final angles =
+        frames.map((f) => selectedExercise.calculateAngle(f)).toList();
+    final minAngle =
+        angles.isEmpty ? 0.0 : angles.reduce((a, b) => a < b ? a : b);
+    final maxAngle =
+        angles.isEmpty ? 0.0 : angles.reduce((a, b) => a > b ? a : b);
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('Pose Data Visualizer'),
         actions: [
-            DropdownButton<ExerciseData>(
-                value: selectedExercise,
-                icon: const Icon(Icons.arrow_downward),
-                elevation: 16,
-                onChanged: _onExerciseChanged,
-                items: exercises.map<DropdownMenuItem<ExerciseData>>((ExerciseData value) {
-                    return DropdownMenuItem<ExerciseData>(
-                        value: value,
-                        child: Text(value.name),
-                    );
-                }).toList(),
-            ),
-            const SizedBox(width: 16),
+          DropdownButton<ExerciseData>(
+            value: selectedExercise,
+            icon: const Icon(Icons.arrow_downward),
+            elevation: 16,
+            onChanged: _onExerciseChanged,
+            items: exercises
+                .map<DropdownMenuItem<ExerciseData>>((ExerciseData value) {
+              return DropdownMenuItem<ExerciseData>(
+                value: value,
+                child: Text(value.name),
+              );
+            }).toList(),
+          ),
+          const SizedBox(width: 16),
         ],
       ),
       body: Column(
@@ -254,7 +261,7 @@ class PosePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (frame.landmarks.isEmpty) return;
-    
+
     final paint = Paint()
       ..color = Colors.green
       ..strokeWidth = 2
@@ -281,7 +288,7 @@ class PosePainter extends CustomPainter {
         canvas, size, paint, LandmarkId.leftHip, LandmarkId.rightHip);
     _drawConnection(
         canvas, size, paint, LandmarkId.leftShoulder, LandmarkId.rightShoulder);
-        
+
     // Legs
     _drawConnection(
         canvas, size, paint, LandmarkId.leftHip, LandmarkId.leftKnee);
@@ -347,7 +354,7 @@ class AngleGraphPainter extends CustomPainter {
     final textPainter = TextPainter(
       textDirection: TextDirection.ltr,
     );
-    
+
     if (angles.isEmpty) return;
 
     // Draw angle line

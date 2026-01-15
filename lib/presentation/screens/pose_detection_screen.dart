@@ -63,12 +63,12 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   // Platform-specific camera handling
   final bool _isMacOS = Platform.isMacOS;
   // Check for simulator (simple heuristics for now, or device_info in future)
-  // Platform.isIOS is true on generic iOS. 
+  // Platform.isIOS is true on generic iOS.
   // We can use the deviceInfo plugin, but maybe we can just try/catch camera init or use a flag?
   // Let's assume we need to import device_info_plus or similar if we want robust checks.
   // Actually, `Platform.environment` might have info? Or checking if cameras are empty on iOS?
   // `availableCameras()` returns empty list on Simulator usually.
-  
+
   bool _isVirtualCamera = false;
   VirtualCameraService? _virtualCameraService;
 
@@ -148,13 +148,13 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   Future<void> _initializeMobileCamera() async {
     _mobileCameras = await mobile_camera.availableCameras();
 
-  // If no cameras found on iOS, assume Simulator and try Virtual Camera
-  // Note: checking if cameras is empty is a decent heuristic for Simulator on some versions,
-  // but explicit platform check is better.
-  if (_mobileCameras.isEmpty && Platform.isIOS) {
-     await _initializeVirtualCamera();
-     return;
-  }
+    // If no cameras found on iOS, assume Simulator and try Virtual Camera
+    // Note: checking if cameras is empty is a decent heuristic for Simulator on some versions,
+    // but explicit platform check is better.
+    if (_mobileCameras.isEmpty && Platform.isIOS) {
+      await _initializeVirtualCamera();
+      return;
+    }
 
     if (_mobileCameras.isEmpty) {
       setState(() {
@@ -189,11 +189,9 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     });
   }
 
-
-  
   Size? _virtualCameraImageSize;
   File? _currentVirtualFrameFile;
-  
+
   void _processVirtualCameraImage(InputImage inputImage) async {
     // Update the UI preview
     if (inputImage.filePath != null) {
@@ -202,21 +200,21 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
           _currentVirtualFrameFile = File(inputImage.filePath!);
         });
       }
-      
+
       // Calculate size once if missing
       if (_virtualCameraImageSize == null) {
-          try {
-             final file = File(inputImage.filePath!);
-             final bytes = await file.readAsBytes();
-             final codec = await ui.instantiateImageCodec(bytes);
-             final frameInfo = await codec.getNextFrame();
-             _virtualCameraImageSize = Size(
-                frameInfo.image.width.toDouble(), 
-                frameInfo.image.height.toDouble()
-             );
-          } catch(e) {
-             // Ignore error, will rely on fallback
-          }
+        try {
+          final file = File(inputImage.filePath!);
+          final bytes = await file.readAsBytes();
+          final codec = await ui.instantiateImageCodec(bytes);
+          final frameInfo = await codec.getNextFrame();
+          _virtualCameraImageSize = Size(
+            frameInfo.image.width.toDouble(),
+            frameInfo.image.height.toDouble(),
+          );
+        } catch (e) {
+          // Ignore error, will rely on fallback
+        }
       }
     }
 
@@ -325,16 +323,16 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
       if (mounted) {
         setState(() {
           if (inputImage.metadata?.size != null) {
-             _cameraImageSize = inputImage.metadata!.size;
+            _cameraImageSize = inputImage.metadata!.size;
           } else if (_virtualCameraImageSize != null) {
-             _cameraImageSize = _virtualCameraImageSize;
+            _cameraImageSize = _virtualCameraImageSize;
           } else if (_isVirtualCamera) {
-             // Fallback for virtual camera if calc fails
-             _cameraImageSize = const Size(720, 1280);
+            // Fallback for virtual camera if calc fails
+            _cameraImageSize = const Size(720, 1280);
           } else {
-             _cameraImageSize = const Size(1, 1);
+            _cameraImageSize = const Size(1, 1);
           }
-          
+
           _currentPose = poses.isNotEmpty ? poses.first : null;
 
           // Process pose through counter if exercise selected
@@ -424,11 +422,12 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
           bottomThreshold: _squatBottomThreshold,
         );
       }
-      
+
       // Update virtual camera video if active
       if (_isVirtualCamera && type != null) {
         _virtualCameraService?.setExercise(type);
-        _virtualCameraImageSize = null; // Force recalculation of image size for new video
+        _virtualCameraImageSize =
+            null; // Force recalculation of image size for new video
       }
     });
   }
@@ -630,11 +629,11 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     return LayoutBuilder(
       builder: (context, constraints) {
         if (_currentVirtualFrameFile == null) {
-           return const Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator());
         }
-        
+
         // Calculate aspect ratio from the image or use default
-        final double aspectRatio = _cameraImageSize != null 
+        final double aspectRatio = _cameraImageSize != null
             ? _cameraImageSize!.width / _cameraImageSize!.height
             : 16 / 9;
 
@@ -665,10 +664,10 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                       ),
                     ),
                   ),
-                  
+
                 // Overlay Widgets (Reuse specific widgets or duplicate structure?)
                 // Let's copy the structure from Mobile for consistency.
-                
+
                 // Exercise selector (top left)
                 Positioned(
                   top: 16,
@@ -683,10 +682,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                         const SizedBox(width: 8),
                         IconButton(
                           onPressed: _showThresholdSettings,
-                          icon: const Icon(
-                            Icons.settings,
-                            color: Colors.white,
-                          ),
+                          icon: const Icon(Icons.settings, color: Colors.white),
                           style: IconButton.styleFrom(
                             backgroundColor: Colors.black87,
                           ),
@@ -734,39 +730,45 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                         Container(
-                           width: 10,
-                           height: 10,
-                           decoration: BoxDecoration(
-                             shape: BoxShape.circle,
-                             color: _currentPose != null
-                                 ? Colors.greenAccent
-                                 : Colors.red,
-                           ),
-                         ),
-                         const SizedBox(width: 8),
-                         Text(
-                           _currentPose != null
-                               ? 'Virtual Pose: ${(_currentPose!.confidence * 100).toStringAsFixed(0)}%'
-                               : 'No pose detected',
-                           style: const TextStyle(
-                             color: Colors.white,
-                             fontSize: 12,
-                           ),
-                         ),
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _currentPose != null
+                                ? Colors.greenAccent
+                                : Colors.red,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _currentPose != null
+                              ? 'Virtual Pose: ${(_currentPose!.confidence * 100).toStringAsFixed(0)}%'
+                              : 'No pose detected',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                          ),
+                        ),
                       ],
                     ),
                   ),
                 ),
-                
+
                 // Simulator Badge
                 Positioned(
                   top: 16,
                   right: 16,
                   child: Container(
-                     padding: const EdgeInsets.all(8),
-                     color: Colors.redAccent,
-                     child: const Text('SIMULATOR MODE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    padding: const EdgeInsets.all(8),
+                    color: Colors.redAccent,
+                    child: const Text(
+                      'SIMULATOR MODE',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
               ],

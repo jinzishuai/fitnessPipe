@@ -46,9 +46,10 @@ class MLKitPoseDetector implements PoseDetector {
     // Note: ML Kit returns coordinates relative to the input image size.
     // If rotation is 90/270, the width/height are swapped in metadata?
     // Let's rely on metadata from InputImage.
-    
+
     final size = inputImage.metadata?.size ?? const Size(1, 1);
-    final rotation = inputImage.metadata?.rotation ?? mlkit.InputImageRotation.rotation0deg;
+    final rotation =
+        inputImage.metadata?.rotation ?? mlkit.InputImageRotation.rotation0deg;
 
     return mlkitPoses
         .map((pose) => _convertPose(pose, size, rotation))
