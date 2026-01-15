@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:camera/camera.dart' as mobile_camera;
@@ -64,7 +63,6 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   // Platform-specific camera handling
   final bool _isMacOS = Platform.isMacOS;
   // Check for simulator (simple heuristics for now, or device_info in future)
-  bool _isSimulator = false;
   // Platform.isIOS is true on generic iOS. 
   // We can use the deviceInfo plugin, but maybe we can just try/catch camera init or use a flag?
   // Let's assume we need to import device_info_plus or similar if we want robust checks.
@@ -154,7 +152,6 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   // Note: checking if cameras is empty is a decent heuristic for Simulator on some versions,
   // but explicit platform check is better.
   if (_mobileCameras.isEmpty && Platform.isIOS) {
-     _isSimulator = true;
      await _initializeVirtualCamera();
      return;
   }

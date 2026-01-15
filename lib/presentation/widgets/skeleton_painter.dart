@@ -74,6 +74,7 @@ class SkeletonPainter extends CustomPainter {
     (LandmarkType.rightAnkle, LandmarkType.rightFootIndex),
   ];
 
+  @override
   void paint(Canvas canvas, Size size) {
     if (pose == null || !pose!.isValid) return;
 

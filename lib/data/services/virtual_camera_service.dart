@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
 
@@ -76,7 +76,7 @@ class VirtualCameraService {
           _currentFrameIndex = (_currentFrameIndex + 1) % count;
         }
       } catch (e) {
-        print('Virtual Camera Error: $e');
+        debugPrint('Virtual Camera Error: $e');
       }
     });
   }
@@ -117,7 +117,7 @@ class VirtualCameraService {
       return InputImage.fromFilePath(tempFile.path);
       
     } catch (e) {
-      print('Error loading virtual frame $assetPath: $e');
+      debugPrint('Error loading virtual frame $assetPath: $e');
       return null;
     }
   }
