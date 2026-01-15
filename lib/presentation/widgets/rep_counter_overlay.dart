@@ -1,16 +1,17 @@
-import 'package:fitness_counter/fitness_counter.dart';
 import 'package:flutter/material.dart';
 
 /// Overlay widget displaying rep counter information.
 class RepCounterOverlay extends StatelessWidget {
   final int repCount;
-  final LateralRaisePhase phase;
+  final String phaseLabel;
+  final Color phaseColor;
   final double currentAngle;
 
   const RepCounterOverlay({
     super.key,
     required this.repCount,
-    required this.phase,
+    required this.phaseLabel,
+    required this.phaseColor,
     required this.currentAngle,
   });
 
@@ -52,7 +53,7 @@ class RepCounterOverlay extends StatelessWidget {
             const SizedBox(height: 8),
 
             // Phase indicator
-            _buildPhaseChip(phase),
+            _buildPhaseChip(),
 
             const SizedBox(height: 4),
 
@@ -67,23 +68,15 @@ class RepCounterOverlay extends StatelessWidget {
     );
   }
 
-  Widget _buildPhaseChip(LateralRaisePhase phase) {
-    final (label, color) = switch (phase) {
-      LateralRaisePhase.waiting => ('Ready...', Colors.grey),
-      LateralRaisePhase.down => ('Down', Colors.blue),
-      LateralRaisePhase.rising => ('Rising ↑', Colors.orange),
-      LateralRaisePhase.up => ('Up!', Colors.green),
-      LateralRaisePhase.falling => ('Lowering ↓', Colors.orange),
-    };
-
+  Widget _buildPhaseChip() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color,
+        color: phaseColor,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        label,
+        phaseLabel,
         style: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.w600,

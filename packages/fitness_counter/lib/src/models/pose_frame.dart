@@ -38,6 +38,16 @@ class PoseFrame {
     return landmark;
   }
 
+  PoseFrame copyWith({
+    Map<LandmarkId, Landmark>? landmarks,
+    DateTime? timestamp,
+  }) {
+    return PoseFrame(
+      landmarks: landmarks ?? this.landmarks,
+      timestamp: timestamp ?? this.timestamp,
+    );
+  }
+
   @override
   String toString() =>
       'PoseFrame(landmarks: ${landmarks.length}, timestamp: $timestamp)';
