@@ -136,8 +136,9 @@ class _PoseVisualizerPageState extends State<PoseVisualizerPage> {
         ? frames[currentFrame]
         : PoseFrame(landmarks: {}, timestamp: DateTime.now());
     // Safe guard if empty frames
-    if (frames.isEmpty)
+    if (frames.isEmpty) {
       return const Scaffold(body: Center(child: Text("No frames")));
+    }
 
     final angle = selectedExercise.calculateAngle(frame);
 
