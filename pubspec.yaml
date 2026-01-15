@@ -40,8 +40,8 @@ dependencies:
   camera_macos: ^0.0.8  # macOS-specific camera support
   
   # ML Kit Pose Detection
-  google_mlkit_pose_detection: ^0.12.0
-  google_mlkit_commons: ^0.8.0
+  google_mlkit_pose_detection: ^0.14.0
+  google_mlkit_commons: ^0.11.0
   
   # Dependency Injection
   get_it: ^7.6.0
@@ -76,7 +76,9 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
+  assets:
+    - assets/fixtures/lateral_raise/
+    - assets/fixtures/single_squat/
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

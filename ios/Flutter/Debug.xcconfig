@@ -1,3 +1,6 @@
 #include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"
 #include "Generated.xcconfig"
 #include? "Config.local.xcconfig"
+
+// Force Rosetta (x86_64) for Simulator
+EXCLUDED_ARCHS[sdk=iphonesimulator*]=arm64

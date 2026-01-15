@@ -36,22 +36,24 @@ class MLKitPoseDetector implements PoseDetector {
   }
 
   @override
-  Future<List<Pose>> detectPoses(
-    CameraImage image,
-    Size imageSize,
-    InputImageRotation rotation,
-  ) async {
+  Future<List<Pose>> detectPoses(mlkit.InputImage inputImage) async {
     if (!_isInitialized || _detector == null) {
       throw StateError('Detector not initialized. Call initialize() first.');
     }
 
-    final inputImage = _convertToInputImage(image, rotation);
-    if (inputImage == null) return [];
-
+    // Process directly
     final mlkitPoses = await _detector!.processImage(inputImage);
 
+    // For coordinate normalization, we use the input image metadata size
+    // Note: ML Kit returns coordinates relative to the input image size.
+    // If rotation is 90/270, the width/height are swapped in metadata?
+    // Let's rely on metadata from InputImage.
+    
+    final size = inputImage.metadata?.size ?? const Size(1, 1);
+    final rotation = inputImage.metadata?.rotation ?? mlkit.InputImageRotation.rotation0deg;
+
     return mlkitPoses
-        .map((pose) => _convertPose(pose, imageSize, rotation))
+        .map((pose) => _convertPose(pose, size, rotation))
         .where((pose) => pose.confidence >= _minConfidence)
         .toList();
   }
@@ -63,53 +65,11 @@ class MLKitPoseDetector implements PoseDetector {
     _isInitialized = false;
   }
 
-  /// Convert a camera image to ML Kit InputImage.
-  mlkit.InputImage? _convertToInputImage(
-    CameraImage image,
-    InputImageRotation rotation,
-  ) {
-    final mlkitRotation = _convertRotation(rotation);
-
-    // Get the image format based on platform
-    final format = Platform.isAndroid
-        ? mlkit.InputImageFormat.nv21
-        : mlkit.InputImageFormat.bgra8888;
-
-    // For Android, use nv21 format from the first plane
-    // For iOS, use bgra8888 format
-    final bytes = Platform.isAndroid
-        ? image.planes.first.bytes
-        : image.planes.first.bytes;
-
-    final metadata = mlkit.InputImageMetadata(
-      size: Size(image.width.toDouble(), image.height.toDouble()),
-      rotation: mlkitRotation,
-      format: format,
-      bytesPerRow: image.planes.first.bytesPerRow,
-    );
-
-    return mlkit.InputImage.fromBytes(bytes: bytes, metadata: metadata);
-  }
-
-  /// Convert our rotation enum to ML Kit's.
-  mlkit.InputImageRotation _convertRotation(InputImageRotation rotation) {
-    switch (rotation) {
-      case InputImageRotation.rotation0deg:
-        return mlkit.InputImageRotation.rotation0deg;
-      case InputImageRotation.rotation90deg:
-        return mlkit.InputImageRotation.rotation90deg;
-      case InputImageRotation.rotation180deg:
-        return mlkit.InputImageRotation.rotation180deg;
-      case InputImageRotation.rotation270deg:
-        return mlkit.InputImageRotation.rotation270deg;
-    }
-  }
-
   /// Convert ML Kit pose to our domain model.
   Pose _convertPose(
     mlkit.Pose mlkitPose,
     Size imageSize,
-    InputImageRotation rotation,
+    mlkit.InputImageRotation rotation,
   ) {
     final landmarks = <PoseLandmark>[];
     double totalConfidence = 0;
@@ -117,13 +77,13 @@ class MLKitPoseDetector implements PoseDetector {
     // When rotated 90 or 270 degrees, ML Kit returns coordinates in rotated space
     // So we need to normalize by the rotated dimensions
     final normalizeWidth =
-        (rotation == InputImageRotation.rotation90deg ||
-            rotation == InputImageRotation.rotation270deg)
+        (rotation == mlkit.InputImageRotation.rotation90deg ||
+            rotation == mlkit.InputImageRotation.rotation270deg)
         ? imageSize.height
         : imageSize.width;
     final normalizeHeight =
-        (rotation == InputImageRotation.rotation90deg ||
-            rotation == InputImageRotation.rotation270deg)
+        (rotation == mlkit.InputImageRotation.rotation90deg ||
+            rotation == mlkit.InputImageRotation.rotation270deg)
         ? imageSize.width
         : imageSize.height;
 
