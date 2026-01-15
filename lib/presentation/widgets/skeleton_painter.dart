@@ -163,13 +163,35 @@ class SkeletonPainter extends CustomPainter {
       // Case: iOS (Coordinates are NOT rotated by ML Kit, but device is rotated)
       // We need to swap X/Y coordinates manually to match orientation
       // Note: We use the effective dimensions (swapped) for scaling
-      x = landmark.y * effectiveImageSize.width * scale + offsetX;
-      y = landmark.x * effectiveImageSize.height * scale + offsetY;
+
+      // Check if coordinates are normalized (0..1) or absolute (pixels)
+      // Heuristic: if value > 2.0, it's likely absolute pixels
+      final isNormalized = landmark.x <= 2.0 && landmark.y <= 2.0;
+
+      if (isNormalized) {
+        x = landmark.y * effectiveImageSize.width * scale + offsetX;
+        y = landmark.x * effectiveImageSize.height * scale + offsetY;
+      } else {
+        // Absolute coordinates - just scale
+        // Note: when swapping dimensions, landmark.y matches width (x-axis)
+        x = landmark.y * scale + offsetX;
+        y = landmark.x * scale + offsetY;
+      }
     } else {
       // Case: Android (Coordinates ARE rotated by ML Kit) OR No Rotation
       // Direct mapping
-      x = landmark.x * effectiveImageSize.width * scale + offsetX;
-      y = landmark.y * effectiveImageSize.height * scale + offsetY;
+
+      // Check if coordinates are normalized (0..1) or absolute (pixels)
+      final isNormalized = landmark.x <= 2.0 && landmark.y <= 2.0;
+
+      if (isNormalized) {
+        x = landmark.x * effectiveImageSize.width * scale + offsetX;
+        y = landmark.y * effectiveImageSize.height * scale + offsetY;
+      } else {
+        // Absolute coordinates - just scale
+        x = landmark.x * scale + offsetX;
+        y = landmark.y * scale + offsetY;
+      }
     }
 
     return Offset(x, y);

@@ -72,6 +72,16 @@ flutter run
 
 > **Note**: Make sure you've configured your development team in `ios/Config.local.xcconfig` (see Installation step 4).
 
+#### iOS Simulator & Virtual Camera
+
+To run on the iOS Simulator, use the helper script which handles Rosetta mode automatically:
+
+```bash
+./run_rosetta.sh
+```
+
+For detailed information about the Simulator setup and Virtual Camera architecture, see [docs/ios_simulator.md](docs/ios_simulator.md).
+
 #### macOS
 
 ```bash

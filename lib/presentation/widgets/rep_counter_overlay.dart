@@ -6,7 +6,6 @@ class RepCounterOverlay extends StatelessWidget {
   final String phaseLabel;
   final Color phaseColor;
   final double currentAngle;
-
   const RepCounterOverlay({
     super.key,
     required this.repCount,

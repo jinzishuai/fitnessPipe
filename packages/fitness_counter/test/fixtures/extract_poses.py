@@ -200,6 +200,7 @@ def main():
     parser.add_argument('--video', required=True, help='Path to input video file')
     parser.add_argument('--output', required=True, help='Path to output Dart file')
     parser.add_argument('--name', required=True, help='Prefix for Dart variables (e.g. "realSingleSquat")')
+    parser.add_argument('--export-images', action='store_true', help='Export frames as JPEG images')
 
     args = parser.parse_args()
     
@@ -217,6 +218,39 @@ def main():
         # Generate Dart fixture
         generate_dart_fixture(data, str(output_path), args.name)
         
+        # Export images if requested
+        if args.export_images:
+            output_dir = output_path.parent / "images"
+            output_dir.mkdir(exist_ok=True)
+            
+            print(f"\nExporting images to {output_dir}...")
+            cap = cv2.VideoCapture(str(video_path))
+            
+            # Use data['frames'] to only export frames where we successfully detected a pose
+            # Or just export all frames that match the fixture indices.
+            # Let's export all frames that correspond to the data we extracted to keep indices in sync.
+            
+            # Map frame_number to frame data for quick lookup
+            frames_to_export = {f['frame_number'] for f in data['frames']}
+            
+            frame_idx = 0
+            exported_count = 0
+            while cap.isOpened():
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                
+                if frame_idx in frames_to_export:
+                    # Save as jpg
+                    image_path = output_dir / f"frame_{frame_idx}.jpg"
+                    cv2.imwrite(str(image_path), frame)
+                    exported_count += 1
+                
+                frame_idx += 1
+                
+            cap.release()
+            print(f"  Exported {exported_count} images matching extracted poses.")
+
         print("\n✓ Extraction complete!")
         return 0
         

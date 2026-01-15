@@ -1,6 +1,4 @@
-import 'dart:ui';
-
-import 'package:camera/camera.dart';
+import 'package:google_mlkit_commons/google_mlkit_commons.dart';
 import '../models/pose.dart';
 
 /// Configuration for pose detector.
@@ -34,28 +32,14 @@ abstract class PoseDetector {
   /// Initialize the detector with configuration.
   Future<void> initialize(PoseDetectorConfig config);
 
-  /// Process a camera frame and return detected poses.
+  /// Process an input image and return detected poses.
   ///
-  /// [image] - The camera frame to process.
-  /// [imageSize] - The size of the image for coordinate normalization.
-  /// [rotation] - The rotation of the image for proper orientation.
-  Future<List<Pose>> detectPoses(
-    CameraImage image,
-    Size imageSize,
-    InputImageRotation rotation,
-  );
+  /// [inputImage] - The input image to process.
+  Future<List<Pose>> detectPoses(InputImage inputImage);
 
   /// Release resources held by the detector.
   Future<void> dispose();
 
   /// Whether the detector has been initialized.
   bool get isInitialized;
-}
-
-/// Input image rotation values.
-enum InputImageRotation {
-  rotation0deg,
-  rotation90deg,
-  rotation180deg,
-  rotation270deg,
 }
