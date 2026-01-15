@@ -15,10 +15,9 @@ Before writing code, analyze the movement to understand the biomechanics and req
 
 1.  **Obtain a Reference Video**: Get a video of the exercise being performed correctly. Save it to `packages/fitness_counter/test/fixtures/[exercise_name].mp4`.
 2.  **Extract & Analyze Data**:
-    *   Create a copy of `test/fixtures/extract_poses.py` (e.g., `extract_[exercise]_poses.py`).
-    *   Modify it to extract relevant landmarks and calculate specific angles (e.g., knee angle, hip angle).
-    *   Run the script to generate a Dart fixture file (e.g., `real_[exercise_name].dart`).
-    *   **Analyze the output**: Look at the minimum/maximum angles during the rep to determine safe and effective **Top** and **Bottom** thresholds.
+    *   Use the generic script `packages/fitness_counter/test/fixtures/extract_poses.py` to extract dart fixture data from your video.
+    *   Run: `python packages/fitness_counter/test/fixtures/extract_poses.py --video [path/to/video.mp4] --output real_[exercise_name].dart --name Real[ExerciseName]`
+    *   **Analyze the output**: Use the `tools/pose_visualizer` to inspect the data and determine safe and effective **Top** and **Bottom** thresholds.
 
 ### 2. Update Core Helpers
 If the exercise utilizes a joint angle not currently calculated (e.g., Knee Angle), add it to the helper.
