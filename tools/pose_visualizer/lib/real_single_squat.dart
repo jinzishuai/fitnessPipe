@@ -1,0 +1,1 @@
+../../../packages/fitness_counter/test/fixtures/real_single_squat.dart

@@ -41,20 +41,18 @@ The app displays the `real_lateral_raise.dart` test fixture data with:
    - Play/pause button for animation
    - Frame counter and angle display
 
-## Test Data Info
+## Select Exercise
 
-- **Source**: `packages/fitness_counter/test/fixtures/real_lateral_raise.dart`
-- **Frames**: 52 frames extracted from a 3.09s video
-- **Angle Range**: 10.8° - 64.4° (within expected 10-60° range)
-- **Average Confidence**: 99.7%
+You can switch between different exercise data sets (e.g., **Lateral Raise**, **Single Squat**) using the dropdown menu in the top right corner of the app bar.
 
 ## Modifying the Data Source
 
-To visualize different pose data:
+To add new pose data:
 
-1. Edit `lib/main.dart` line 3 to import your fixture file
-2. Update line 35 to reference your data: `final List<PoseFrame> frames = yourFramesHere;`
-3. Hot reload (press `r` in the terminal) or restart the app
+1. Add your fixture file to `lib/` (e.g., `real_new_exercise.dart`).
+2. Import it in `lib/main.dart`.
+3. Add a new `ExerciseData` entry to the `exercises` list in `_PoseVisualizerPageState.initState`.
+4. Hot reload/restart.
 
 ## Development
 
