@@ -19,6 +19,20 @@ To ensure stability and compatibility, we force the Simulator to run in **Rosett
 - **Why?** It ensures that the binary built for `x86_64` runs correctly on Apple Silicon machines without architecture mismatch errors during the build or runtime.
 - **How?** The `run_rosetta.sh` script explicitly boots the simulator with `--arch=x86_64` and runs the flutter build command with `arch -x86_64`.
 
+#### 1.1 Required on Apple Sillicon Mac: Install "Universal" iOS Platform Component
+
+ref: https://github.com/jinzishuai/fitnessPipe/issues/1
+
+Check `Xcode -> Settings -> Components -> iOS 26.0 info symbol`, we need to ensure we see
+
+<img width="582" height="454" alt="Image" src="https://github.com/user-attachments/assets/b10f1434-9c5d-4f46-9f17-f6ce6fa6276b" />
+
+If you see "Apple Sillicon", you have to delete it and then download the "Universal" version with command:
+
+```
+xcodebuild -downloadPlatform iOS -architectureVariant universal
+```
+
 ### 2. Virtual Camera Injection
 The iOS Simulator does not support real camera input. To test Pose Detection logic without a physical device, we implemented a **Virtual Camera** system.
 
