@@ -19,7 +19,7 @@ To ensure stability and compatibility, we force the Simulator to run in **Rosett
 - **Why?** It ensures that the binary built for `x86_64` runs correctly on Apple Silicon machines without architecture mismatch errors during the build or runtime.
 - **How?** The `run_rosetta.sh` script explicitly boots the simulator with `--arch=x86_64` and runs the flutter build command with `arch -x86_64`.
 
-#### 1.1 Required on Apple Sillicon Mac: Install "Universal" iOS Platform Component
+#### 1.1 Required on Apple Sillicon Mac: Install "Universal" iOS SDK
 
 ref: https://github.com/jinzishuai/fitnessPipe/issues/1
 
