@@ -1,3 +1,5 @@
+rootProject.name = "fitness_pipe_android"
+
 pluginManagement {
     val flutterSdkPath =
         run {
