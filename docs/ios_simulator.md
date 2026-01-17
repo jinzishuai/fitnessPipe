@@ -89,10 +89,11 @@ xcrun simctl boot <UUID> --arch=x86_64
 ```
 
 > [!IMPORTANT]
-> **The name "Rosetta" is just a label.** 
-> Creating a simulator named "iPhone 16 Rosetta" does NOT automatically make it x86_64. You **MUST** boot it via the command line with `--arch=x86_64`.
+> **The name "Rosetta" is just a label.**
+> Creating a simulator named "iPhone 16 Rosetta" does NOT automatically make it x86_64.
 >
-> If you launch the simulator via the **Simulator App UI**, it will default to `arm64` (on Apple Silicon), and the app may crash or fail to build. Always use the command line or the helper script to boot.
+> While you successfully observed `x86_64` via UI launch (likely due to your Universal SDK or Simulator.app configuration), this is not guaranteed on all Apple Silicon setups.
+> **Always verify with step 4.** If `uname -m` returns `arm64`, you MUST shutdown and boot via the command line with `--arch=x86_64`.
 
 ### 4. Verify Architecture
 
