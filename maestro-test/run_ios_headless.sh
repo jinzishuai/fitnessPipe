@@ -6,7 +6,9 @@
 mkdir -p maestro-report
 
 echo "Running Maestro tests..."
-maestro test maestro-test/ios-flow.yaml
+# --format junit writes the report to the specified output file
+# standard output still shows progress
+maestro test --format junit --output maestro-report/report.xml maestro-test/ios-flow.yaml
 
 # Check exit code
 if [ $? -eq 0 ]; then
