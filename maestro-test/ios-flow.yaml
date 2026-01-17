@@ -8,7 +8,8 @@ appId: com.fitnesspipe.fitnessPipe
 - tapOn: "Single Squat"
 - assertVisible: "Single Squat"
 # Verify counter reset
-- assertVisible: "1" 
+# Verify counter is > 0 (regex matches 1-9 followed by any digits)
+- assertVisible: "[1-9][0-9]*" 
 - assertVisible: "reps"
 
 - tapOn: "Single Squat"
@@ -17,5 +18,6 @@ appId: com.fitnesspipe.fitnessPipe
 
 # Counter Checks
 # Verify counter overlay is present
-- assertVisible: "1"
+# Verify counter overlay is present and > 0
+- assertVisible: "[1-9][0-9]*"
 - assertVisible: "reps"

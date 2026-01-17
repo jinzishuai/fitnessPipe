@@ -55,3 +55,4 @@ packages/fitness_counter/test/fixtures/pose_landmarker.task
 # Build artifacts (anywhere in tree)
 **/build/
 LateralRaise_One_Rep.mp4
+maestro-report/report.xml
