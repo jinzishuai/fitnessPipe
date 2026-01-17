@@ -8,7 +8,15 @@ mkdir -p maestro-report
 echo "Running Maestro tests..."
 # --format junit writes the report to the specified output file
 # standard output still shows progress
-maestro test --format junit --output maestro-report/report.xml maestro-test/ios-flow.yaml
+CMD="maestro test --format junit --output maestro-report/report.xml"
+
+# If SIMULATOR_ID is set (e.g. from CI), target that specific device
+if [ -n "$SIMULATOR_ID" ]; then
+    echo "Targeting specific device: $SIMULATOR_ID"
+    CMD="$CMD --device $SIMULATOR_ID"
+fi
+
+$CMD maestro-test/ios-flow.yaml
 
 # Check exit code
 if [ $? -eq 0 ]; then
