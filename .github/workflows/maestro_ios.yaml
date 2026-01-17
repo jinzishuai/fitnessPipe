@@ -48,8 +48,11 @@ jobs:
           APP_PATH="build/ios/iphonesimulator/Runner.app"
           
           echo "Installing $APP_PATH to ${{ env.SIMULATOR_ID }}"
-          # Uninstall first to ensure clean state (optional but safer)
+          # Uninstall app and Maestro driver to ensure clean state
           xcrun simctl uninstall "${{ env.SIMULATOR_ID }}" "com.fitnesspipe.fitnessPipe" || true
+          xcrun simctl uninstall "${{ env.SIMULATOR_ID }}" "dev.mobile.maestro-driver-ios" || true
+          xcrun simctl uninstall "${{ env.SIMULATOR_ID }}" "dev.mobile.maestro-driver-ios.xctrunner" || true
+          
           xcrun simctl install "${{ env.SIMULATOR_ID }}" "$APP_PATH"
 
       - name: Run Maestro Tests
