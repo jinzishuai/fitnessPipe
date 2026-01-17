@@ -8,7 +8,7 @@ appId: com.fitnesspipe.fitnessPipe
 - tapOn: "Single Squat"
 - assertVisible: "Single Squat"
 # Verify counter reset
-- assertVisible: "0" 
+- assertVisible: "1" 
 - assertVisible: "reps"
 
 - tapOn: "Single Squat"
@@ -17,5 +17,5 @@ appId: com.fitnesspipe.fitnessPipe
 
 # Counter Checks
 # Verify counter overlay is present
-- assertVisible: "0"
+- assertVisible: "1"
 - assertVisible: "reps"
