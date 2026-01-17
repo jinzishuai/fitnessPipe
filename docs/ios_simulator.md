@@ -88,6 +88,23 @@ Use the UUID returned from the create command (or find it via `xcrun simctl list
 xcrun simctl boot <UUID> --arch=x86_64
 ```
 
+> [!IMPORTANT]
+> **The name "Rosetta" is just a label.** 
+> Creating a simulator named "iPhone 16 Rosetta" does NOT automatically make it x86_64. You **MUST** boot it via the command line with `--arch=x86_64`.
+>
+> If you launch the simulator via the **Simulator App UI**, it will default to `arm64` (on Apple Silicon), and the app may crash or fail to build. Always use the command line or the helper script to boot.
+
+### 4. Verify Architecture
+
+To verify that your simulator is actually running in Rosetta (x86_64) mode, you can run a command "inside" the simulator:
+
+```bash
+xcrun simctl spawn booted /usr/bin/uname -m
+```
+
+*   **Result `x86_64`**: Success! You are in Rosetta mode.
+*   **Result `arm64`**: You are in native mode. Shutdown and reboot with `--arch=x86_64`.
+
 ### 4. Update Helper Script (Optional)
 If you want to use this new simulator with the `run_rosetta.sh` script, update the `SIMULATOR_ID` variable in that file:
 
