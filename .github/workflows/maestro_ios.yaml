@@ -8,6 +8,7 @@ on:
 
 jobs:
   maestro-test:
+    if: github.repository == 'jinzishuai/fitnessPipe'
     runs-on: [self-hosted, mac-mini]
 
     env:
