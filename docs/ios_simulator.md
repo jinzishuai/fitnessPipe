@@ -58,3 +58,39 @@ To add a new simulated exercise:
 1.  Extract frames from a video using `packages/fitness_counter/test/fixtures/extract_poses.py --export-images`.
 2.  Add the frames to `assets/fixtures/your_exercise/`.
 3.  Update `VirtualCameraService.dart` to include the new exercise configuration.
+
+## Adding a New Rosetta Simulator
+
+If you want to test on a different device (e.g., **iPhone 16**), you can create a new simulator instance and boot it in Rosetta mode.
+
+### 1. Identify Device Type and Runtime
+List the available device types and runtimes:
+```bash
+xcrun simctl list devicetypes | grep "iPhone"
+# Example Output: iPhone 16 (com.apple.CoreSimulator.SimDeviceType.iPhone-16)
+
+xcrun simctl list runtimes
+# Example Output: iOS 26.2 (26.2 - 23C54) - com.apple.CoreSimulator.SimRuntime.iOS-26-2
+```
+
+### 2. Create the Simulator
+Matches the identifier found above. For example, to create an "iPhone 16 Rosetta":
+
+```bash
+xcrun simctl create "iPhone 16 Rosetta" "com.apple.CoreSimulator.SimDeviceType.iPhone-16" "com.apple.CoreSimulator.SimRuntime.iOS-26-2"
+```
+This returns a UUID (e.g., `A1B2C3D4-....`).
+
+### 3. Boot in Rosetta Mode
+Use the UUID returned from the create command (or find it via `xcrun simctl list devices`):
+
+```bash
+xcrun simctl boot <UUID> --arch=x86_64
+```
+
+### 4. Update Helper Script (Optional)
+If you want to use this new simulator with the `run_rosetta.sh` script, update the `SIMULATOR_ID` variable in that file:
+
+```bash
+SIMULATOR_ID="<YOUR-NEW-UUID>" # iPhone 16 Rosetta
+```
