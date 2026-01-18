@@ -1,0 +1,69 @@
+name: Maestro iOS Tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  maestro-test:
+    if: github.repository == 'jinzishuai/fitnessPipe'
+    runs-on: [self-hosted, mac-mini]
+
+    env:
+      # iPhone 16 Rosetta (Created manually on the self-hosted machine)
+      # UUID: 0DF6EEDE-9FD6-40F7-8CA2-F8416D987E30
+      # SIMULATOR_ID: "0DF6EEDE-9FD6-40F7-8CA2-F8416D987E30" # iPhone 16
+      SIMULATOR_ID: "AB7CA7A8-6217-4CE9-995B-3E4B72C343C1" # iPhone 17
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify Environment
+        run: |
+          echo "Checking for Flutter..."
+          which flutter
+          flutter --version
+          
+          echo "Checking for Maestro..."
+          which maestro
+          maestro --version
+
+      - name: Boot Simulator
+        run: |
+          # Boot the specific persistent simulator using our script
+          # We set BOOT_ONLY=true so the script doesn't try to 'flutter run'
+          export SIMULATOR_ID=${{ env.SIMULATOR_ID }}
+          export BOOT_ONLY=true
+          chmod +x run_rosetta.sh
+          ./run_rosetta.sh
+
+      - name: Build Application
+        run: |
+          flutter pub get
+          flutter build ios --simulator --no-codesign --debug
+
+      - name: Install App on Simulator
+        run: |
+          APP_PATH="build/ios/iphonesimulator/Runner.app"
+          
+          echo "Installing $APP_PATH to ${{ env.SIMULATOR_ID }}"
+          # Uninstall app and Maestro driver to ensure clean state
+          xcrun simctl uninstall "${{ env.SIMULATOR_ID }}" "com.fitnesspipe.fitnessPipe" || true
+          xcrun simctl uninstall "${{ env.SIMULATOR_ID }}" "dev.mobile.maestro-driver-ios" || true
+          xcrun simctl uninstall "${{ env.SIMULATOR_ID }}" "dev.mobile.maestro-driver-ios.xctrunner" || true
+          
+          xcrun simctl install "${{ env.SIMULATOR_ID }}" "$APP_PATH"
+
+      - name: Run Maestro Tests
+        run: |
+          chmod +x maestro-test/run_ios_headless.sh
+          ./maestro-test/run_ios_headless.sh
+
+      - name: Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-report
+          path: maestro-report/

@@ -1,0 +1,23 @@
+appId: com.fitnesspipe.fitnessPipe
+---
+- launchApp
+- assertVisible: "FitnessPipe"
+
+# Exercise Navigation
+- tapOn: "Lateral Raise" 
+- tapOn: "Single Squat"
+- assertVisible: "Single Squat"
+# Verify counter reset
+# Verify counter is > 0 (regex matches 1-9 followed by any digits)
+- assertVisible: "[1-9][0-9]*" 
+- assertVisible: "reps"
+
+- tapOn: "Single Squat"
+- tapOn: "Lateral Raise"
+- assertVisible: "Lateral Raise"
+
+# Counter Checks
+# Verify counter overlay is present
+# Verify counter overlay is present and > 0
+- assertVisible: "[1-9][0-9]*"
+- assertVisible: "reps"
