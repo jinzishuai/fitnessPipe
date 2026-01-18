@@ -14,7 +14,7 @@ jobs:
     env:
       # iPhone 16 Rosetta (Created manually on the self-hosted machine)
       # UUID: 0DF6EEDE-9FD6-40F7-8CA2-F8416D987E30
-      SIMULATOR_ID: "0DF6EEDE-9FD6-40F7-8CA2-F8416D987E30" # iPhone 16
+      # SIMULATOR_ID: "0DF6EEDE-9FD6-40F7-8CA2-F8416D987E30" # iPhone 16
       SIMULATOR_ID: "AB7CA7A8-6217-4CE9-995B-3E4B72C343C1" # iPhone 17
 
     steps:
