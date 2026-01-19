@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ "main" ]
 
+concurrency:
+  group: maestro-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   maestro-test:
     if: github.repository == 'jinzishuai/fitnessPipe'
