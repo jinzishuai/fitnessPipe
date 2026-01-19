@@ -20,17 +20,29 @@ class VirtualCameraService {
       'prefix': 'assets/fixtures/lateral_raise/frame_',
       'count': 52,
       'fps': 24,
+      'width': 1280.0,
+      'height': 720.0,
     },
     ExerciseType.singleSquat: {
       'prefix': 'assets/fixtures/single_squat/frame_',
       'count': 68,
       'fps': 30, // Assuming 30fps for squat video
+      'width': 1920.0,
+      'height': 1080.0,
     },
   };
 
-  ExerciseType _currentExercise = ExerciseType.lateralRaise;
+  ExerciseType _currentExercise;
 
   int _startDelayFrames = 0; // Number of frames to hold at start
+
+  VirtualCameraService({ExerciseType initialExercise = ExerciseType.lateralRaise})
+      : _currentExercise = initialExercise;
+
+  Size get currentImageSize {
+    final config = _exerciseConfig[_currentExercise]!;
+    return Size(config['width'] as double, config['height'] as double);
+  }
 
   void setExercise(ExerciseType type) {
     if (_currentExercise == type) return;
