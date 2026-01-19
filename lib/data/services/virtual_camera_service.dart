@@ -36,8 +36,9 @@ class VirtualCameraService {
 
   int _startDelayFrames = 0; // Number of frames to hold at start
 
-  VirtualCameraService({ExerciseType initialExercise = ExerciseType.lateralRaise})
-      : _currentExercise = initialExercise;
+  VirtualCameraService({
+    ExerciseType initialExercise = ExerciseType.lateralRaise,
+  }) : _currentExercise = initialExercise;
 
   Size get currentImageSize {
     final config = _exerciseConfig[_currentExercise]!;

@@ -1,6 +1,5 @@
 import 'dart:io';
 
-
 import 'package:camera/camera.dart' as mobile_camera;
 import 'package:camera_macos/camera_macos.dart';
 import 'package:fitness_counter/fitness_counter.dart';
@@ -177,7 +176,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   Future<void> _initializeVirtualCamera() async {
     // Dispose any existing service to prevent multiple timers (issue #42)
     _virtualCameraService?.dispose();
-    
+
     // Initialize with the currently selected exercise to avoid state reset
     _virtualCameraService = VirtualCameraService(
       initialExercise: _selectedExercise ?? ExerciseType.lateralRaise,
@@ -196,7 +195,6 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     });
   }
 
-
   File? _currentVirtualFrameFile;
 
   void _processVirtualCameraImage(InputImage inputImage) async {
@@ -207,8 +205,6 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
           _currentVirtualFrameFile = File(inputImage.filePath!);
         });
       }
-
-
     }
 
     _processPoseDetection(inputImage);
@@ -319,7 +315,6 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
             _cameraImageSize = inputImage.metadata!.size;
           } else if (_isVirtualCamera) {
             _cameraImageSize = _virtualCameraService?.currentImageSize;
-
           } else {
             _cameraImageSize = const Size(1, 1);
           }
