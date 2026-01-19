@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:ui' as ui;
 
 import 'package:camera/camera.dart' as mobile_camera;
 import 'package:camera_macos/camera_macos.dart';
@@ -175,7 +174,14 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   }
 
   Future<void> _initializeVirtualCamera() async {
-    _virtualCameraService = VirtualCameraService();
+    // Dispose any existing service to prevent multiple timers (issue #42)
+    _virtualCameraService?.dispose();
+
+    // Initialize with the currently selected exercise to avoid state reset
+    _virtualCameraService = VirtualCameraService(
+      initialExercise: _selectedExercise ?? ExerciseType.lateralRaise,
+    );
+
     setState(() {
       _isVirtualCamera = true;
     });
@@ -189,7 +195,6 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     });
   }
 
-  Size? _virtualCameraImageSize;
   File? _currentVirtualFrameFile;
 
   void _processVirtualCameraImage(InputImage inputImage) async {
@@ -199,22 +204,6 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         setState(() {
           _currentVirtualFrameFile = File(inputImage.filePath!);
         });
-      }
-
-      // Calculate size once if missing
-      if (_virtualCameraImageSize == null) {
-        try {
-          final file = File(inputImage.filePath!);
-          final bytes = await file.readAsBytes();
-          final codec = await ui.instantiateImageCodec(bytes);
-          final frameInfo = await codec.getNextFrame();
-          _virtualCameraImageSize = Size(
-            frameInfo.image.width.toDouble(),
-            frameInfo.image.height.toDouble(),
-          );
-        } catch (e) {
-          // Ignore error, will rely on fallback
-        }
       }
     }
 
@@ -324,11 +313,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         setState(() {
           if (inputImage.metadata?.size != null) {
             _cameraImageSize = inputImage.metadata!.size;
-          } else if (_virtualCameraImageSize != null) {
-            _cameraImageSize = _virtualCameraImageSize;
           } else if (_isVirtualCamera) {
-            // Fallback for virtual camera if calc fails
-            _cameraImageSize = const Size(720, 1280);
+            _cameraImageSize = _virtualCameraService?.currentImageSize;
           } else {
             _cameraImageSize = const Size(1, 1);
           }
@@ -426,8 +412,6 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
       // Update virtual camera video if active
       if (_isVirtualCamera && type != null) {
         _virtualCameraService?.setExercise(type);
-        _virtualCameraImageSize =
-            null; // Force recalculation of image size for new video
       }
     });
   }
