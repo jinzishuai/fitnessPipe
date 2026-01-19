@@ -917,8 +917,9 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                       child: CustomPaint(
                         painter: SkeletonPainter(
                           pose: _currentPose,
-                          rotationDegrees: _sensorOrientation,
-                          imageSize: null, // iOS uses legacy stretch-to-fill
+                          rotationDegrees: 0, // Virtual is always 0
+                          imageSize:
+                              _cameraImageSize, // Use actual image size for proper scaling
                           inputsAreRotated: false,
                           skeletonColor: Colors.greenAccent,
                         ),
