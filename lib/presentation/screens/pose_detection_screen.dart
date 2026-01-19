@@ -335,6 +335,10 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
 
           _currentPose = poses.isNotEmpty ? poses.first : null;
 
+          debugPrint(
+            'Pose detected: cameraImageSize=$_cameraImageSize, sensorOrientation=$_sensorOrientation, poseLandmarks=${_currentPose?.landmarks.length ?? 0}',
+          );
+
           // Process pose through counter if exercise selected
           if (_currentPose != null) {
             _processPoseWithCounter(_currentPose!);
@@ -428,6 +432,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         _virtualCameraService?.setExercise(type);
         _virtualCameraImageSize =
             null; // Force recalculation of image size for new video
+        _currentPose = null; // Clear old pose to prevent flashing during switch
       }
     });
   }
@@ -658,7 +663,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                       painter: SkeletonPainter(
                         pose: _currentPose,
                         rotationDegrees: 0, // Virtual is always 0
-                        imageSize: _cameraImageSize,
+                        imageSize:
+                            null, // Use stretch-to-fill like real iOS for consistency
                         inputsAreRotated: false,
                         skeletonColor: Colors.greenAccent,
                       ),
