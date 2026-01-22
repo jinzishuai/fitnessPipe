@@ -15,6 +15,7 @@ import '../../data/services/virtual_camera_service.dart';
 import '../../domain/interfaces/pose_detector.dart';
 import '../../domain/models/pose.dart';
 import '../widgets/exercise_selector.dart';
+import '../widgets/form_feedback_overlay.dart';
 import '../widgets/rep_counter_overlay.dart';
 import '../widgets/skeleton_painter.dart';
 import '../widgets/threshold_settings_dialog.dart';
@@ -38,11 +39,13 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   final _poseAdapter = PoseAdapter();
   ExerciseType? _selectedExercise = ExerciseType.lateralRaise;
   LateralRaiseCounter? _lateralRaiseCounter;
+  LateralRaiseFormAnalyzer? _lateralRaiseFormAnalyzer;
   SingleSquatCounter? _singleSquatCounter;
   int _repCount = 0;
   String _phaseLabel = 'Ready';
   Color _phaseColor = Colors.grey;
   double _currentAngle = 0.0;
+  FormFeedback? _currentFeedback;
 
   // Threshold configuration
   double _topThreshold = 50.0;
@@ -349,6 +352,11 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         _repCount = state.repCount;
         _currentAngle = state.smoothedAngle;
 
+        // Form Analysis
+        if (_lateralRaiseFormAnalyzer != null) {
+          _currentFeedback = _lateralRaiseFormAnalyzer!.analyzeFrame(poseFrame.landmarks);
+        }
+
         // Map LateralRaisePhase to UI
         final (label, color) = switch (state.phase) {
           LateralRaisePhase.waiting => ('Ready...', Colors.grey),
@@ -361,6 +369,9 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         _phaseColor = color;
       } else if (_selectedExercise == ExerciseType.singleSquat &&
           _singleSquatCounter != null) {
+        // Reset specific feedback for other exercises or extend later
+        _currentFeedback = null;
+        
         event = _singleSquatCounter!.processPose(poseFrame);
         final state = _singleSquatCounter!.state;
         _repCount = state.repCount;
@@ -389,9 +400,12 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   void _onExerciseSelected(ExerciseType? type) {
     setState(() {
       _selectedExercise = type;
+      _selectedExercise = type;
       _lateralRaiseCounter = null;
+      _lateralRaiseFormAnalyzer = null;
       _singleSquatCounter = null;
       _repCount = 0;
+      _currentFeedback = null;
       _phaseLabel = 'Ready';
       _phaseColor = Colors.grey;
       _currentAngle = 0.0;
@@ -402,6 +416,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
           bottomThreshold: _bottomThreshold,
           readyHoldTime: const Duration(milliseconds: 300),
         );
+        _lateralRaiseFormAnalyzer = LateralRaiseFormAnalyzer();
       } else if (type == ExerciseType.singleSquat) {
         _singleSquatCounter = SingleSquatCounter(
           topThreshold: _squatTopThreshold,
@@ -939,6 +954,10 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                       phaseColor: _phaseColor,
                       currentAngle: _currentAngle,
                     ),
+
+                  // Form Feedback Overlay
+                  if (_currentFeedback != null)
+                    FormFeedbackOverlay(feedback: _currentFeedback!),
 
                   // Reset button (bottom right)
                   if (_selectedExercise != null)

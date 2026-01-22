@@ -34,3 +34,4 @@ export 'src/core/smoothing.dart';
 // Exercises
 export 'src/exercises/lateral_raise_counter.dart';
 export 'src/exercises/single_squat_counter.dart';
+export 'src/form_analyzers/lateral_raise_form_analyzer.dart';
