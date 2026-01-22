@@ -754,6 +754,10 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                   ),
                 ),
 
+                // Form Feedback Overlay
+                if (_currentFeedback != null)
+                  FormFeedbackOverlay(feedback: _currentFeedback!),
+
                 // Simulator Badge
                 Positioned(
                   top: 16,
