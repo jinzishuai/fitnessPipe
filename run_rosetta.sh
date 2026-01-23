@@ -3,7 +3,7 @@
 # Configuration
 # Use explicit ID if valid, otherwise fallback to "iPhone 17 Rosetta" default.
 # Can be overridden by env var SIMULATOR_ID or first argument.
-DEFAULT_ID="AB7CA7A8-6217-4CE9-995B-3E4B72C343C1"
+DEFAULT_ID="FD6EF918-97F9-43BB-AA9D-92B93FAF257C"
 SIMULATOR_ID="${1:-${SIMULATOR_ID:-$DEFAULT_ID}}"
 
 echo "Booting Simulator ($SIMULATOR_ID) in Rosetta mode..."
