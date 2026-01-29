@@ -2,7 +2,7 @@ import 'dart:math';
 
 import '../core/smoothing.dart';
 import '../models/landmark.dart';
-import '../models/pose_frame.dart'; // Assuming PoseLandmark is here or exported via models
+
 
 /// Status of the user's form for a single frame.
 enum FormStatus {
@@ -300,7 +300,9 @@ class LateralRaiseFormAnalyzer {
   ) {
     // Requires ears
     if (!landmarks.containsKey(LandmarkId.leftEar) || 
-        !landmarks.containsKey(LandmarkId.rightEar)) return;
+        !landmarks.containsKey(LandmarkId.rightEar)) {
+      return;
+    }
       
     final lEar = landmarks[LandmarkId.leftEar]!;
     final rEar = landmarks[LandmarkId.rightEar]!;
@@ -398,8 +400,6 @@ class LateralRaiseFormAnalyzer {
       final rWrist = landmarks[LandmarkId.rightWrist]!;
       final lHip = landmarks[LandmarkId.leftHip]!;
       final rHip = landmarks[LandmarkId.rightHip]!;
-      final lShoulder = landmarks[LandmarkId.leftShoulder]!;
-      final rShoulder = landmarks[LandmarkId.rightShoulder]!;
 
       // Midpoint calculations
       final hipCenterY = (lHip.y + rHip.y) / 2.0;

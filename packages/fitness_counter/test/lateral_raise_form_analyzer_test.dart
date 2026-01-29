@@ -42,7 +42,6 @@ void main() {
         LandmarkId.rightShoulder: (0.6, 0.3),
         LandmarkId.leftElbow: (0.2, 0.3), 
         LandmarkId.rightElbow: (0.8, 0.3),
-        LandmarkId.rightElbow: (0.8, 0.3),
         // Wrists down (bent elbows) 
         // NOTE: For Gating, we need wrists to be somewhat high relative to hips.
         // Hips are at 0.8.
@@ -93,6 +92,7 @@ void main() {
       
       // Final result should be WARNING (or BAD if geometry was too sharp)
       // Given specific coordinates, let's just check it detects *something*
+      // ignore: unused_local_variable - Used to get final analyzer state
       final feedback = analyzer.analyzeFrame(softPose.landmarks);
        
       // The exact coordinates above might be tricky (I didn't calculate trig).
@@ -179,7 +179,7 @@ void main() {
       // Frame 1-29: Should eventually trigger BAD
       // We run enough frames to ensure smoother settles AND counter exceeds threshold (8)
       for(int i=0; i<30; i++) {
-        final feedback = analyzer.analyzeFrame(shruggedPose.landmarks);
+        analyzer.analyzeFrame(shruggedPose.landmarks);
         if (i < 10) { 
            // Early frames might be Warning (smoothing or counter buildup)
            // Just ensure we don't crash or behave weirdly.
