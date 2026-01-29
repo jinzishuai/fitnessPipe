@@ -59,6 +59,10 @@ jobs:
           xcrun simctl uninstall "${{ env.SIMULATOR_ID }}" "dev.mobile.maestro-driver-ios.xctrunner" || true
           
           xcrun simctl install "${{ env.SIMULATOR_ID }}" "$APP_PATH"
+          
+          # Wait for app installation to fully complete
+          echo "Waiting for app to settle..."
+          sleep 10
 
       - name: Run Maestro Tests
         run: |

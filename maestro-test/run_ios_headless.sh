@@ -17,7 +17,11 @@ if [ -n "$SIMULATOR_ID" ]; then
 fi
 
 # Increase driver startup timeout for CI/Rosetta environments (default is 15000ms)
-export MAESTRO_DRIVER_STARTUP_TIMEOUT=30000
+# Rosetta emulation can be slow; use 60 seconds
+export MAESTRO_DRIVER_STARTUP_TIMEOUT=60000
+
+# Give the simulator a moment to stabilize before running tests
+sleep 5
 
 $CMD maestro-test/ios-flow.yaml
 
