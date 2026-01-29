@@ -3,14 +3,12 @@
 # Run Maestro tests in headless mode and generate JUnit report
 # Requires maestro to be installed and in PATH
 
-rm -fR maestro-report
-mkdir -p maestro-report/debug
+mkdir -p maestro-report
 
 echo "Running Maestro tests..."
 # --format junit writes the report to the specified output file
-# --debug-output saves screenshots and view hierarchy on failure
 # standard output still shows progress
-CMD="maestro test --format junit --output maestro-report/report.xml --debug-output maestro-report/debug"
+CMD="maestro test --format junit --output maestro-report/report.xml"
 
 # If SIMULATOR_ID is set (e.g. from CI), target that specific device
 if [ -n "$SIMULATOR_ID" ]; then
@@ -19,9 +17,12 @@ if [ -n "$SIMULATOR_ID" ]; then
 fi
 
 # Increase driver startup timeout for CI/Rosetta environments (default is 15000ms)
-export MAESTRO_DRIVER_STARTUP_TIMEOUT=${MAESTRO_DRIVER_STARTUP_TIMEOUT:-60000}
+# Rosetta emulation can be slow; use 60 seconds
+export MAESTRO_DRIVER_STARTUP_TIMEOUT=60000
 
-echo "Running $CMD maestro-test/ios-flow.yaml"
+# Give the simulator a moment to stabilize before running tests
+sleep 5
+
 $CMD maestro-test/ios-flow.yaml
 
 # Check exit code
