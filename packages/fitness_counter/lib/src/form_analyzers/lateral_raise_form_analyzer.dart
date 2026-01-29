@@ -3,13 +3,8 @@ import 'dart:math';
 import '../core/smoothing.dart';
 import '../models/landmark.dart';
 
-
 /// Status of the user's form for a single frame.
-enum FormStatus {
-  good,
-  warning,
-  bad,
-}
+enum FormStatus { good, warning, bad }
 
 /// A specific issue detected with the form.
 class FormIssue {
@@ -54,7 +49,8 @@ class LateralRaiseFormAnalyzer {
   // Constants / Thresholds
   static const double _elbowBadThreshold = 145.0; // Immediate BAD
   static const double _elbowSoftWarnEnter = 155.0; // Threshold to start warning
-  static const double _elbowSoftWarnExit = 158.0; // Threshold to clear warning (hysteresis)
+  static const double _elbowSoftWarnExit =
+      158.0; // Threshold to clear warning (hysteresis)
   static const int _elbowWarnFrameThreshold = 6; // Sustain for ~0.2s
 
   static const double _trunkLeanWarning = 8.0;
@@ -113,11 +109,7 @@ class LateralRaiseFormAnalyzer {
       }
     }
 
-    return FormFeedback(
-      status: status,
-      issues: issues,
-      debugMetrics: metrics,
-    );
+    return FormFeedback(status: status, issues: issues, debugMetrics: metrics);
   }
 
   void reset() {
@@ -178,8 +170,8 @@ class LateralRaiseFormAnalyzer {
     // 3. Phase Gating
     // Re-using the same phase gate as shrugging for now
     // (This requires _checkShrugging or _isRaisingOrAtTop to have run/be run)
-    // Ideally we calculate it once per frame. 
-    // Since analyzeFrame doesn't cache it, we'll recompute or rely on metric if order is guaranteed? 
+    // Ideally we calculate it once per frame.
+    // Since analyzeFrame doesn't cache it, we'll recompute or rely on metric if order is guaranteed?
     // _isRaisingOrAtTop is stateless/idempotent.
     final isActivePhase = _isRaisingOrAtTop(landmarks, metrics);
     metrics['elbow_active_phase'] = isActivePhase ? 1.0 : 0.0;
@@ -187,14 +179,14 @@ class LateralRaiseFormAnalyzer {
     if (!isActivePhase) {
       // Not active: decay counters and return
       if (_elbowWarnFrames > 0) _elbowWarnFrames--;
-      return; 
+      return;
     }
 
     // 4. Evaluate Rules (Active Only)
-    
+
     // BAD Check: Safety critical, use min of smoothed
     final minSm = min(leftSm, rightSm);
-    
+
     if (minSm < _elbowBadThreshold) {
       issues.add(
         const FormIssue(
@@ -203,7 +195,7 @@ class LateralRaiseFormAnalyzer {
           severity: FormStatus.bad,
         ),
       );
-      // If bad, we reset the warning counters/state to avoid double jeopardy? 
+      // If bad, we reset the warning counters/state to avoid double jeopardy?
       // Or keep them? Usually Bad supersedes Warning.
       return;
     }
@@ -211,39 +203,39 @@ class LateralRaiseFormAnalyzer {
     // WARNING Check: Soft bend
     // Condition: Either arm is bent enough to trigger entry, OR we are already in warning and haven't exited
     bool triggerCondition = false;
-    
+
     if (_elbowWarningActive) {
-        // Hysteresis: Stay active until both arms are > Exit Threshold
-        if (leftSm > _elbowSoftWarnExit && rightSm > _elbowSoftWarnExit) {
-            _elbowWarningActive = false;
-        } else {
-            triggerCondition = true;
-        }
+      // Hysteresis: Stay active until both arms are > Exit Threshold
+      if (leftSm > _elbowSoftWarnExit && rightSm > _elbowSoftWarnExit) {
+        _elbowWarningActive = false;
+      } else {
+        triggerCondition = true;
+      }
     } else {
-        // Hysteresis: Enter if either arm < Enter Threshold
-        if (leftSm < _elbowSoftWarnEnter || rightSm < _elbowSoftWarnEnter) {
-             triggerCondition = true;
-        }
+      // Hysteresis: Enter if either arm < Enter Threshold
+      if (leftSm < _elbowSoftWarnEnter || rightSm < _elbowSoftWarnEnter) {
+        triggerCondition = true;
+      }
     }
 
     if (triggerCondition) {
-        _elbowWarnFrames++;
-        // Trigger actual warning if sustained
-        if (_elbowWarnFrames >= _elbowWarnFrameThreshold) {
-             _elbowWarningActive = true; 
-             issues.add(
-                const FormIssue(
-                  code: 'ELBOW_SOFT',
-                  message: 'Straighten arms slightly',
-                  severity: FormStatus.warning,
-                ),
-              );
-        }
+      _elbowWarnFrames++;
+      // Trigger actual warning if sustained
+      if (_elbowWarnFrames >= _elbowWarnFrameThreshold) {
+        _elbowWarningActive = true;
+        issues.add(
+          const FormIssue(
+            code: 'ELBOW_SOFT',
+            message: 'Straighten arms slightly',
+            severity: FormStatus.warning,
+          ),
+        );
+      }
     } else {
-        // Decay if condition not met (and not locked in by hysteresis)
-        if (_elbowWarnFrames > 0) _elbowWarnFrames--;
+      // Decay if condition not met (and not locked in by hysteresis)
+      if (_elbowWarnFrames > 0) _elbowWarnFrames--;
     }
-    
+
     metrics['elbow_warn_frames'] = _elbowWarnFrames.toDouble();
   }
 
@@ -264,32 +256,64 @@ class LateralRaiseFormAnalyzer {
     // 1. Trunk Lean (angle with vertical)
     // Vector from hip to shoulder
     final trunkDx = shoulderCenter.x - hipCenter.x;
-    final trunkDy = shoulderCenter.y - hipCenter.y; // Y is usually down in CV, but we care about vertical alignment
-    // Vertical vector is (0, -1) [up] or (0, 1) [down]. 
-    // Angle with Vertical axis (Y-axis). 
+    final trunkDy =
+        shoulderCenter.y -
+        hipCenter
+            .y; // Y is usually down in CV, but we care about vertical alignment
+    // Vertical vector is (0, -1) [up] or (0, 1) [down].
+    // Angle with Vertical axis (Y-axis).
     // atan2(dx, dy) gives angle from Y axis.
-    final leanRad = atan2(trunkDx.abs(), trunkDy.abs()); // Deviation from vertical
+    final leanRad = atan2(
+      trunkDx.abs(),
+      trunkDy.abs(),
+    ); // Deviation from vertical
     final leanDeg = leanRad * 180 / pi;
-    
+
     // Actually, simple atan2(dx, dy) works if we assume upright.
     // If trunk is perfectly vertical, dx is 0.
     final smoothedLean = _trunkLeanSmoother.smooth(leanDeg);
     metrics['trunk_lean'] = smoothedLean;
 
     if (smoothedLean > _trunkLeanBad) {
-       issues.add(const FormIssue(code: 'TRUNK_LEAN', message: 'Avoid leaning your torso', severity: FormStatus.bad));
+      issues.add(
+        const FormIssue(
+          code: 'TRUNK_LEAN',
+          message: 'Avoid leaning your torso',
+          severity: FormStatus.bad,
+        ),
+      );
     } else if (smoothedLean > _trunkLeanWarning) {
-       issues.add(const FormIssue(code: 'TRUNK_LEAN', message: 'Stand straighter', severity: FormStatus.warning));
+      issues.add(
+        const FormIssue(
+          code: 'TRUNK_LEAN',
+          message: 'Stand straighter',
+          severity: FormStatus.warning,
+        ),
+      );
     }
 
     // 2. Lateral Shift (shoulder center relative to hip center X)
-    final shift = (shoulderCenter.x - hipCenter.x).abs() / (shoulderWidth > 0 ? shoulderWidth : 1.0);
+    final shift =
+        (shoulderCenter.x - hipCenter.x).abs() /
+        (shoulderWidth > 0 ? shoulderWidth : 1.0);
     metrics['trunk_shift'] = shift;
-    
+
     if (shift > _trunkShiftBad) {
-        issues.add(const FormIssue(code: 'TRUNK_SHIFT', message: 'Core is shifting - brace tight', severity: FormStatus.bad));
+      issues.add(
+        const FormIssue(
+          code: 'TRUNK_SHIFT',
+          message: 'Core is shifting - brace tight',
+          severity: FormStatus.bad,
+        ),
+      );
     } else if (shift > _trunkShiftWarning) {
-        issues.add(const FormIssue(code: 'TRUNK_SHIFT', message: 'Keep hips stable', severity: FormStatus.warning));
+      issues.add(
+        const FormIssue(
+          code: 'TRUNK_SHIFT',
+          message: 'Keep hips stable',
+          severity: FormStatus.warning,
+        ),
+      );
     }
   }
 
@@ -299,14 +323,14 @@ class LateralRaiseFormAnalyzer {
     Map<String, double> metrics,
   ) {
     // Requires ears
-    if (!landmarks.containsKey(LandmarkId.leftEar) || 
+    if (!landmarks.containsKey(LandmarkId.leftEar) ||
         !landmarks.containsKey(LandmarkId.rightEar)) {
       return;
     }
-      
+
     final lEar = landmarks[LandmarkId.leftEar]!;
     final rEar = landmarks[LandmarkId.rightEar]!;
-    
+
     if (!lEar.isVisible || !rEar.isVisible) return;
 
     final lShoulder = landmarks[LandmarkId.leftShoulder]!;
@@ -314,17 +338,17 @@ class LateralRaiseFormAnalyzer {
 
     final shoulderWidth = _dist(lShoulder, rShoulder);
     // Sanity check to avoid div by zero
-    if (shoulderWidth < 0.05) return; 
+    if (shoulderWidth < 0.05) return;
 
     // "Neck Length" proxy
     final lDist = _dist(lEar, lShoulder);
     final rDist = _dist(rEar, rShoulder);
     final avgNeck = (lDist + rDist) / 2.0;
-    
+
     final rawNormalizedNeck = avgNeck / shoulderWidth;
     // Smooth the neck length
     final normalizedNeck = _neckLenSmoother.smooth(rawNormalizedNeck);
-    
+
     metrics['neck_length_raw'] = rawNormalizedNeck;
     metrics['neck_length_smoothed'] = normalizedNeck;
 
@@ -339,11 +363,12 @@ class LateralRaiseFormAnalyzer {
       // Use a simple max as a proxy for "most relaxed" (longest neck)
       // A moving window median would be better but requires more state.
       // This is consistent with previous logic but gated.
-      if (_baselineNeckLength == null || normalizedNeck > _baselineNeckLength!) {
+      if (_baselineNeckLength == null ||
+          normalizedNeck > _baselineNeckLength!) {
         _baselineNeckLength = normalizedNeck;
       }
     }
-    
+
     metrics['neck_baseline'] = _baselineNeckLength ?? 0.0;
 
     // Evaluate Shrug
@@ -351,7 +376,7 @@ class LateralRaiseFormAnalyzer {
     if (_baselineNeckLength == null) {
       // If we haven't calibrated yet (user started immediately?), we can't judge.
       // Optionally warn if this persists?
-      return; 
+      return;
     }
 
     final drop = (_baselineNeckLength! - normalizedNeck) / _baselineNeckLength!;
@@ -362,68 +387,83 @@ class LateralRaiseFormAnalyzer {
     bool isWarning = false;
 
     if (isActivePhase) {
-        if (drop > _shrugBad) {
-            // Check for sustained bad frames
-            _shrugBadFrames++;
-            if (_shrugBadFrames >= _shrugBadFrameThreshold) {
-                isBad = true;
-            } else {
-                // While building up to BAD, show WARNING to give immediate feedback
-                isWarning = true;
-            }
+      if (drop > _shrugBad) {
+        // Check for sustained bad frames
+        _shrugBadFrames++;
+        if (_shrugBadFrames >= _shrugBadFrameThreshold) {
+          isBad = true;
         } else {
-             // Decay bad frames count if not bad this frame but active
-             if (_shrugBadFrames > 0) _shrugBadFrames--;
-
-             if (drop > _shrugWarning) {
-                 isWarning = true;
-             }
+          // While building up to BAD, show WARNING to give immediate feedback
+          isWarning = true;
         }
+      } else {
+        // Decay bad frames count if not bad this frame but active
+        if (_shrugBadFrames > 0) _shrugBadFrames--;
+
+        if (drop > _shrugWarning) {
+          isWarning = true;
+        }
+      }
     } else {
-        // Reset counter when not active (e.g. going down)
-        _shrugBadFrames = 0;
+      // Reset counter when not active (e.g. going down)
+      _shrugBadFrames = 0;
     }
-    
+
     metrics['shrug_bad_frames'] = _shrugBadFrames.toDouble();
 
     if (isBad) {
-       issues.add(const FormIssue(code: 'SHRUGGING', message: 'Don\'t shrug—shoulders down', severity: FormStatus.bad));
+      issues.add(
+        const FormIssue(
+          code: 'SHRUGGING',
+          message: 'Don\'t shrug—shoulders down',
+          severity: FormStatus.bad,
+        ),
+      );
     } else if (isWarning) {
-       issues.add(const FormIssue(code: 'SHRUGGING', message: 'Relax your shoulders', severity: FormStatus.warning));
+      issues.add(
+        const FormIssue(
+          code: 'SHRUGGING',
+          message: 'Relax your shoulders',
+          severity: FormStatus.warning,
+        ),
+      );
     }
   }
 
   /// Determines if the user is in the "active" phase of the lateral raise
   /// (lifting or at the top), where shrugging is most critical.
-  bool _isRaisingOrAtTop(Map<LandmarkId, Landmark> landmarks, Map<String, double> metrics) {
-      final lWrist = landmarks[LandmarkId.leftWrist]!;
-      final rWrist = landmarks[LandmarkId.rightWrist]!;
-      final lHip = landmarks[LandmarkId.leftHip]!;
-      final rHip = landmarks[LandmarkId.rightHip]!;
+  bool _isRaisingOrAtTop(
+    Map<LandmarkId, Landmark> landmarks,
+    Map<String, double> metrics,
+  ) {
+    final lWrist = landmarks[LandmarkId.leftWrist]!;
+    final rWrist = landmarks[LandmarkId.rightWrist]!;
+    final lHip = landmarks[LandmarkId.leftHip]!;
+    final rHip = landmarks[LandmarkId.rightHip]!;
 
-      // Midpoint calculations
-      final hipCenterY = (lHip.y + rHip.y) / 2.0;
-      final avgWristY = (lWrist.y + rWrist.y) / 2.0;
-      
-      // Y increases downwards. Smaller Y is higher.
-      // 1. Minimum Height Check: Wrists must be clearly above hips.
-      // Let's say higher than hips by 5% of screen (approx).
-      // Or relative to shoulder-hip distance? Normalized coords are 0-1.
-      // Using simple y difference: hipCenterY - avgWristY > 0.1 
-      // (Wrists are 0.1 normalized units above hips).
-      final heightAboveHips = hipCenterY - avgWristY;
-      metrics['wrist_height_above_hips'] = heightAboveHips;
+    // Midpoint calculations
+    final hipCenterY = (lHip.y + rHip.y) / 2.0;
+    final avgWristY = (lWrist.y + rWrist.y) / 2.0;
 
-      const activeHeightThreshold = 0.05; // Tunable
+    // Y increases downwards. Smaller Y is higher.
+    // 1. Minimum Height Check: Wrists must be clearly above hips.
+    // Let's say higher than hips by 5% of screen (approx).
+    // Or relative to shoulder-hip distance? Normalized coords are 0-1.
+    // Using simple y difference: hipCenterY - avgWristY > 0.1
+    // (Wrists are 0.1 normalized units above hips).
+    final heightAboveHips = hipCenterY - avgWristY;
+    metrics['wrist_height_above_hips'] = heightAboveHips;
 
-      if (heightAboveHips < activeHeightThreshold) {
-          return false; // Arms too low
-      }
+    const activeHeightThreshold = 0.05; // Tunable
 
-      // 2. Elbow check (optional): Don't gate if elbows are totally collapsed?
-      // Assuming existing geometry.
-      
-      return true;
+    if (heightAboveHips < activeHeightThreshold) {
+      return false; // Arms too low
+    }
+
+    // 2. Elbow check (optional): Don't gate if elbows are totally collapsed?
+    // Assuming existing geometry.
+
+    return true;
   }
 
   // --- Geometric Helpers ---

@@ -354,7 +354,9 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
 
         // Form Analysis
         if (_lateralRaiseFormAnalyzer != null) {
-          _currentFeedback = _lateralRaiseFormAnalyzer!.analyzeFrame(poseFrame.landmarks);
+          _currentFeedback = _lateralRaiseFormAnalyzer!.analyzeFrame(
+            poseFrame.landmarks,
+          );
         }
 
         // Map LateralRaisePhase to UI
@@ -371,7 +373,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
           _singleSquatCounter != null) {
         // Reset specific feedback for other exercises or extend later
         _currentFeedback = null;
-        
+
         event = _singleSquatCounter!.processPose(poseFrame);
         final state = _singleSquatCounter!.state;
         _repCount = state.repCount;

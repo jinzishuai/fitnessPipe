@@ -5,16 +5,13 @@ import 'package:flutter/material.dart';
 class FormFeedbackOverlay extends StatelessWidget {
   final FormFeedback feedback;
 
-  const FormFeedbackOverlay({
-    super.key,
-    required this.feedback,
-  });
+  const FormFeedbackOverlay({super.key, required this.feedback});
 
   @override
   Widget build(BuildContext context) {
     if (feedback.status == FormStatus.good) {
       // Optional: Show nothing or a small "Good Form" check checkmark
-      // For now, let's keep it clean and only show when issues arise, 
+      // For now, let's keep it clean and only show when issues arise,
       // or maybe a subtle green indicator?
       // User request implied they want "feedback", usually implied corrections.
       // Let's show a small green dot for positive reinforcement?
@@ -34,7 +31,10 @@ class FormFeedbackOverlay extends StatelessWidget {
               SizedBox(width: 4),
               Text(
                 'Good Form',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
@@ -42,8 +42,12 @@ class FormFeedbackOverlay extends StatelessWidget {
       );
     }
 
-    final color = feedback.status == FormStatus.bad ? Colors.red : Colors.orange;
-    final icon = feedback.status == FormStatus.bad ? Icons.cancel : Icons.warning_amber_rounded;
+    final color = feedback.status == FormStatus.bad
+        ? Colors.red
+        : Colors.orange;
+    final icon = feedback.status == FormStatus.bad
+        ? Icons.cancel
+        : Icons.warning_amber_rounded;
     final title = feedback.status == FormStatus.bad ? 'Bad Form' : 'Warning';
 
     return Positioned(
@@ -77,24 +81,26 @@ class FormFeedbackOverlay extends StatelessWidget {
             ),
             if (feedback.issues.isNotEmpty) ...[
               const SizedBox(height: 8),
-              ...feedback.issues.map((issue) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('• ', style: TextStyle(color: Colors.white70)),
-                    Expanded(
-                      child: Text(
-                        issue.message,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
+              ...feedback.issues.map(
+                (issue) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('• ', style: TextStyle(color: Colors.white70)),
+                      Expanded(
+                        child: Text(
+                          issue.message,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              )),
+              ),
             ],
           ],
         ),
