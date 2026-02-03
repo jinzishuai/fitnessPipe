@@ -66,4 +66,70 @@ class PoseAdapter {
 
     return mapping[type];
   }
+
+  /// Convert counter's LandmarkId to app's LandmarkType.
+  static LandmarkType? toLandmarkType(counter.LandmarkId id) {
+    const mapping = {
+      counter.LandmarkId.nose: LandmarkType.nose,
+      counter.LandmarkId.leftEyeInner: LandmarkType.leftEyeInner,
+      counter.LandmarkId.leftEye: LandmarkType.leftEye,
+      counter.LandmarkId.leftEyeOuter: LandmarkType.leftEyeOuter,
+      counter.LandmarkId.rightEyeInner: LandmarkType.rightEyeInner,
+      counter.LandmarkId.rightEye: LandmarkType.rightEye,
+      counter.LandmarkId.rightEyeOuter: LandmarkType.rightEyeOuter,
+      counter.LandmarkId.leftEar: LandmarkType.leftEar,
+      counter.LandmarkId.rightEar: LandmarkType.rightEar,
+      counter.LandmarkId.mouthLeft: LandmarkType.mouthLeft,
+      counter.LandmarkId.mouthRight: LandmarkType.mouthRight,
+      counter.LandmarkId.leftShoulder: LandmarkType.leftShoulder,
+      counter.LandmarkId.rightShoulder: LandmarkType.rightShoulder,
+      counter.LandmarkId.leftElbow: LandmarkType.leftElbow,
+      counter.LandmarkId.rightElbow: LandmarkType.rightElbow,
+      counter.LandmarkId.leftWrist: LandmarkType.leftWrist,
+      counter.LandmarkId.rightWrist: LandmarkType.rightWrist,
+      counter.LandmarkId.leftPinky: LandmarkType.leftPinky,
+      counter.LandmarkId.rightPinky: LandmarkType.rightPinky,
+      counter.LandmarkId.leftIndex: LandmarkType.leftIndex,
+      counter.LandmarkId.rightIndex: LandmarkType.rightIndex,
+      counter.LandmarkId.leftThumb: LandmarkType.leftThumb,
+      counter.LandmarkId.rightThumb: LandmarkType.rightThumb,
+      counter.LandmarkId.leftHip: LandmarkType.leftHip,
+      counter.LandmarkId.rightHip: LandmarkType.rightHip,
+      counter.LandmarkId.leftKnee: LandmarkType.leftKnee,
+      counter.LandmarkId.rightKnee: LandmarkType.rightKnee,
+      counter.LandmarkId.leftAnkle: LandmarkType.leftAnkle,
+      counter.LandmarkId.rightAnkle: LandmarkType.rightAnkle,
+      counter.LandmarkId.leftHeel: LandmarkType.leftHeel,
+      counter.LandmarkId.rightHeel: LandmarkType.rightHeel,
+      counter.LandmarkId.leftFootIndex: LandmarkType.leftFootIndex,
+      counter.LandmarkId.rightFootIndex: LandmarkType.rightFootIndex,
+    };
+
+    return mapping[id];
+  }
+
+  /// Convert a set of counter LandmarkIds to app LandmarkTypes.
+  static Set<LandmarkType> toLandmarkTypeSet(Set<counter.LandmarkId> ids) {
+    return ids
+        .map((id) => toLandmarkType(id))
+        .whereType<LandmarkType>()
+        .toSet();
+  }
+
+  /// Convert bone connections from counter LandmarkIds to app LandmarkTypes.
+  static List<(LandmarkType, LandmarkType)> toBoneConnections(
+    List<(counter.LandmarkId, counter.LandmarkId)> bones,
+  ) {
+    return bones
+        .map((pair) {
+          final start = toLandmarkType(pair.$1);
+          final end = toLandmarkType(pair.$2);
+          if (start != null && end != null) {
+            return (start, end);
+          }
+          return null;
+        })
+        .whereType<(LandmarkType, LandmarkType)>()
+        .toList();
+  }
 }
