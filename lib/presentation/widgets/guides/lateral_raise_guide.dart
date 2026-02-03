@@ -61,41 +61,47 @@ class LateralRaiseGuide extends ExerciseGuide {
       inputsAreRotated,
     );
 
-    final shoulderWidth = (leftShoulderPoint - rightShoulderPoint).distance;
+    final shoulderWidth =
+        (leftShoulderPoint - rightShoulderPoint).distance;
     final armLength = shoulderWidth * 1.5; // Approximate arm length
 
-    // Convert threshold angles to radians
-    final topAngleRadians = topThreshold * (pi / 180);
-    final bottomAngleRadians = bottomThreshold * (pi / 180);
+    // Determine which angle to show based on phase
+    final double targetAngle;
+    switch (currentPhase) {
+      case LateralRaisePhase.waiting:
+      case LateralRaisePhase.down:
+      case LateralRaisePhase.rising:
+        // Show target "up" position (more horizontal)
+        targetAngle = topThreshold;
+        break;
+      case LateralRaisePhase.up:
+      case LateralRaisePhase.falling:
+        // Show target "down" position (more vertical)
+        targetAngle = bottomThreshold;
+        break;
+    }
 
-    // Calculate endpoints for "up" guide lines (green)
-    final leftUpEndPoint = Offset(
-      leftShoulderPoint.dx + armLength * sin(topAngleRadians),
-      leftShoulderPoint.dy + armLength * cos(topAngleRadians),
-    );
-    final rightUpEndPoint = Offset(
-      rightShoulderPoint.dx - armLength * sin(topAngleRadians),
-      rightShoulderPoint.dy + armLength * cos(topAngleRadians),
+    // Convert threshold angle from degrees to radians
+    // Threshold is measured from vertical (0 = arms down, 90 = arms horizontal)
+    // We need angle from horizontal for canvas drawing
+    final angleFromHorizontal = (90 - targetAngle) * (pi / 180);
+
+    // Calculate endpoints for guide lines
+    // Left arm: extends to the left and slightly up/down based on angle
+    final leftEndPoint = Offset(
+      leftShoulderPoint.dx - armLength * cos(angleFromHorizontal),
+      leftShoulderPoint.dy - armLength * sin(angleFromHorizontal),
     );
 
-    // Calculate endpoints for "down" guide lines (blue)
-    final leftDownEndPoint = Offset(
-      leftShoulderPoint.dx + armLength * sin(bottomAngleRadians),
-      leftShoulderPoint.dy + armLength * cos(bottomAngleRadians),
-    );
-    final rightDownEndPoint = Offset(
-      rightShoulderPoint.dx - armLength * sin(bottomAngleRadians),
-      rightShoulderPoint.dy + armLength * cos(bottomAngleRadians),
+    // Right arm: extends to the right and slightly up/down based on angle
+    final rightEndPoint = Offset(
+      rightShoulderPoint.dx + armLength * cos(angleFromHorizontal),
+      rightShoulderPoint.dy - armLength * sin(angleFromHorizontal),
     );
 
-    // Draw guides:
-    // Always show both lines so user sees full range of motion immediately:
-    // - Green for "up" target
-    // - Blue for "down" target
-    _drawDashedLine(canvas, leftShoulderPoint, leftUpEndPoint, Colors.green);
-    _drawDashedLine(canvas, rightShoulderPoint, rightUpEndPoint, Colors.green);
-    _drawDashedLine(canvas, leftShoulderPoint, leftDownEndPoint, Colors.blue);
-    _drawDashedLine(canvas, rightShoulderPoint, rightDownEndPoint, Colors.blue);
+    // Draw dashed lines
+    _drawDashedLine(canvas, leftShoulderPoint, leftEndPoint, guideColor);
+    _drawDashedLine(canvas, rightShoulderPoint, rightEndPoint, guideColor);
   }
 
   /// Draw a dashed line from start to end.
@@ -116,11 +122,9 @@ class LateralRaiseGuide extends ExerciseGuide {
     bool isDrawing = true;
 
     while (currentLength < totalLength) {
-      final segmentLength = isDrawing ? dashLength : gapLength;
-      final nextLength = (currentLength + segmentLength).clamp(
-        0.0,
-        totalLength,
-      );
+      final segmentLength =
+          isDrawing ? dashLength : gapLength;
+      final nextLength = (currentLength + segmentLength).clamp(0.0, totalLength);
 
       if (isDrawing) {
         final startPoint = start + unitVector * currentLength;
