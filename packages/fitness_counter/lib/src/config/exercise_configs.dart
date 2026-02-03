@@ -26,5 +26,8 @@ class ExerciseConfigs {
   }
 
   /// All available exercise configurations.
-  static List<ExerciseConfig> get all => const [lateralRaise, singleSquat];
+  static List<ExerciseConfig> get all => const [
+        lateralRaise,
+        singleSquat,
+      ];
 }
