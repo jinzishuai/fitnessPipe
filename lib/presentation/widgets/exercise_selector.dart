@@ -1,3 +1,4 @@
+import 'package:fitness_counter/fitness_counter.dart';
 import 'package:flutter/material.dart';
 
 /// Exercise types available for rep counting.
@@ -7,6 +8,16 @@ enum ExerciseType {
 
   final String displayName;
   const ExerciseType(this.displayName);
+
+  /// Get the configuration for this exercise type.
+  ExerciseConfig get config {
+    switch (this) {
+      case ExerciseType.lateralRaise:
+        return ExerciseConfigs.lateralRaise;
+      case ExerciseType.singleSquat:
+        return ExerciseConfigs.singleSquat;
+    }
+  }
 }
 
 /// Dropdown widget for selecting an exercise.
