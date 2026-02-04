@@ -110,9 +110,18 @@ class VirtualCameraService {
   Future<InputImage?> _loadFrame(int index, String prefix) async {
     final assetPath = '$prefix$index.jpg';
     try {
-      // Check cache first
+      // Check cache first - but verify file still exists and is valid
       if (_tempFileCache.containsKey(assetPath)) {
-        return InputImage.fromFilePath(_tempFileCache[assetPath]!);
+        final cachedPath = _tempFileCache[assetPath]!;
+        final cachedFile = File(cachedPath);
+        if (await cachedFile.exists()) {
+          final stat = await cachedFile.stat();
+          if (stat.size > 0) {
+            return InputImage.fromFilePath(cachedPath);
+          }
+        }
+        // Cache is stale, remove it
+        _tempFileCache.remove(assetPath);
       }
 
       final byteData = await rootBundle.load(assetPath);
@@ -123,9 +132,20 @@ class VirtualCameraService {
       final fileName = assetPath.replaceAll('/', '_');
       final tempFile = File('${tempDir.path}/$fileName');
 
-      if (!await tempFile.exists()) {
-        await tempFile.writeAsBytes(bytes);
+      // Atomic write: write to temp file first, then rename
+      final tempWriteFile = File('${tempDir.path}/$fileName.tmp');
+      await tempWriteFile.writeAsBytes(bytes, flush: true);
+
+      // Verify the write was successful
+      final writtenStat = await tempWriteFile.stat();
+      if (writtenStat.size != bytes.length) {
+        await tempWriteFile.delete().catchError((_) => tempWriteFile);
+        debugPrint('Write verification failed for $assetPath');
+        return null;
       }
+
+      // Atomic rename to final path
+      await tempWriteFile.rename(tempFile.path);
 
       _tempFileCache[assetPath] = tempFile.path;
       return InputImage.fromFilePath(tempFile.path);
