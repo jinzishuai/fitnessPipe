@@ -146,7 +146,8 @@ class VirtualCameraService {
       final writtenStat = await tempWriteFile.stat();
       if (writtenStat.size != bytes.length) {
         await _safeDelete(tempWriteFile, 'invalid temp file');
-        debugPrint('Write verification failed for $assetPath');
+        debugPrint(
+            'Write verification failed for $assetPath: expected ${bytes.length} bytes, wrote ${writtenStat.size} bytes');
         return null;
       }
 
