@@ -145,10 +145,7 @@ class VirtualCameraService {
       // Verify the write was successful
       final writtenStat = await tempWriteFile.stat();
       if (writtenStat.size != bytes.length) {
-        await tempWriteFile.delete().catchError((e) {
-          debugPrint('Failed to delete invalid temp file: $e');
-          return tempWriteFile;
-        });
+        await _safeDelete(tempWriteFile, 'invalid temp file');
         debugPrint('Write verification failed for $assetPath');
         return null;
       }
@@ -158,18 +155,12 @@ class VirtualCameraService {
       if (await tempFile.exists()) {
         final existingStat = await tempFile.stat();
         if (existingStat.size > 0) {
-          await tempWriteFile.delete().catchError((e) {
-            debugPrint('Failed to delete redundant temp file: $e');
-            return tempWriteFile;
-          });
+          await _safeDelete(tempWriteFile, 'redundant temp file');
           _tempFileCache[assetPath] = tempFile.path;
           return InputImage.fromFilePath(tempFile.path);
         } else {
           // Existing target seems invalid; remove it and proceed with rename.
-          await tempFile.delete().catchError((e) {
-            debugPrint('Failed to delete invalid target file: $e');
-            return tempFile;
-          });
+          await _safeDelete(tempFile, 'invalid target file');
         }
       }
 
@@ -181,6 +172,15 @@ class VirtualCameraService {
     } catch (e) {
       debugPrint('Error loading virtual frame $assetPath: $e');
       return null;
+    }
+  }
+
+  /// Safely delete a file, logging any errors without throwing.
+  Future<void> _safeDelete(File file, String description) async {
+    try {
+      await file.delete();
+    } catch (e) {
+      debugPrint('Failed to delete $description: $e');
     }
   }
 
