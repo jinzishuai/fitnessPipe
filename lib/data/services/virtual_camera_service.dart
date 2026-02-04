@@ -132,8 +132,10 @@ class VirtualCameraService {
       final fileName = assetPath.replaceAll('/', '_');
       final tempFile = File('${tempDir.path}/$fileName');
 
-      // Atomic write: write to temp file first, then rename
-      final tempWriteFile = File('${tempDir.path}/$fileName.tmp');
+      // Atomic write: write to a unique temp file first, then rename
+      final tempWriteFile = File(
+        '${tempDir.path}/$fileName.${DateTime.now().microsecondsSinceEpoch}.tmp',
+      );
       await tempWriteFile.writeAsBytes(bytes, flush: true);
 
       // Verify the write was successful
@@ -142,6 +144,20 @@ class VirtualCameraService {
         await tempWriteFile.delete().catchError((_) => tempWriteFile);
         debugPrint('Write verification failed for $assetPath');
         return null;
+      }
+
+      // If the final file already exists and appears valid, keep it and
+      // discard the temp file instead of overwriting a potentially good file.
+      if (await tempFile.exists()) {
+        final existingStat = await tempFile.stat();
+        if (existingStat.size > 0) {
+          await tempWriteFile.delete().catchError((_) => tempWriteFile);
+          _tempFileCache[assetPath] = tempFile.path;
+          return InputImage.fromFilePath(tempFile.path);
+        } else {
+          // Existing target seems invalid; remove it and proceed with rename.
+          await tempFile.delete().catchError((_) => tempFile);
+        }
       }
 
       // Atomic rename to final path
