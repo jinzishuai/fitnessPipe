@@ -13,6 +13,9 @@ class VirtualCameraService {
   bool _isStreaming = false;
   int _currentFrameIndex = 0;
 
+  // Atomic counter for unique temp file names to avoid collisions
+  static int _tempFileCounter = 0;
+
   // Configuration
   // Configuration
   static const Map<ExerciseType, Map<String, dynamic>> _exerciseConfig = {
@@ -110,9 +113,18 @@ class VirtualCameraService {
   Future<InputImage?> _loadFrame(int index, String prefix) async {
     final assetPath = '$prefix$index.jpg';
     try {
-      // Check cache first
+      // Check cache first - but verify file still exists and is valid
       if (_tempFileCache.containsKey(assetPath)) {
-        return InputImage.fromFilePath(_tempFileCache[assetPath]!);
+        final cachedPath = _tempFileCache[assetPath]!;
+        final cachedFile = File(cachedPath);
+        if (await cachedFile.exists()) {
+          final stat = await cachedFile.stat();
+          if (stat.size > 0) {
+            return InputImage.fromFilePath(cachedPath);
+          }
+        }
+        // Cache is stale, remove it
+        _tempFileCache.remove(assetPath);
       }
 
       final byteData = await rootBundle.load(assetPath);
@@ -123,15 +135,54 @@ class VirtualCameraService {
       final fileName = assetPath.replaceAll('/', '_');
       final tempFile = File('${tempDir.path}/$fileName');
 
-      if (!await tempFile.exists()) {
-        await tempFile.writeAsBytes(bytes);
+      // Atomic write: write to a unique temp file first, then rename.
+      // Use both counter and timestamp to guarantee uniqueness across concurrent calls.
+      final uniqueId =
+          '${_tempFileCounter++}_${DateTime.now().microsecondsSinceEpoch}';
+      final tempWriteFile = File('${tempDir.path}/$fileName.$uniqueId.tmp');
+      await tempWriteFile.writeAsBytes(bytes, flush: true);
+
+      // Verify the write was successful
+      final writtenStat = await tempWriteFile.stat();
+      if (writtenStat.size != bytes.length) {
+        await _safeDelete(tempWriteFile, 'invalid temp file');
+        debugPrint(
+          'Write verification failed for $assetPath: expected ${bytes.length} bytes, wrote ${writtenStat.size} bytes',
+        );
+        return null;
       }
+
+      // If the final file already exists and appears valid, keep it and
+      // discard the temp file instead of overwriting a potentially good file.
+      if (await tempFile.exists()) {
+        final existingStat = await tempFile.stat();
+        if (existingStat.size > 0) {
+          await _safeDelete(tempWriteFile, 'redundant temp file');
+          _tempFileCache[assetPath] = tempFile.path;
+          return InputImage.fromFilePath(tempFile.path);
+        } else {
+          // Existing target seems invalid; remove it and proceed with rename.
+          await _safeDelete(tempFile, 'invalid target file');
+        }
+      }
+
+      // Atomic rename to final path
+      await tempWriteFile.rename(tempFile.path);
 
       _tempFileCache[assetPath] = tempFile.path;
       return InputImage.fromFilePath(tempFile.path);
     } catch (e) {
       debugPrint('Error loading virtual frame $assetPath: $e');
       return null;
+    }
+  }
+
+  /// Safely delete a file, logging any errors without throwing.
+  Future<void> _safeDelete(File file, String description) async {
+    try {
+      await file.delete();
+    } catch (e) {
+      debugPrint('Failed to delete $description: $e');
     }
   }
 
