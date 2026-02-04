@@ -13,6 +13,9 @@ class VirtualCameraService {
   bool _isStreaming = false;
   int _currentFrameIndex = 0;
 
+  // Atomic counter for unique temp file names to avoid collisions
+  static int _tempFileCounter = 0;
+
   // Configuration
   // Configuration
   static const Map<ExerciseType, Map<String, dynamic>> _exerciseConfig = {
@@ -132,16 +135,19 @@ class VirtualCameraService {
       final fileName = assetPath.replaceAll('/', '_');
       final tempFile = File('${tempDir.path}/$fileName');
 
-      // Atomic write: write to a unique temp file first, then rename
-      final tempWriteFile = File(
-        '${tempDir.path}/$fileName.${DateTime.now().microsecondsSinceEpoch}.tmp',
-      );
+      // Atomic write: write to a unique temp file first, then rename.
+      // Use both counter and timestamp to guarantee uniqueness across concurrent calls.
+      final uniqueId = '${_tempFileCounter++}_${DateTime.now().microsecondsSinceEpoch}';
+      final tempWriteFile = File('${tempDir.path}/$fileName.$uniqueId.tmp');
       await tempWriteFile.writeAsBytes(bytes, flush: true);
 
       // Verify the write was successful
       final writtenStat = await tempWriteFile.stat();
       if (writtenStat.size != bytes.length) {
-        await tempWriteFile.delete().catchError((_) => tempWriteFile);
+        await tempWriteFile.delete().catchError((e) {
+          debugPrint('Failed to delete invalid temp file: $e');
+          return tempWriteFile;
+        });
         debugPrint('Write verification failed for $assetPath');
         return null;
       }
@@ -151,12 +157,18 @@ class VirtualCameraService {
       if (await tempFile.exists()) {
         final existingStat = await tempFile.stat();
         if (existingStat.size > 0) {
-          await tempWriteFile.delete().catchError((_) => tempWriteFile);
+          await tempWriteFile.delete().catchError((e) {
+            debugPrint('Failed to delete redundant temp file: $e');
+            return tempWriteFile;
+          });
           _tempFileCache[assetPath] = tempFile.path;
           return InputImage.fromFilePath(tempFile.path);
         } else {
           // Existing target seems invalid; remove it and proceed with rename.
-          await tempFile.delete().catchError((_) => tempFile);
+          await tempFile.delete().catchError((e) {
+            debugPrint('Failed to delete invalid target file: $e');
+            return tempFile;
+          });
         }
       }
 
