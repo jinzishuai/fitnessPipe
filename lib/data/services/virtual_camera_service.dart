@@ -137,7 +137,8 @@ class VirtualCameraService {
 
       // Atomic write: write to a unique temp file first, then rename.
       // Use both counter and timestamp to guarantee uniqueness across concurrent calls.
-      final uniqueId = '${_tempFileCounter++}_${DateTime.now().microsecondsSinceEpoch}';
+      final uniqueId =
+          '${_tempFileCounter++}_${DateTime.now().microsecondsSinceEpoch}';
       final tempWriteFile = File('${tempDir.path}/$fileName.$uniqueId.tmp');
       await tempWriteFile.writeAsBytes(bytes, flush: true);
 
