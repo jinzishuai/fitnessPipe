@@ -34,18 +34,26 @@ class RepCounterOverlay extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.baseline,
               textBaseline: TextBaseline.alphabetic,
               children: [
-                Text(
-                  '$repCount',
-                  style: const TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                Semantics(
+                  label: '$repCount',
+                  excludeSemantics: true,
+                  child: Text(
+                    '$repCount',
+                    style: const TextStyle(
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Text(
-                  'reps',
-                  style: TextStyle(fontSize: 18, color: Colors.white70),
+                Semantics(
+                  label: 'reps',
+                  excludeSemantics: true,
+                  child: const Text(
+                    'reps',
+                    style: TextStyle(fontSize: 18, color: Colors.white70),
+                  ),
                 ),
               ],
             ),

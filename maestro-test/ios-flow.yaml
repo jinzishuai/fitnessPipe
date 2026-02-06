@@ -1,15 +1,26 @@
 appId: com.fitnesspipe.fitnessPipe
 ---
 - launchApp
+
+# ── Portrait mode tests ──────────────────────────────────────────────
+# Ensure we start in portrait so the iOS accessibility tree has correct
+# coordinates.  Landscape coordinate mapping is broken in Maestro ≥1.41
+# (tracked as mobile-dev-inc/maestro#2701).
+- setOrientation: PORTRAIT
 - assertVisible: "FitnessPipe"
 
+# Wait for camera initialization to complete (loading screen shows
+# "Initializing camera..." until pose detector and virtual camera are ready)
+- extendedWaitUntil:
+    visible: "Lateral Raise"
+    timeout: 30000
+
 # Exercise Navigation
-- tapOn: "Lateral Raise" 
+- tapOn: "Lateral Raise"
 - tapOn: "Single Squat"
 - assertVisible: "Single Squat"
-# Verify counter reset
 # Verify counter is > 0 (regex matches 1-9 followed by any digits)
-- assertVisible: "[1-9][0-9]*" 
+- assertVisible: "[1-9][0-9]*"
 - assertVisible: "reps"
 
 - tapOn: "Single Squat"
@@ -17,7 +28,18 @@ appId: com.fitnesspipe.fitnessPipe
 - assertVisible: "Lateral Raise"
 
 # Counter Checks
-# Verify counter overlay is present
 # Verify counter overlay is present and > 0
 - assertVisible: "[1-9][0-9]*"
 - assertVisible: "reps"
+
+# ── Landscape mode tests ─────────────────────────────────────────────
+# Switch to landscape and verify the app renders correctly.
+# NOTE: Due to Maestro#2701, elements on the left half of the landscape
+# screen have negative accessibility coordinates and are invisible to
+# Maestro.  We can only assert elements that remain in the visible
+# (right-half) region of the accessibility tree.  Full landscape element
+# interaction will be possible once Maestro ships the fix (MAE-275).
+- setOrientation: LANDSCAPE_LEFT
+- extendedWaitUntil:
+    visible: "FitnessPipe"
+    timeout: 10000

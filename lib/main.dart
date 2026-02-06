@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'presentation/screens/pose_detection_screen.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
   runApp(const FitnessPipeApp());
 }
 
