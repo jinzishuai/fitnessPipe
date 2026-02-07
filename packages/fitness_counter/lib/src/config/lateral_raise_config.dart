@@ -51,5 +51,5 @@ class LateralRaiseConfig extends ExerciseConfig {
   bool get hasThresholds => true;
 
   @override
-  (double, double) get defaultThresholds => (50.0, 25.0);
+  (double, double) get defaultThresholds => (70.0, 25.0);
 }
