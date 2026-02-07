@@ -199,14 +199,21 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   }
 
   File? _currentVirtualFrameFile;
+  DateTime _lastVirtualFrameUpdate = DateTime(0);
 
   void _processVirtualCameraImage(InputImage inputImage) async {
-    // Update the UI preview
-    if (inputImage.filePath != null) {
-      if (mounted) {
+    // Update the UI preview, throttled to ~10fps to allow the iOS
+    // accessibility tree to stabilize (fixes Maestro element discovery, #50).
+    if (inputImage.filePath != null && mounted) {
+      final now = DateTime.now();
+      if (now.difference(_lastVirtualFrameUpdate).inMilliseconds >= 100) {
+        _lastVirtualFrameUpdate = now;
         setState(() {
           _currentVirtualFrameFile = File(inputImage.filePath!);
         });
+      } else {
+        // Still update the file reference for pose detection without setState
+        _currentVirtualFrameFile = File(inputImage.filePath!);
       }
     }
 
@@ -649,6 +656,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                   _currentVirtualFrameFile!,
                   fit: BoxFit.cover,
                   gaplessPlayback: true, // Prevents flickering
+                  excludeFromSemantics: true,
                 ),
 
                 // Skeleton overlay
@@ -665,9 +673,6 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                       ),
                     ),
                   ),
-
-                // Overlay Widgets (Reuse specific widgets or duplicate structure?)
-                // Let's copy the structure from Mobile for consistency.
 
                 // Exercise selector (top left)
                 Positioned(
