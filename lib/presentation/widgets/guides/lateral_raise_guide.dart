@@ -65,48 +65,43 @@ class LateralRaiseGuide extends ExerciseGuide {
         (leftShoulderPoint - rightShoulderPoint).distance;
     final armLength = shoulderWidth * 1.5; // Approximate arm length
 
-    // Determine which angle and color to show based on phase
-    // Guide shows where user should go NEXT
-    // Colors match the phase message colors: green="Up!", blue="Down"
-    final double targetAngle;
-    final Color lineColor;
-    switch (currentPhase) {
-      case LateralRaisePhase.down:
-      case LateralRaisePhase.rising:
-        // User is in starting position or rising - show target "up" angle (green)
-        targetAngle = topThreshold;
-        lineColor = Colors.green;
-        break;
-      case LateralRaisePhase.waiting:
-      case LateralRaisePhase.up:
-      case LateralRaisePhase.falling:
-        // User needs to get to starting position, or is at top/falling - show "down" angle (blue)
-        targetAngle = bottomThreshold;
-        lineColor = Colors.blue;
-        break;
+    // Convert threshold angles to radians
+    final topAngleRadians = topThreshold * (pi / 180);
+    final bottomAngleRadians = bottomThreshold * (pi / 180);
+
+    // Calculate endpoints for "up" guide lines (green)
+    final leftUpEndPoint = Offset(
+      leftShoulderPoint.dx + armLength * sin(topAngleRadians),
+      leftShoulderPoint.dy + armLength * cos(topAngleRadians),
+    );
+    final rightUpEndPoint = Offset(
+      rightShoulderPoint.dx - armLength * sin(topAngleRadians),
+      rightShoulderPoint.dy + armLength * cos(topAngleRadians),
+    );
+
+    // Calculate endpoints for "down" guide lines (blue)
+    final leftDownEndPoint = Offset(
+      leftShoulderPoint.dx + armLength * sin(bottomAngleRadians),
+      leftShoulderPoint.dy + armLength * cos(bottomAngleRadians),
+    );
+    final rightDownEndPoint = Offset(
+      rightShoulderPoint.dx - armLength * sin(bottomAngleRadians),
+      rightShoulderPoint.dy + armLength * cos(bottomAngleRadians),
+    );
+
+    // Draw guides based on phase:
+    // - waiting: only show "down" lines (blue) to guide user to starting position
+    // - all other phases: show both lines so user sees full range
+    if (currentPhase == LateralRaisePhase.waiting) {
+      _drawDashedLine(canvas, leftShoulderPoint, leftDownEndPoint, Colors.blue);
+      _drawDashedLine(canvas, rightShoulderPoint, rightDownEndPoint, Colors.blue);
+    } else {
+      // Show both lines: green for "up" target, blue for "down" target
+      _drawDashedLine(canvas, leftShoulderPoint, leftUpEndPoint, Colors.green);
+      _drawDashedLine(canvas, rightShoulderPoint, rightUpEndPoint, Colors.green);
+      _drawDashedLine(canvas, leftShoulderPoint, leftDownEndPoint, Colors.blue);
+      _drawDashedLine(canvas, rightShoulderPoint, rightDownEndPoint, Colors.blue);
     }
-
-    // Convert threshold angle to radians
-    // Threshold is measured from vertical (0 = arms straight down, 90 = horizontal)
-    // For canvas: y-axis points down, so we use sin for x-offset and cos for y-offset
-    final angleRadians = targetAngle * (pi / 180);
-
-    // Calculate endpoints for guide lines
-    // Left arm: extends outward (right on screen due to mirroring) at the target angle
-    final leftEndPoint = Offset(
-      leftShoulderPoint.dx + armLength * sin(angleRadians),
-      leftShoulderPoint.dy + armLength * cos(angleRadians),
-    );
-
-    // Right arm: extends outward (left on screen due to mirroring) at the target angle
-    final rightEndPoint = Offset(
-      rightShoulderPoint.dx - armLength * sin(angleRadians),
-      rightShoulderPoint.dy + armLength * cos(angleRadians),
-    );
-
-    // Draw dashed lines with phase-appropriate color
-    _drawDashedLine(canvas, leftShoulderPoint, leftEndPoint, lineColor);
-    _drawDashedLine(canvas, rightShoulderPoint, rightEndPoint, lineColor);
   }
 
   /// Draw a dashed line from start to end.
