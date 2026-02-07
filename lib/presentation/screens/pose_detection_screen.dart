@@ -73,7 +73,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   Timer? _feedbackClearTimer;
 
   // Threshold configuration
-  double _topThreshold = 50.0;
+  double _topThreshold = 70.0;
   double _bottomThreshold = 25.0;
   // Squat thresholds (defaults)
   double _squatTopThreshold = 170.0;
