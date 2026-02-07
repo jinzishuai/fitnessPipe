@@ -3,7 +3,8 @@
 # Run Maestro tests in headless mode and generate JUnit report
 # Requires maestro to be installed and in PATH
 
-mkdir -p maestro-report
+rm -fR maestro-report
+mkdir -p maestro-report/debug
 
 echo "Running Maestro tests..."
 # --format junit writes the report to the specified output file
