@@ -15,17 +15,29 @@ appId: com.fitnesspipe.fitnessPipe
     visible: "Lateral Raise"
     timeout: 30000
 
-# Exercise Navigation
+# Exercise Navigation — switch to Single Squat
 - tapOn: "Lateral Raise"
+# Wait for dropdown menu to fully open before tapping the option
+- extendedWaitUntil:
+    visible: "Single Squat"
+    timeout: 5000
 - tapOn: "Single Squat"
-- assertVisible: "Single Squat"
+- extendedWaitUntil:
+    visible: "Single Squat"
+    timeout: 5000
 # Verify counter is > 0 (regex matches 1-9 followed by any digits)
 - assertVisible: "[1-9][0-9]*"
 - assertVisible: "reps"
 
+# Switch back to Lateral Raise
 - tapOn: "Single Squat"
+- extendedWaitUntil:
+    visible: "Lateral Raise"
+    timeout: 5000
 - tapOn: "Lateral Raise"
-- assertVisible: "Lateral Raise"
+- extendedWaitUntil:
+    visible: "Lateral Raise"
+    timeout: 5000
 
 # Counter Checks
 # Verify counter overlay is present and > 0

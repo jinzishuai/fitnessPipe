@@ -19,7 +19,7 @@ if [ -n "$SIMULATOR_ID" ]; then
 fi
 
 # Increase driver startup timeout for CI/Rosetta environments (default is 15000ms)
-export MAESTRO_DRIVER_STARTUP_TIMEOUT=30000
+export MAESTRO_DRIVER_STARTUP_TIMEOUT=${MAESTRO_DRIVER_STARTUP_TIMEOUT:-60000}
 
 echo "Running $CMD maestro-test/ios-flow.yaml"
 $CMD maestro-test/ios-flow.yaml
