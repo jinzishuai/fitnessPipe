@@ -65,43 +65,48 @@ class LateralRaiseGuide extends ExerciseGuide {
         (leftShoulderPoint - rightShoulderPoint).distance;
     final armLength = shoulderWidth * 1.5; // Approximate arm length
 
-    // Determine which angle to show based on phase
+    // Determine which angle and color to show based on phase
+    // Guide shows where user should go NEXT
+    // Colors match the phase message colors: green="Up!", blue="Down"
     final double targetAngle;
+    final Color lineColor;
     switch (currentPhase) {
-      case LateralRaisePhase.waiting:
       case LateralRaisePhase.down:
       case LateralRaisePhase.rising:
-        // Show target "up" position (more horizontal)
+        // User is in starting position or rising - show target "up" angle (green)
         targetAngle = topThreshold;
+        lineColor = Colors.green;
         break;
+      case LateralRaisePhase.waiting:
       case LateralRaisePhase.up:
       case LateralRaisePhase.falling:
-        // Show target "down" position (more vertical)
+        // User needs to get to starting position, or is at top/falling - show "down" angle (blue)
         targetAngle = bottomThreshold;
+        lineColor = Colors.blue;
         break;
     }
 
-    // Convert threshold angle from degrees to radians
-    // Threshold is measured from vertical (0 = arms down, 90 = arms horizontal)
-    // We need angle from horizontal for canvas drawing
-    final angleFromHorizontal = (90 - targetAngle) * (pi / 180);
+    // Convert threshold angle to radians
+    // Threshold is measured from vertical (0 = arms straight down, 90 = horizontal)
+    // For canvas: y-axis points down, so we use sin for x-offset and cos for y-offset
+    final angleRadians = targetAngle * (pi / 180);
 
     // Calculate endpoints for guide lines
-    // Left arm: extends to the left and slightly up/down based on angle
+    // Left arm: extends outward (right on screen due to mirroring) at the target angle
     final leftEndPoint = Offset(
-      leftShoulderPoint.dx - armLength * cos(angleFromHorizontal),
-      leftShoulderPoint.dy - armLength * sin(angleFromHorizontal),
+      leftShoulderPoint.dx + armLength * sin(angleRadians),
+      leftShoulderPoint.dy + armLength * cos(angleRadians),
     );
 
-    // Right arm: extends to the right and slightly up/down based on angle
+    // Right arm: extends outward (left on screen due to mirroring) at the target angle
     final rightEndPoint = Offset(
-      rightShoulderPoint.dx + armLength * cos(angleFromHorizontal),
-      rightShoulderPoint.dy - armLength * sin(angleFromHorizontal),
+      rightShoulderPoint.dx - armLength * sin(angleRadians),
+      rightShoulderPoint.dy + armLength * cos(angleRadians),
     );
 
-    // Draw dashed lines
-    _drawDashedLine(canvas, leftShoulderPoint, leftEndPoint, guideColor);
-    _drawDashedLine(canvas, rightShoulderPoint, rightEndPoint, guideColor);
+    // Draw dashed lines with phase-appropriate color
+    _drawDashedLine(canvas, leftShoulderPoint, leftEndPoint, lineColor);
+    _drawDashedLine(canvas, rightShoulderPoint, rightEndPoint, lineColor);
   }
 
   /// Draw a dashed line from start to end.
