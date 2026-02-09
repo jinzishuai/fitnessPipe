@@ -118,7 +118,8 @@ class SkeletonPainter extends CustomPainter {
     // Draw landmark points (filter by visibleLandmarks if provided)
     for (final landmark in pose!.landmarks) {
       // Skip if visibleLandmarks is set and this landmark is not in the set
-      if (visibleLandmarks != null && !visibleLandmarks!.contains(landmark.type)) {
+      if (visibleLandmarks != null &&
+          !visibleLandmarks!.contains(landmark.type)) {
         continue;
       }
 

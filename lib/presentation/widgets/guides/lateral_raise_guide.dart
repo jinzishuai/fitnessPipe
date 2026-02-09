@@ -61,8 +61,7 @@ class LateralRaiseGuide extends ExerciseGuide {
       inputsAreRotated,
     );
 
-    final shoulderWidth =
-        (leftShoulderPoint - rightShoulderPoint).distance;
+    final shoulderWidth = (leftShoulderPoint - rightShoulderPoint).distance;
     final armLength = shoulderWidth * 1.5; // Approximate arm length
 
     // Convert threshold angles to radians
@@ -94,13 +93,28 @@ class LateralRaiseGuide extends ExerciseGuide {
     // - all other phases: show both lines so user sees full range
     if (currentPhase == LateralRaisePhase.waiting) {
       _drawDashedLine(canvas, leftShoulderPoint, leftDownEndPoint, Colors.blue);
-      _drawDashedLine(canvas, rightShoulderPoint, rightDownEndPoint, Colors.blue);
+      _drawDashedLine(
+        canvas,
+        rightShoulderPoint,
+        rightDownEndPoint,
+        Colors.blue,
+      );
     } else {
       // Show both lines: green for "up" target, blue for "down" target
       _drawDashedLine(canvas, leftShoulderPoint, leftUpEndPoint, Colors.green);
-      _drawDashedLine(canvas, rightShoulderPoint, rightUpEndPoint, Colors.green);
+      _drawDashedLine(
+        canvas,
+        rightShoulderPoint,
+        rightUpEndPoint,
+        Colors.green,
+      );
       _drawDashedLine(canvas, leftShoulderPoint, leftDownEndPoint, Colors.blue);
-      _drawDashedLine(canvas, rightShoulderPoint, rightDownEndPoint, Colors.blue);
+      _drawDashedLine(
+        canvas,
+        rightShoulderPoint,
+        rightDownEndPoint,
+        Colors.blue,
+      );
     }
   }
 
@@ -122,9 +136,11 @@ class LateralRaiseGuide extends ExerciseGuide {
     bool isDrawing = true;
 
     while (currentLength < totalLength) {
-      final segmentLength =
-          isDrawing ? dashLength : gapLength;
-      final nextLength = (currentLength + segmentLength).clamp(0.0, totalLength);
+      final segmentLength = isDrawing ? dashLength : gapLength;
+      final nextLength = (currentLength + segmentLength).clamp(
+        0.0,
+        totalLength,
+      );
 
       if (isDrawing) {
         final startPoint = start + unitVector * currentLength;

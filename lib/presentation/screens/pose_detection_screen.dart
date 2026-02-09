@@ -91,18 +91,23 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   /// Get the visible landmarks for the current exercise (null = show all).
   Set<LandmarkType>? get _visibleLandmarks {
     if (_selectedExercise == null) return null;
-    return PoseAdapter.toLandmarkTypeSet(_selectedExercise!.config.visibleLandmarks);
+    return PoseAdapter.toLandmarkTypeSet(
+      _selectedExercise!.config.visibleLandmarks,
+    );
   }
 
   /// Get the visible bone connections for the current exercise (null = show all).
   List<(LandmarkType, LandmarkType)>? get _visibleBones {
     if (_selectedExercise == null) return null;
-    return PoseAdapter.toBoneConnections(_selectedExercise!.config.visibleBones);
+    return PoseAdapter.toBoneConnections(
+      _selectedExercise!.config.visibleBones,
+    );
   }
 
   /// Get the visual guide for the current exercise.
   ExerciseGuide? get _currentGuide {
-    if (_selectedExercise == ExerciseType.lateralRaise && _lateralRaiseCounter != null) {
+    if (_selectedExercise == ExerciseType.lateralRaise &&
+        _lateralRaiseCounter != null) {
       return LateralRaiseGuide(
         topThreshold: _topThreshold,
         bottomThreshold: _bottomThreshold,
