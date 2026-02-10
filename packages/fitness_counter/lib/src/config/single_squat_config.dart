@@ -7,27 +7,27 @@ class SingleSquatConfig extends ExerciseConfig {
 
   @override
   Set<LandmarkId> get requiredLandmarks => const {
-        LandmarkId.leftHip,
-        LandmarkId.rightHip,
-        LandmarkId.leftKnee,
-        LandmarkId.rightKnee,
-        LandmarkId.leftAnkle,
-        LandmarkId.rightAnkle,
-      };
+    LandmarkId.leftHip,
+    LandmarkId.rightHip,
+    LandmarkId.leftKnee,
+    LandmarkId.rightKnee,
+    LandmarkId.leftAnkle,
+    LandmarkId.rightAnkle,
+  };
 
   // visibleLandmarks defaults to requiredLandmarks (no additional needed)
 
   @override
   List<(LandmarkId, LandmarkId)> get visibleBones => const [
-        // Hip connection
-        (LandmarkId.leftHip, LandmarkId.rightHip),
-        // Left leg
-        (LandmarkId.leftHip, LandmarkId.leftKnee),
-        (LandmarkId.leftKnee, LandmarkId.leftAnkle),
-        // Right leg
-        (LandmarkId.rightHip, LandmarkId.rightKnee),
-        (LandmarkId.rightKnee, LandmarkId.rightAnkle),
-      ];
+    // Hip connection
+    (LandmarkId.leftHip, LandmarkId.rightHip),
+    // Left leg
+    (LandmarkId.leftHip, LandmarkId.leftKnee),
+    (LandmarkId.leftKnee, LandmarkId.leftAnkle),
+    // Right leg
+    (LandmarkId.rightHip, LandmarkId.rightKnee),
+    (LandmarkId.rightKnee, LandmarkId.rightAnkle),
+  ];
 
   @override
   bool get hasThresholds => false;

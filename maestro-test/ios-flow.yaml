@@ -9,11 +9,24 @@ appId: com.fitnesspipe.fitnessPipe
 - setOrientation: PORTRAIT
 - assertVisible: "FitnessPipe"
 
-# Wait for camera initialization to complete (loading screen shows
-# "Initializing camera..." until pose detector and virtual camera are ready)
+# Wait for camera initialization to complete and exercise selector to appear
+- extendedWaitUntil:
+    visible: "Select Exercise"
+    timeout: 30000
+
+# Select Lateral Raise from the dropdown
+- tapOn: "Select Exercise"
 - extendedWaitUntil:
     visible: "Lateral Raise"
-    timeout: 30000
+    timeout: 5000
+- tapOn: "Lateral Raise"
+- extendedWaitUntil:
+    visible: "Lateral Raise"
+    timeout: 5000
+
+# Verify counter is > 0 (regex matches 1-9 followed by any digits)
+- assertVisible: "[1-9][0-9]*"
+- assertVisible: "reps"
 
 # Exercise Navigation — switch to Single Squat
 - tapOn: "Lateral Raise"

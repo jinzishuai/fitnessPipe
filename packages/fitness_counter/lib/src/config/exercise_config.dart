@@ -8,6 +8,7 @@ import '../models/landmark.dart';
 /// - Threshold configuration
 abstract class ExerciseConfig {
   const ExerciseConfig();
+
   /// Landmarks required for rep counting and form analysis.
   Set<LandmarkId> get requiredLandmarks;
 
