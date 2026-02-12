@@ -6,12 +6,15 @@ class RepCounterOverlay extends StatelessWidget {
   final String phaseLabel;
   final Color phaseColor;
   final double currentAngle;
+  final bool isActive;
+
   const RepCounterOverlay({
     super.key,
     required this.repCount,
     required this.phaseLabel,
     required this.phaseColor,
     required this.currentAngle,
+    this.isActive = false,
   });
 
   @override
@@ -31,9 +34,27 @@ class RepCounterOverlay extends StatelessWidget {
           children: [
             // Rep count (large)
             Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
+              crossAxisAlignment: CrossAxisAlignment.center,
               textBaseline: TextBaseline.alphabetic,
               children: [
+                if (isActive) ...[
+                  Container(
+                    width: 12,
+                    height: 12,
+                    margin: const EdgeInsets.only(right: 8, top: 4),
+                    decoration: const BoxDecoration(
+                      color: Colors.greenAccent,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.greenAccent,
+                          blurRadius: 4,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 Semantics(
                   label: '$repCount',
                   excludeSemantics: true,
