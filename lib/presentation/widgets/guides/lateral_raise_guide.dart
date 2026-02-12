@@ -88,34 +88,14 @@ class LateralRaiseGuide extends ExerciseGuide {
       rightShoulderPoint.dy + armLength * cos(bottomAngleRadians),
     );
 
-    // Draw guides based on phase:
-    // - waiting: only show "down" lines (blue) to guide user to starting position
-    // - all other phases: show both lines so user sees full range
-    if (currentPhase == LateralRaisePhase.waiting) {
-      _drawDashedLine(canvas, leftShoulderPoint, leftDownEndPoint, Colors.blue);
-      _drawDashedLine(
-        canvas,
-        rightShoulderPoint,
-        rightDownEndPoint,
-        Colors.blue,
-      );
-    } else {
-      // Show both lines: green for "up" target, blue for "down" target
-      _drawDashedLine(canvas, leftShoulderPoint, leftUpEndPoint, Colors.green);
-      _drawDashedLine(
-        canvas,
-        rightShoulderPoint,
-        rightUpEndPoint,
-        Colors.green,
-      );
-      _drawDashedLine(canvas, leftShoulderPoint, leftDownEndPoint, Colors.blue);
-      _drawDashedLine(
-        canvas,
-        rightShoulderPoint,
-        rightDownEndPoint,
-        Colors.blue,
-      );
-    }
+    // Draw guides:
+    // Always show both lines so user sees full range of motion immediately:
+    // - Green for "up" target
+    // - Blue for "down" target
+    _drawDashedLine(canvas, leftShoulderPoint, leftUpEndPoint, Colors.green);
+    _drawDashedLine(canvas, rightShoulderPoint, rightUpEndPoint, Colors.green);
+    _drawDashedLine(canvas, leftShoulderPoint, leftDownEndPoint, Colors.blue);
+    _drawDashedLine(canvas, rightShoulderPoint, rightDownEndPoint, Colors.blue);
   }
 
   /// Draw a dashed line from start to end.
