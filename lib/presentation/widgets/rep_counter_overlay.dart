@@ -7,6 +7,7 @@ class RepCounterOverlay extends StatelessWidget {
   final Color phaseColor;
   final double currentAngle;
   final bool isActive;
+  final String? instructionMessage;
 
   const RepCounterOverlay({
     super.key,
@@ -15,6 +16,7 @@ class RepCounterOverlay extends StatelessWidget {
     required this.phaseColor,
     required this.currentAngle,
     this.isActive = false,
+    this.instructionMessage,
   });
 
   @override
@@ -33,10 +35,10 @@ class RepCounterOverlay extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             // Guidance prompt (Only when inactive)
-            if (!isActive) ...[
-              const Text(
-                'Lower arms to start',
-                style: TextStyle(
+            if (!isActive && instructionMessage != null) ...[
+              Text(
+                instructionMessage!,
+                style: const TextStyle(
                   color: Colors.redAccent,
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -48,7 +50,6 @@ class RepCounterOverlay extends StatelessWidget {
             // Rep count (large)
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
-              textBaseline: TextBaseline.alphabetic,
               children: [
                 // Status Indicator (Red/Green)
                 Container(

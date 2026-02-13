@@ -753,6 +753,11 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                     phaseLabel: _phaseLabel,
                     phaseColor: _phaseColor,
                     currentAngle: _currentAngle,
+                    instructionMessage: _selectedExercise == ExerciseType.lateralRaise
+                        ? 'Lower arms to start'
+                        : _selectedExercise == ExerciseType.singleSquat
+                            ? 'Stand straight to start'
+                            : null,
                   ),
 
                 // Reset button
@@ -1015,6 +1020,11 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                       phaseLabel: _phaseLabel,
                       phaseColor: _phaseColor,
                       currentAngle: _currentAngle,
+                      instructionMessage: _selectedExercise == ExerciseType.lateralRaise
+                          ? 'Lower arms to start'
+                          : _selectedExercise == ExerciseType.singleSquat
+                              ? 'Stand straight to start'
+                              : null,
                     ),
 
                   // Form Feedback Overlay
@@ -1074,7 +1084,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                     ),
                   ),
 
-                  // Instruction Overlay
+
                 ],
               ),
             ),
@@ -1221,6 +1231,11 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                     phaseLabel: _phaseLabel,
                     phaseColor: _phaseColor,
                     currentAngle: _currentAngle,
+                    instructionMessage: _selectedExercise == ExerciseType.lateralRaise
+                        ? 'Lower arms to start'
+                        : _selectedExercise == ExerciseType.singleSquat
+                            ? 'Stand straight to start'
+                            : null,
                   ),
 
                 // Reset button (bottom right)

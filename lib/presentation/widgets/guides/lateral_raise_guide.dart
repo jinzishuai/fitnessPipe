@@ -8,11 +8,10 @@ import '../../../domain/models/pose.dart';
 import '../../../domain/models/pose_landmark.dart';
 import 'exercise_guide.dart';
 
-/// Visual guide for lateral raise exercise.
+/// Painter for lateral raise exercise guide lines.
 ///
-/// Draws dashed projection lines from shoulders showing target arm positions:
-/// - During down/rising phase: horizontal lines at topThreshold (target "up")
-/// - During up/falling phase: downward lines at bottomThreshold (target "down")
+/// Shows both "up" (green) and "down" (blue) target guide lines at all times
+/// to help users visualize the full range of motion for the exercise.
 class LateralRaiseGuide extends ExerciseGuide {
   final double topThreshold;
   final double bottomThreshold;
@@ -74,7 +73,7 @@ class LateralRaiseGuide extends ExerciseGuide {
       leftShoulderPoint.dy + armLength * cos(topAngleRadians),
     );
     final rightUpEndPoint = Offset(
-      rightShoulderPoint.dx - armLength * sin(topAngleRadians),
+      rightShoulderPoint.dx + armLength * sin(topAngleRadians),
       rightShoulderPoint.dy + armLength * cos(topAngleRadians),
     );
 
@@ -84,7 +83,7 @@ class LateralRaiseGuide extends ExerciseGuide {
       leftShoulderPoint.dy + armLength * cos(bottomAngleRadians),
     );
     final rightDownEndPoint = Offset(
-      rightShoulderPoint.dx - armLength * sin(bottomAngleRadians),
+      rightShoulderPoint.dx + armLength * sin(bottomAngleRadians),
       rightShoulderPoint.dy + armLength * cos(bottomAngleRadians),
     );
 
@@ -101,7 +100,7 @@ class LateralRaiseGuide extends ExerciseGuide {
   /// Draw a dashed line from start to end.
   void _drawDashedLine(Canvas canvas, Offset start, Offset end, Color color) {
     final paint = Paint()
-      ..color = color.withAlpha(180)
+      ..color = color.withValues(alpha: 180 / 255)
       ..strokeWidth = 3.0
       ..style = PaintingStyle.stroke;
 
