@@ -56,3 +56,7 @@ packages/fitness_counter/test/fixtures/pose_landmarker.task
 **/build/
 LateralRaise_One_Rep.mp4
 maestro-report/
+maestro-screenshots/
+# Maestro takeScreenshot outputs (saved to project root)
+single-squat-counter.png
+lateral-raise-counter.png
