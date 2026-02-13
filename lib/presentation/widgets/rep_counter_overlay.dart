@@ -32,29 +32,43 @@ class RepCounterOverlay extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Guidance prompt (Only when inactive)
+            if (!isActive) ...[
+              const Text(
+                'Lower arms to start',
+                style: TextStyle(
+                  color: Colors.redAccent,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+
             // Rep count (large)
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               textBaseline: TextBaseline.alphabetic,
               children: [
-                if (isActive) ...[
-                  Container(
-                    width: 12,
-                    height: 12,
-                    margin: const EdgeInsets.only(right: 8, top: 4),
-                    decoration: const BoxDecoration(
-                      color: Colors.greenAccent,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.greenAccent,
-                          blurRadius: 4,
-                          spreadRadius: 1,
-                        ),
-                      ],
-                    ),
+                // Status Indicator (Red/Green)
+                Container(
+                  width: 12,
+                  height: 12,
+                  margin: const EdgeInsets.only(right: 8, top: 4),
+                  decoration: BoxDecoration(
+                    color: isActive ? Colors.greenAccent : Colors.redAccent,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: isActive
+                            ? Colors.greenAccent.withValues(alpha: 0.6)
+                            : Colors.redAccent.withValues(alpha: 0.6),
+                        blurRadius: 4,
+                        spreadRadius: 1,
+                      ),
+                    ],
                   ),
-                ],
+                ),
                 Semantics(
                   label: '$repCount',
                   excludeSemantics: true,
