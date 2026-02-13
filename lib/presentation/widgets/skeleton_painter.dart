@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../domain/models/pose.dart';
 import '../../domain/models/pose_landmark.dart';
+import 'guides/exercise_guide.dart';
 
 /// CustomPainter that draws a skeleton overlay on detected pose landmarks.
 class SkeletonPainter extends CustomPainter {
@@ -22,6 +23,15 @@ class SkeletonPainter extends CustomPainter {
   /// Scale factor for landmark coordinates.
   final double coordinateScale;
 
+  /// Optional subset of landmarks to display. If null, all landmarks are shown.
+  final Set<LandmarkType>? visibleLandmarks;
+
+  /// Optional subset of bone connections to display. If null, all bones are shown.
+  final List<(LandmarkType, LandmarkType)>? visibleBones;
+
+  /// Optional visual guide to draw for the exercise.
+  final ExerciseGuide? guide;
+
   const SkeletonPainter({
     required this.pose,
     required this.imageSize,
@@ -31,6 +41,9 @@ class SkeletonPainter extends CustomPainter {
     this.coordinateScale = 1.0,
     this.pointRadius = 6.0,
     this.strokeWidth = 3.0,
+    this.visibleLandmarks,
+    this.visibleBones,
+    this.guide,
   });
 
   /// Bone connections defining the skeleton structure.
@@ -88,8 +101,9 @@ class SkeletonPainter extends CustomPainter {
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
 
-    // Draw bone connections
-    for (final connection in boneConnections) {
+    // Draw bone connections (use visibleBones if provided, otherwise all)
+    final bonesToDraw = visibleBones ?? boneConnections;
+    for (final connection in bonesToDraw) {
       final start = pose!.getLandmark(connection.$1);
       final end = pose!.getLandmark(connection.$2);
 
@@ -101,8 +115,14 @@ class SkeletonPainter extends CustomPainter {
       }
     }
 
-    // Draw landmark points
+    // Draw landmark points (filter by visibleLandmarks if provided)
     for (final landmark in pose!.landmarks) {
+      // Skip if visibleLandmarks is set and this landmark is not in the set
+      if (visibleLandmarks != null &&
+          !visibleLandmarks!.contains(landmark.type)) {
+        continue;
+      }
+
       if (landmark.isVisible) {
         final point = _scalePoint(landmark, size);
 
@@ -117,6 +137,16 @@ class SkeletonPainter extends CustomPainter {
         );
       }
     }
+
+    // Draw exercise guide if provided
+    guide?.paint(
+      canvas,
+      size,
+      pose!,
+      imageSize: imageSize,
+      rotationDegrees: rotationDegrees,
+      inputsAreRotated: inputsAreRotated,
+    );
   }
 
   /// Scale a landmark's normalized coordinates to canvas coordinates.
@@ -202,6 +232,9 @@ class SkeletonPainter extends CustomPainter {
     return pose != oldDelegate.pose ||
         rotationDegrees != oldDelegate.rotationDegrees ||
         imageSize != oldDelegate.imageSize ||
-        inputsAreRotated != oldDelegate.inputsAreRotated;
+        inputsAreRotated != oldDelegate.inputsAreRotated ||
+        visibleLandmarks != oldDelegate.visibleLandmarks ||
+        visibleBones != oldDelegate.visibleBones ||
+        guide != oldDelegate.guide;
   }
 }

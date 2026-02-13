@@ -14,8 +14,12 @@ import '../../data/ml_kit/ml_kit_pose_detector.dart';
 import '../../data/services/virtual_camera_service.dart';
 import '../../domain/interfaces/pose_detector.dart';
 import '../../domain/models/pose.dart';
+import '../../domain/models/pose_landmark.dart';
 import '../widgets/exercise_selector.dart';
 import '../widgets/form_feedback_overlay.dart';
+import '../widgets/guides/exercise_guide.dart';
+import '../widgets/guides/lateral_raise_guide.dart';
+
 import '../widgets/rep_counter_overlay.dart';
 import '../widgets/skeleton_painter.dart';
 import '../widgets/threshold_settings_dialog.dart';
@@ -37,7 +41,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
 
   // Exercise counter
   final _poseAdapter = PoseAdapter();
-  ExerciseType? _selectedExercise = ExerciseType.lateralRaise;
+  ExerciseType? _selectedExercise;
   LateralRaiseCounter? _lateralRaiseCounter;
   LateralRaiseFormAnalyzer? _lateralRaiseFormAnalyzer;
   SingleSquatCounter? _singleSquatCounter;
@@ -48,7 +52,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   FormFeedback? _currentFeedback;
 
   // Threshold configuration
-  double _topThreshold = 50.0;
+  double _topThreshold = 70.0;
   double _bottomThreshold = 25.0;
   // Squat thresholds (defaults)
   double _squatTopThreshold = 170.0;
@@ -85,18 +89,43 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   int _selectedMacOSCameraIndex = 0;
   GlobalKey? _macOSCameraKey;
 
+  /// Get the visible landmarks for the current exercise (null = show all).
+  Set<LandmarkType>? get _visibleLandmarks {
+    if (_selectedExercise == null) return null;
+    return PoseAdapter.toLandmarkTypeSet(
+      _selectedExercise!.config.visibleLandmarks,
+    );
+  }
+
+  /// Get the visible bone connections for the current exercise (null = show all).
+  List<(LandmarkType, LandmarkType)>? get _visibleBones {
+    if (_selectedExercise == null) return null;
+    return PoseAdapter.toBoneConnections(
+      _selectedExercise!.config.visibleBones,
+    );
+  }
+
+  /// Get the visual guide for the current exercise.
+  ExerciseGuide? get _currentGuide {
+    if (_selectedExercise == ExerciseType.lateralRaise &&
+        _lateralRaiseCounter != null) {
+      return LateralRaiseGuide(
+        topThreshold: _topThreshold,
+        bottomThreshold: _bottomThreshold,
+        currentPhase: _lateralRaiseCounter!.state.phase,
+      );
+    }
+    // Other exercises don't have guides yet
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _poseDetector = MLKitPoseDetector();
 
-    // Initialize default counter
-    _lateralRaiseCounter = LateralRaiseCounter(
-      topThreshold: _topThreshold,
-      bottomThreshold: _bottomThreshold,
-      readyHoldTime: const Duration(milliseconds: 300),
-    );
+    // Counter will be initialized when user selects an exercise
 
     _initializeCamera();
   }
@@ -444,6 +473,20 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     // Determine which thresholds to show based on selected exercise
     if (_selectedExercise == null) return;
 
+    // Check if this exercise has configurable thresholds
+    if (!_selectedExercise!.config.hasThresholds) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'No thresholds to adjust for ${_selectedExercise!.displayName}',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
     double currentTop;
     double currentBottom;
     if (_selectedExercise == ExerciseType.lateralRaise) {
@@ -670,6 +713,9 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                         imageSize: _cameraImageSize,
                         inputsAreRotated: false,
                         skeletonColor: Colors.greenAccent,
+                        visibleLandmarks: _visibleLandmarks,
+                        visibleBones: _visibleBones,
+                        guide: _currentGuide,
                       ),
                     ),
                   ),
@@ -684,7 +730,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                         selectedExercise: _selectedExercise,
                         onChanged: _onExerciseSelected,
                       ),
-                      if (_selectedExercise == ExerciseType.lateralRaise) ...[
+                      if (_selectedExercise != null) ...[
                         const SizedBox(width: 8),
                         IconButton(
                           onPressed: _showThresholdSettings,
@@ -702,6 +748,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                 // Rep counter overlay
                 if (_selectedExercise != null)
                   RepCounterOverlay(
+                    isActive: _phaseColor != Colors.grey,
                     repCount: _repCount,
                     phaseLabel: _phaseLabel,
                     phaseColor: _phaseColor,
@@ -925,6 +972,9 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                           imageSize: null, // iOS uses legacy stretch-to-fill
                           inputsAreRotated: false,
                           skeletonColor: Colors.greenAccent,
+                          visibleLandmarks: _visibleLandmarks,
+                          visibleBones: _visibleBones,
+                          guide: _currentGuide,
                         ),
                       ),
                     ),
@@ -939,7 +989,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                           selectedExercise: _selectedExercise,
                           onChanged: _onExerciseSelected,
                         ),
-                        if (_selectedExercise == ExerciseType.lateralRaise) ...[
+                        if (_selectedExercise != null) ...[
                           const SizedBox(width: 8),
                           IconButton(
                             onPressed: _showThresholdSettings,
@@ -960,6 +1010,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                   // Rep counter overlay (when exercise selected)
                   if (_selectedExercise != null)
                     RepCounterOverlay(
+                      isActive: _phaseColor != Colors.grey,
                       repCount: _repCount,
                       phaseLabel: _phaseLabel,
                       phaseColor: _phaseColor,
@@ -1022,6 +1073,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                       ),
                     ),
                   ),
+
+                  // Instruction Overlay
                 ],
               ),
             ),
@@ -1128,6 +1181,9 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                             _getMobileImageRotation() !=
                             InputImageRotation.rotation0deg,
                         skeletonColor: Colors.greenAccent,
+                        visibleLandmarks: _visibleLandmarks,
+                        visibleBones: _visibleBones,
+                        guide: _currentGuide,
                       ),
                     ),
                   ),
@@ -1142,7 +1198,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                         selectedExercise: _selectedExercise,
                         onChanged: _onExerciseSelected,
                       ),
-                      if (_selectedExercise == ExerciseType.lateralRaise) ...[
+                      if (_selectedExercise != null) ...[
                         const SizedBox(width: 8),
                         IconButton(
                           onPressed: _showThresholdSettings,
@@ -1160,6 +1216,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                 // Rep counter overlay (when exercise selected)
                 if (_selectedExercise != null)
                   RepCounterOverlay(
+                    isActive: _phaseColor != Colors.grey,
                     repCount: _repCount,
                     phaseLabel: _phaseLabel,
                     phaseColor: _phaseColor,
