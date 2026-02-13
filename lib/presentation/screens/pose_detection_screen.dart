@@ -24,7 +24,7 @@ import '../widgets/exercise_selector.dart';
 import '../widgets/form_feedback_overlay.dart';
 import '../widgets/guides/exercise_guide.dart';
 import '../widgets/guides/lateral_raise_guide.dart';
-import '../widgets/instruction_overlay.dart';
+
 import '../widgets/rep_counter_overlay.dart';
 import '../widgets/skeleton_painter.dart';
 import '../widgets/threshold_settings_dialog.dart';
@@ -67,7 +67,6 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   double _currentAngle = 0.0;
   FormFeedback? _currentFeedback;
   FilteredFeedback? _displayedFeedback;
-  String? _currentInstruction;
 
   // Voice guidance and feedback throttling
   late final VoiceGuidanceService _voiceGuidanceService;
@@ -558,22 +557,6 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     }
   }
 
-  void _showInstruction(String message) {
-    if (mounted) {
-      setState(() {
-        _currentInstruction = message;
-      });
-    }
-  }
-
-  void _hideInstruction() {
-    if (mounted) {
-      setState(() {
-        _currentInstruction = null;
-      });
-    }
-  }
-
   void _onExerciseSelected(ExerciseType? type) {
     setState(() {
       _selectedExercise = type;
@@ -608,9 +591,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         _lateralRaiseFormAnalyzer = LateralRaiseFormAnalyzer(
           sensitivity: _currentSensitivity,
         );
-        _showInstruction('Straighten and lower arms to sides to start');
       } else if (type == ExerciseType.singleSquat) {
-        _hideInstruction();
         _singleSquatCounter = SingleSquatCounter(
           topThreshold: _squatTopThreshold,
           bottomThreshold: _squatBottomThreshold,
@@ -1091,13 +1072,6 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                       ),
                     ),
                   ),
-
-                // Instruction Overlay
-                if (_currentInstruction != null)
-                  InstructionOverlay(
-                    message: _currentInstruction!,
-                    onDismiss: _hideInstruction,
-                  ),
               ],
             ),
           ),
@@ -1374,11 +1348,6 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                   ),
 
                   // Instruction Overlay
-                  if (_currentInstruction != null)
-                    InstructionOverlay(
-                      message: _currentInstruction!,
-                      onDismiss: _hideInstruction,
-                    ),
                 ],
               ),
             ),
@@ -1611,13 +1580,6 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                     ),
                   ),
                 ),
-
-                // Instruction Overlay
-                if (_currentInstruction != null)
-                  InstructionOverlay(
-                    message: _currentInstruction!,
-                    onDismiss: _hideInstruction,
-                  ),
               ],
             ),
           ),
