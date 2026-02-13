@@ -69,6 +69,46 @@ jobs:
           chmod +x maestro-test/run_ios_headless.sh
           ./maestro-test/run_ios_headless.sh
 
+      - name: Generate Screenshot Summary
+        if: always()
+        run: |
+          echo "## 📸 Maestro Test Screenshots" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          # Find all screenshot files in the debug output
+          SCREENSHOTS=$(find maestro-report/debug -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" \) 2>/dev/null | sort)
+
+          if [ -z "$SCREENSHOTS" ]; then
+            echo "No screenshots were captured during this test run." >> "$GITHUB_STEP_SUMMARY"
+          else
+            # Collect screenshots into a flat directory for easy artifact browsing
+            mkdir -p maestro-screenshots
+            COUNT=0
+            echo "| # | Screenshot | Source Path |" >> "$GITHUB_STEP_SUMMARY"
+            echo "|---|-----------|-------------|" >> "$GITHUB_STEP_SUMMARY"
+            while IFS= read -r img; do
+              COUNT=$((COUNT + 1))
+              BASENAME=$(basename "$img")
+              # Prefix with index to avoid name collisions in the flat dir
+              DEST_NAME="${COUNT}-${BASENAME}"
+              cp "$img" "maestro-screenshots/${DEST_NAME}"
+              echo "| ${COUNT} | \`${DEST_NAME}\` | \`${img}\` |" >> "$GITHUB_STEP_SUMMARY"
+            done <<< "$SCREENSHOTS"
+
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "**Total: ${COUNT} screenshot(s) captured.**" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "> 💡 Download the **maestro-screenshots** artifact below to view all screenshots." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload Screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-screenshots
+          path: maestro-screenshots/
+          if-no-files-found: ignore
+
       - name: Upload Test Report
         if: always()
         uses: actions/upload-artifact@v4
