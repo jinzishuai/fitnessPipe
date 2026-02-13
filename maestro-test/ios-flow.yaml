@@ -24,8 +24,10 @@ appId: com.fitnesspipe.fitnessPipe
     visible: "Lateral Raise"
     timeout: 5000
 
-# Verify counter is > 0 (regex matches 1-9 followed by any digits)
-- assertVisible: "[1-9][0-9]*"
+# Wait for counter to increment > 0 (virtual pose needs time for detection + counting)
+- extendedWaitUntil:
+    visible: "[1-9][0-9]*"
+    timeout: 60000
 - assertVisible: "reps"
 
 # Exercise Navigation — switch to Single Squat
@@ -38,8 +40,10 @@ appId: com.fitnesspipe.fitnessPipe
 - extendedWaitUntil:
     visible: "Single Squat"
     timeout: 5000
-# Verify counter is > 0 (regex matches 1-9 followed by any digits)
-- assertVisible: "[1-9][0-9]*"
+# Wait for counter to increment > 0 (virtual pose needs time for detection + counting)
+- extendedWaitUntil:
+    visible: "[1-9][0-9]*"
+    timeout: 60000
 - assertVisible: "reps"
 - takeScreenshot: "single-squat-counter"
 
@@ -54,8 +58,10 @@ appId: com.fitnesspipe.fitnessPipe
     timeout: 5000
 
 # Counter Checks
-# Verify counter overlay is present and > 0
-- assertVisible: "[1-9][0-9]*"
+# Wait for counter to increment > 0
+- extendedWaitUntil:
+    visible: "[1-9][0-9]*"
+    timeout: 60000
 - assertVisible: "reps"
 - takeScreenshot: "lateral-raise-counter"
 
