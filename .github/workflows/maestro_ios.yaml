@@ -21,9 +21,6 @@ jobs:
       # SIMULATOR_ID: "0DF6EEDE-9FD6-40F7-8CA2-F8416D987E30" # iPhone 16
       SIMULATOR_ID: "AB7CA7A8-6217-4CE9-995B-3E4B72C343C1" # iPhone 17
 
-    permissions:
-      contents: write
-
     steps:
       - uses: actions/checkout@v4
 
@@ -95,41 +92,6 @@ jobs:
           
           echo "SCREENSHOT_COUNT=${COUNT}" >> "$GITHUB_ENV"
 
-      - name: Publish Screenshots to Branch
-        if: always() && env.SCREENSHOT_COUNT != '0'
-        run: |
-          # Configure git
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
-
-          # Create a temporary work directory for the screenshots branch
-          mkdir -p ../screenshots-repo
-          
-          # Clone/Checkout the screenshots branch
-          # We use the GITHUB_TOKEN to auth
-          git clone --depth 1 --branch screenshots https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git ../screenshots-repo 2>/dev/null || \
-          git clone --depth 1 https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git ../screenshots-repo
-
-          cd ../screenshots-repo
-          
-          # If screenshots branch doesn't exist remotely (failed first clone), create it orphan
-          if ! git show-ref --verify --quiet refs/remotes/origin/screenshots; then
-            git checkout --orphan screenshots
-            git rm -rf .
-          else
-            git checkout screenshots
-          fi
-
-          # Copy screenshots to a folder specific to this run
-          DEST_DIR="runs/${{ github.run_id }}"
-          mkdir -p "$DEST_DIR"
-          cp -R ../fitnessPipe/maestro-screenshots/* "$DEST_DIR/"
-
-          # Push changes
-          git add .
-          git commit -m "Add screenshots for run ${{ github.run_id }}"
-          git push origin screenshots
-
       - name: Generate Screenshot Summary
         if: always()
         run: |
@@ -139,22 +101,21 @@ jobs:
           if [ "${{ env.SCREENSHOT_COUNT }}" -eq "0" ]; then
             echo "No screenshots were captured during this test run." >> "$GITHUB_STEP_SUMMARY"
           else
-            # Use the raw GitHub URL which works for private repos if the user is logged in
-            BASE_URL="https://github.com/${{ github.repository }}/raw/screenshots/runs/${{ github.run_id }}"
+            echo "| # | Screenshot | Size |" >> "$GITHUB_STEP_SUMMARY"
+            echo "|---|------------|------|" >> "$GITHUB_STEP_SUMMARY"
             
+            i=0
             for img in maestro-screenshots/*; do
+              i=$((i + 1))
               NAME=$(basename "$img")
-              IMG_URL="${BASE_URL}/${NAME}"
-              
-              echo "<details open><summary><strong>${NAME}</strong></summary>" >> "$GITHUB_STEP_SUMMARY"
-              echo "<br/>" >> "$GITHUB_STEP_SUMMARY"
-              echo "<a href=\"${IMG_URL}\"><img src=\"${IMG_URL}\" width=\"400\" /></a>" >> "$GITHUB_STEP_SUMMARY"
-              echo "<br/>" >> "$GITHUB_STEP_SUMMARY"
-              echo "</details>" >> "$GITHUB_STEP_SUMMARY"
-              echo "<br/>" >> "$GITHUB_STEP_SUMMARY"
+              SIZE=$(du -h "$img" | cut -f1)
+              echo "| ${i} | \`${NAME}\` | ${SIZE} |" >> "$GITHUB_STEP_SUMMARY"
             done
             
+            echo "" >> "$GITHUB_STEP_SUMMARY"
             echo "**Total: ${{ env.SCREENSHOT_COUNT }} screenshot(s)**" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "> 💡 Download the **maestro-screenshots** artifact below to view these images." >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Upload Screenshots
