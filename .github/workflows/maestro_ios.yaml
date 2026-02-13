@@ -98,23 +98,41 @@ jobs:
           if [ "$COUNT" -eq 0 ]; then
             echo "No screenshots were captured during this test run." >> "$GITHUB_STEP_SUMMARY"
           else
+            # Create a temporary directory for resized thumbnails
+            mkdir -p maestro-thumbs
+            
             for img in maestro-screenshots/*; do
               NAME=$(basename "$img")
+              THUMB="maestro-thumbs/$NAME"
+              
+              # Copy and resize to max 400px width/height using sips (macOS built-in)
+              cp "$img" "$THUMB"
+              sips -Z 400 "$THUMB" > /dev/null 2>&1
+              
               # Determine MIME type
               case "${NAME##*.}" in
                 png)  MIME="image/png" ;;
                 jpg|jpeg) MIME="image/jpeg" ;;
                 *) MIME="image/png" ;;
               esac
-              B64=$(base64 < "$img")
+              
+              B64=$(base64 < "$THUMB")
+              # Remove newlines from base64 output if any (Linux base64 uses -w0, macOS uses -b 0 or tr -d '\n')
+              # Standardize removal of newlines for safe embedding
+              B64_CLEAN=$(echo "$B64" | tr -d '\n')
+              
               echo "<details open><summary><strong>${NAME}</strong></summary>" >> "$GITHUB_STEP_SUMMARY"
-              echo "" >> "$GITHUB_STEP_SUMMARY"
-              echo "<img src=\"data:${MIME};base64,${B64}\" width=\"300\" />" >> "$GITHUB_STEP_SUMMARY"
-              echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "<br/>" >> "$GITHUB_STEP_SUMMARY"
+              echo "<img src=\"data:${MIME};base64,${B64_CLEAN}\" width=\"400\" />" >> "$GITHUB_STEP_SUMMARY"
+              echo "<br/>" >> "$GITHUB_STEP_SUMMARY"
               echo "</details>" >> "$GITHUB_STEP_SUMMARY"
-              echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "<br/>" >> "$GITHUB_STEP_SUMMARY"
             done
+            
             echo "**Total: ${COUNT} screenshot(s)**" >> "$GITHUB_STEP_SUMMARY"
+            
+            # Clean up thumbs
+            rm -rf maestro-thumbs
           fi
 
       - name: Upload Screenshots
