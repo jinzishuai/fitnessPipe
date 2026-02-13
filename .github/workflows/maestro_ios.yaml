@@ -91,24 +91,30 @@ jobs:
             cp "$img" "maestro-screenshots/${DEST}"
           done < <(find maestro-report/debug -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" \) 2>/dev/null | sort)
 
-          # 3) Write summary to GitHub Actions job summary
+          # 3) Write summary with inline images to GitHub Actions job summary
           echo "## 📸 Maestro Test Screenshots" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
           if [ "$COUNT" -eq 0 ]; then
             echo "No screenshots were captured during this test run." >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "| # | Screenshot |" >> "$GITHUB_STEP_SUMMARY"
-            echo "|---|-----------|" >> "$GITHUB_STEP_SUMMARY"
-            i=0
             for img in maestro-screenshots/*; do
-              i=$((i + 1))
-              echo "| ${i} | \`$(basename "$img")\` |" >> "$GITHUB_STEP_SUMMARY"
+              NAME=$(basename "$img")
+              # Determine MIME type
+              case "${NAME##*.}" in
+                png)  MIME="image/png" ;;
+                jpg|jpeg) MIME="image/jpeg" ;;
+                *) MIME="image/png" ;;
+              esac
+              B64=$(base64 < "$img")
+              echo "<details open><summary><strong>${NAME}</strong></summary>" >> "$GITHUB_STEP_SUMMARY"
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "<img src=\"data:${MIME};base64,${B64}\" width=\"300\" />" >> "$GITHUB_STEP_SUMMARY"
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "</details>" >> "$GITHUB_STEP_SUMMARY"
+              echo "" >> "$GITHUB_STEP_SUMMARY"
             done
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "**Total: ${COUNT} screenshot(s) captured.**" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "> 💡 Download the **maestro-screenshots** artifact below to view all images." >> "$GITHUB_STEP_SUMMARY"
+            echo "**Total: ${COUNT} screenshot(s)**" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Upload Screenshots
