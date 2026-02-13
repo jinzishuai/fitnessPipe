@@ -125,6 +125,7 @@ jobs:
           name: maestro-screenshots
           path: maestro-screenshots/
           if-no-files-found: ignore
+          retention-days: 5
 
       - name: Upload Test Report
         if: always()
@@ -132,3 +133,4 @@ jobs:
         with:
           name: maestro-report
           path: maestro-report/
+          retention-days: 5
