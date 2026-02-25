@@ -49,6 +49,14 @@ class LateralRaiseSensitivity extends FormSensitivityConfig {
   });
 
   /// Factory with default values matching the tuned analyzer constants.
+  ///
+  /// These defaults were re-tuned from the original hardcoded constants based
+  /// on real-device testing to reduce false positives:
+  ///   - Elbow: stricter (bad 145→140°, warn 155→151°) — original values
+  ///     missed genuinely bent elbows.
+  ///   - Shrug: more lenient (warn 0.10→0.115, bad 0.28→0.322) — original
+  ///     values triggered too often due to natural shoulder movement.
+  ///   - Trunk: unchanged (warn 8°, bad 15°).
   const factory LateralRaiseSensitivity.defaults() = LateralRaiseSensitivity._;
 
   const LateralRaiseSensitivity._()

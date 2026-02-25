@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:fitness_counter/fitness_counter.dart';
@@ -13,6 +14,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 class VoiceGuidanceService {
   final FlutterTts _tts;
   final Stopwatch _latencyStopwatch = Stopwatch();
+  final Completer<void> _initCompleter = Completer<void>();
 
   /// Whether voice guidance is enabled. Toggle via [setEnabled].
   bool _isEnabled = true;
@@ -88,6 +90,7 @@ class VoiceGuidanceService {
     // Try to select a premium/enhanced voice
     await _selectBestVoice();
     debugPrint('TTS_INIT: Voice guidance service initialized');
+    _initCompleter.complete();
   }
 
   /// Attempt to select a premium neural voice if available.
@@ -137,6 +140,10 @@ class VoiceGuidanceService {
   /// message is spoken immediately.
   Future<void> speak(FilteredFeedback feedback) async {
     if (!_isEnabled) return;
+
+    // Wait for TTS engine to finish initialising (typically instant after
+    // the first frame, but guards against a race on cold start).
+    await _initCompleter.future;
 
     final phrase = _voicePhrases[feedback.issue.code];
     if (phrase == null) {

@@ -183,7 +183,7 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
           description: 'Angle below which a soft bend warning shows',
           effectHint: 'Lower = stricter',
           onChanged: (v) => setState(() {
-            if (v > s.elbowBadAngle + 4) {
+            if (v > s.elbowBadAngle + 5) {
               sensitivity = s.copyWith(elbowWarnAngle: v);
             }
           }),
@@ -218,7 +218,7 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
           description: 'Lean angle for bad form',
           effectHint: 'Higher = more lenient',
           onChanged: (v) => setState(() {
-            if (v > s.trunkLeanWarnAngle + 2) {
+            if (v > s.trunkLeanWarnAngle + 3) {
               sensitivity = s.copyWith(trunkLeanBadAngle: v);
             }
           }),

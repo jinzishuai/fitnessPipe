@@ -48,11 +48,11 @@ Wraps `flutter_tts` with:
 
 | Issue Code | Severity | Voice Phrase |
 |---|---|---|
-| `ELBOW_BENT` | bad | "Straighten elbows" |
-| `ELBOW_SOFT` | warning | "Straighten arms" |
-| `TRUNK_LEAN` | bad/warning | "Stand straight" |
-| `TRUNK_SHIFT` | bad/warning | "Brace your core" |
-| `SHRUGGING` | bad/warning | "Shoulders down" |
+| `ELBOW_BENT` | bad | "Keep your arms straight" |
+| `ELBOW_SOFT` | warning | "Extend your elbows more" |
+| `TRUNK_LEAN` | bad/warning | "Keep your torso upright" |
+| `TRUNK_SHIFT` | bad/warning | "Keep your hips centered" |
+| `SHRUGGING` | bad/warning | "Relax your shoulders away from ears" |
 | `LOW_CONFIDENCE` | warning | *(silent)* |
 
 ### Exercise Config Extension
