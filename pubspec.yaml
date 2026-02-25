@@ -53,6 +53,9 @@ dependencies:
   # Native device orientation detection (for accurate landscape-left vs landscape-right)
   native_device_orientation: ^2.0.3
 
+  # Text-to-Speech for voice form correction guidance
+  flutter_tts: ^4.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

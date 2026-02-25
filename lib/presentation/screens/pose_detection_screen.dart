@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:camera/camera.dart' as mobile_camera;
@@ -12,6 +13,7 @@ import '../../core/adapters/pose_adapter.dart';
 import '../../core/utils/camera_utils.dart';
 import '../../data/ml_kit/ml_kit_pose_detector.dart';
 import '../../data/services/virtual_camera_service.dart';
+import '../../data/services/voice_guidance_service.dart';
 import '../../domain/interfaces/pose_detector.dart';
 import '../../domain/models/pose.dart';
 import '../../domain/models/pose_landmark.dart';
@@ -50,6 +52,12 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   Color _phaseColor = Colors.grey;
   double _currentAngle = 0.0;
   FormFeedback? _currentFeedback;
+  FilteredFeedback? _displayedFeedback;
+
+  // Voice guidance and feedback throttling
+  late final VoiceGuidanceService _voiceGuidanceService;
+  FeedbackCooldownManager? _feedbackCooldownManager;
+  Timer? _feedbackClearTimer;
 
   // Threshold configuration
   double _topThreshold = 70.0;
@@ -57,6 +65,9 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   // Squat thresholds (defaults)
   double _squatTopThreshold = 170.0;
   double _squatBottomThreshold = 160.0;
+  // Form sensitivity (lateral raise)
+  LateralRaiseSensitivity _currentSensitivity =
+      const LateralRaiseSensitivity.defaults();
 
   // UI state
   bool _isLoading = true;
@@ -124,6 +135,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _poseDetector = MLKitPoseDetector();
+    _voiceGuidanceService = VoiceGuidanceService();
 
     // Counter will be initialized when user selects an exercise
 
@@ -136,6 +148,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     _mobileCameraController?.dispose();
     _macOSCameraController?.destroy();
     _virtualCameraService?.dispose();
+    _voiceGuidanceService.dispose();
+    _feedbackClearTimer?.cancel();
     _poseDetector.dispose();
     super.dispose();
   }
@@ -393,6 +407,26 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
           _currentFeedback = _lateralRaiseFormAnalyzer!.analyzeFrame(
             poseFrame.landmarks,
           );
+
+          // Throttle feedback for both visual and voice
+          if (_currentFeedback != null && _feedbackCooldownManager != null) {
+            final filtered = _feedbackCooldownManager!.processFeedback(
+              _currentFeedback!,
+            );
+            if (filtered != null) {
+              _displayedFeedback = filtered;
+              _voiceGuidanceService.speak(filtered);
+              // Auto-clear visual feedback after 3 seconds
+              _feedbackClearTimer?.cancel();
+              _feedbackClearTimer = Timer(const Duration(seconds: 3), () {
+                if (mounted) {
+                  setState(() {
+                    _displayedFeedback = null;
+                  });
+                }
+              });
+            }
+          }
         }
 
         // Map LateralRaisePhase to UI
@@ -444,9 +478,21 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
       _singleSquatCounter = null;
       _repCount = 0;
       _currentFeedback = null;
+      _displayedFeedback = null;
       _phaseLabel = 'Ready';
       _phaseColor = Colors.grey;
       _currentAngle = 0.0;
+
+      // Reset and reconfigure feedback cooldown for new exercise
+      _feedbackCooldownManager?.reset();
+      _feedbackClearTimer?.cancel();
+      if (type != null) {
+        _feedbackCooldownManager = FeedbackCooldownManager(
+          perCodeCooldown: type.config.feedbackCooldown,
+        );
+      } else {
+        _feedbackCooldownManager = null;
+      }
 
       if (type == ExerciseType.lateralRaise) {
         _lateralRaiseCounter = LateralRaiseCounter(
@@ -454,7 +500,9 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
           bottomThreshold: _bottomThreshold,
           readyHoldTime: const Duration(milliseconds: 300),
         );
-        _lateralRaiseFormAnalyzer = LateralRaiseFormAnalyzer();
+        _lateralRaiseFormAnalyzer = LateralRaiseFormAnalyzer(
+          sensitivity: _currentSensitivity,
+        );
       } else if (type == ExerciseType.singleSquat) {
         _singleSquatCounter = SingleSquatCounter(
           topThreshold: _squatTopThreshold,
@@ -497,18 +545,21 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
       currentBottom = _squatBottomThreshold;
     }
 
-    final result = await showDialog<Map<String, double>>(
+    final result = await showDialog<ThresholdDialogResult>(
       context: context,
       builder: (context) => ThresholdSettingsDialog(
         initialTopThreshold: currentTop,
         initialBottomThreshold: currentBottom,
+        initialSensitivity: _selectedExercise == ExerciseType.lateralRaise
+            ? _currentSensitivity
+            : null,
       ),
     );
 
     if (result != null) {
       setState(() {
-        final newTop = result['top']!;
-        final newBottom = result['bottom']!;
+        final newTop = result.topThreshold;
+        final newBottom = result.bottomThreshold;
 
         // Update appropriate thresholds and recreate counter
         if (_selectedExercise == ExerciseType.lateralRaise) {
@@ -519,6 +570,12 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
             bottomThreshold: _bottomThreshold,
             readyHoldTime: const Duration(milliseconds: 300),
           );
+
+          // Apply sensitivity changes
+          if (result.sensitivity != null) {
+            _currentSensitivity = result.sensitivity!;
+            _lateralRaiseFormAnalyzer?.updateSensitivity(_currentSensitivity);
+          }
         } else if (_selectedExercise == ExerciseType.singleSquat) {
           _squatTopThreshold = newTop;
           _squatBottomThreshold = newBottom;
@@ -541,7 +598,10 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     setState(() {
       _lateralRaiseCounter?.reset();
       _singleSquatCounter?.reset();
+      _feedbackCooldownManager?.reset();
+      _feedbackClearTimer?.cancel();
       _repCount = 0;
+      _displayedFeedback = null;
       _phaseLabel = 'Ready';
       _phaseColor = Colors.grey;
       _currentAngle = 0.0;
@@ -808,9 +868,38 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                   ),
                 ),
 
-                // Form Feedback Overlay
-                if (_currentFeedback != null)
-                  FormFeedbackOverlay(feedback: _currentFeedback!),
+                // Form Feedback Overlay (throttled)
+                if (_displayedFeedback != null)
+                  FormFeedbackOverlay(
+                    feedback: FormFeedback(
+                      status: _displayedFeedback!.status,
+                      issues: [_displayedFeedback!.issue],
+                    ),
+                  ),
+
+                // Voice Guidance Toggle (simulator/virtual camera view)
+                if (_selectedExercise != null)
+                  Positioned(
+                    bottom: 16,
+                    right: 80,
+                    child: FloatingActionButton(
+                      mini: true,
+                      onPressed: () {
+                        setState(() {
+                          _voiceGuidanceService.setEnabled(
+                            !_voiceGuidanceService.isEnabled,
+                          );
+                        });
+                      },
+                      backgroundColor: Colors.black87,
+                      child: Icon(
+                        _voiceGuidanceService.isEnabled
+                            ? Icons.volume_up
+                            : Icons.volume_off,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
 
                 // Simulator Badge
                 Positioned(
@@ -1017,9 +1106,38 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                       currentAngle: _currentAngle,
                     ),
 
-                  // Form Feedback Overlay
-                  if (_currentFeedback != null)
-                    FormFeedbackOverlay(feedback: _currentFeedback!),
+                  // Form Feedback Overlay (throttled)
+                  if (_displayedFeedback != null)
+                    FormFeedbackOverlay(
+                      feedback: FormFeedback(
+                        status: _displayedFeedback!.status,
+                        issues: [_displayedFeedback!.issue],
+                      ),
+                    ),
+
+                  // Voice Guidance Toggle
+                  if (_selectedExercise != null)
+                    Positioned(
+                      bottom: 16,
+                      right: 80,
+                      child: FloatingActionButton(
+                        mini: true,
+                        onPressed: () {
+                          setState(() {
+                            _voiceGuidanceService.setEnabled(
+                              !_voiceGuidanceService.isEnabled,
+                            );
+                          });
+                        },
+                        backgroundColor: Colors.black87,
+                        child: Icon(
+                          _voiceGuidanceService.isEnabled
+                              ? Icons.volume_up
+                              : Icons.volume_off,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
 
                   // Reset button (bottom right)
                   if (_selectedExercise != null)
@@ -1223,6 +1341,15 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                     currentAngle: _currentAngle,
                   ),
 
+                // Form Feedback Overlay (throttled) — Android view
+                if (_displayedFeedback != null)
+                  FormFeedbackOverlay(
+                    feedback: FormFeedback(
+                      status: _displayedFeedback!.status,
+                      issues: [_displayedFeedback!.issue],
+                    ),
+                  ),
+
                 // Reset button (bottom right)
                 if (_selectedExercise != null)
                   Positioned(
@@ -1232,6 +1359,30 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                       onPressed: _resetCounter,
                       backgroundColor: Colors.black87,
                       child: const Icon(Icons.refresh, color: Colors.white),
+                    ),
+                  ),
+
+                // Voice Guidance Toggle
+                if (_selectedExercise != null)
+                  Positioned(
+                    bottom: 16,
+                    right: 80,
+                    child: FloatingActionButton(
+                      mini: true,
+                      onPressed: () {
+                        setState(() {
+                          _voiceGuidanceService.setEnabled(
+                            !_voiceGuidanceService.isEnabled,
+                          );
+                        });
+                      },
+                      backgroundColor: Colors.black87,
+                      child: Icon(
+                        _voiceGuidanceService.isEnabled
+                            ? Icons.volume_up
+                            : Icons.volume_off,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
 

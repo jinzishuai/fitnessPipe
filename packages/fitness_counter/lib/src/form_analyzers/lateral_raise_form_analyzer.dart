@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import '../config/form_sensitivity_config.dart';
 import '../core/smoothing.dart';
 import '../models/landmark.dart';
 
@@ -46,22 +47,26 @@ class LateralRaiseFormAnalyzer {
   final AngleSmoother _trunkRotationSmoother = AngleSmoother(alpha: 0.2);
   final AngleSmoother _neckLenSmoother = AngleSmoother(alpha: 0.2);
 
-  // Constants / Thresholds
-  static const double _elbowBadThreshold = 145.0; // Immediate BAD
-  static const double _elbowSoftWarnEnter = 155.0; // Threshold to start warning
-  static const double _elbowSoftWarnExit =
-      158.0; // Threshold to clear warning (hysteresis)
+  /// Runtime-adjustable sensitivity thresholds.
+  LateralRaiseSensitivity _sensitivity;
+
+  /// Read the current sensitivity config (e.g., for UI display).
+  LateralRaiseSensitivity get sensitivity => _sensitivity;
+
+  // Non-adjustable constants
   static const int _elbowWarnFrameThreshold = 6; // Sustain for ~0.2s
-
-  static const double _trunkLeanWarning = 8.0;
-  static const double _trunkLeanBad = 15.0;
-
   static const double _trunkShiftWarning = 0.10;
   static const double _trunkShiftBad = 0.18;
-
-  static const double _shrugWarning = 0.10; // 10% drop in neck length
-  static const double _shrugBad = 0.28; // 28% drop (less sensitive)
   static const int _shrugBadFrameThreshold = 8; // Sustain for ~0.25s
+
+  /// Creates an analyzer with the given sensitivity, or defaults.
+  LateralRaiseFormAnalyzer({LateralRaiseSensitivity? sensitivity})
+    : _sensitivity = sensitivity ?? const LateralRaiseSensitivity.defaults();
+
+  /// Update sensitivity at runtime (e.g., from settings dialog).
+  void updateSensitivity(LateralRaiseSensitivity newSensitivity) {
+    _sensitivity = newSensitivity;
+  }
 
   // State
   double? _baselineNeckLength;
@@ -187,16 +192,14 @@ class LateralRaiseFormAnalyzer {
     // BAD Check: Safety critical, use min of smoothed
     final minSm = min(leftSm, rightSm);
 
-    if (minSm < _elbowBadThreshold) {
+    if (minSm < _sensitivity.elbowBadAngle) {
       issues.add(
         const FormIssue(
           code: 'ELBOW_BENT',
-          message: 'Keep your elbows straighter',
+          message: 'Keep your arms straight — elbows are too bent',
           severity: FormStatus.bad,
         ),
       );
-      // If bad, we reset the warning counters/state to avoid double jeopardy?
-      // Or keep them? Usually Bad supersedes Warning.
       return;
     }
 
@@ -206,14 +209,16 @@ class LateralRaiseFormAnalyzer {
 
     if (_elbowWarningActive) {
       // Hysteresis: Stay active until both arms are > Exit Threshold
-      if (leftSm > _elbowSoftWarnExit && rightSm > _elbowSoftWarnExit) {
+      if (leftSm > _sensitivity.elbowWarnExitAngle &&
+          rightSm > _sensitivity.elbowWarnExitAngle) {
         _elbowWarningActive = false;
       } else {
         triggerCondition = true;
       }
     } else {
       // Hysteresis: Enter if either arm < Enter Threshold
-      if (leftSm < _elbowSoftWarnEnter || rightSm < _elbowSoftWarnEnter) {
+      if (leftSm < _sensitivity.elbowWarnAngle ||
+          rightSm < _sensitivity.elbowWarnAngle) {
         triggerCondition = true;
       }
     }
@@ -226,7 +231,7 @@ class LateralRaiseFormAnalyzer {
         issues.add(
           const FormIssue(
             code: 'ELBOW_SOFT',
-            message: 'Straighten arms slightly',
+            message: 'Extend your elbows more — arms should be straight',
             severity: FormStatus.warning,
           ),
         );
@@ -274,19 +279,19 @@ class LateralRaiseFormAnalyzer {
     final smoothedLean = _trunkLeanSmoother.smooth(leanDeg);
     metrics['trunk_lean'] = smoothedLean;
 
-    if (smoothedLean > _trunkLeanBad) {
+    if (smoothedLean > _sensitivity.trunkLeanBadAngle) {
       issues.add(
         const FormIssue(
           code: 'TRUNK_LEAN',
-          message: 'Avoid leaning your torso',
+          message: 'Keep your torso upright — avoid leaning',
           severity: FormStatus.bad,
         ),
       );
-    } else if (smoothedLean > _trunkLeanWarning) {
+    } else if (smoothedLean > _sensitivity.trunkLeanWarnAngle) {
       issues.add(
         const FormIssue(
           code: 'TRUNK_LEAN',
-          message: 'Stand straighter',
+          message: 'Stand straighter — slight torso lean detected',
           severity: FormStatus.warning,
         ),
       );
@@ -302,7 +307,7 @@ class LateralRaiseFormAnalyzer {
       issues.add(
         const FormIssue(
           code: 'TRUNK_SHIFT',
-          message: 'Core is shifting - brace tight',
+          message: 'Keep your hips centered — core is shifting sideways',
           severity: FormStatus.bad,
         ),
       );
@@ -310,7 +315,7 @@ class LateralRaiseFormAnalyzer {
       issues.add(
         const FormIssue(
           code: 'TRUNK_SHIFT',
-          message: 'Keep hips stable',
+          message: 'Keep your hips stable and centered',
           severity: FormStatus.warning,
         ),
       );
@@ -387,7 +392,7 @@ class LateralRaiseFormAnalyzer {
     bool isWarning = false;
 
     if (isActivePhase) {
-      if (drop > _shrugBad) {
+      if (drop > _sensitivity.shrugBadDrop) {
         // Check for sustained bad frames
         _shrugBadFrames++;
         if (_shrugBadFrames >= _shrugBadFrameThreshold) {
@@ -400,7 +405,7 @@ class LateralRaiseFormAnalyzer {
         // Decay bad frames count if not bad this frame but active
         if (_shrugBadFrames > 0) _shrugBadFrames--;
 
-        if (drop > _shrugWarning) {
+        if (drop > _sensitivity.shrugWarnDrop) {
           isWarning = true;
         }
       }
@@ -415,7 +420,7 @@ class LateralRaiseFormAnalyzer {
       issues.add(
         const FormIssue(
           code: 'SHRUGGING',
-          message: 'Don\'t shrug—shoulders down',
+          message: 'Relax your shoulders away from ears',
           severity: FormStatus.bad,
         ),
       );
@@ -423,7 +428,7 @@ class LateralRaiseFormAnalyzer {
       issues.add(
         const FormIssue(
           code: 'SHRUGGING',
-          message: 'Relax your shoulders',
+          message: 'Relax your shoulders — slight shrug detected',
           severity: FormStatus.warning,
         ),
       );

@@ -1,14 +1,34 @@
+import 'package:fitness_counter/fitness_counter.dart';
 import 'package:flutter/material.dart';
 
-/// Dialog for configuring lateral raise thresholds.
+/// Dialog result containing angle thresholds and optional sensitivity config.
+class ThresholdDialogResult {
+  final double topThreshold;
+  final double bottomThreshold;
+  final LateralRaiseSensitivity? sensitivity;
+
+  const ThresholdDialogResult({
+    required this.topThreshold,
+    required this.bottomThreshold,
+    this.sensitivity,
+  });
+}
+
+/// Dialog for configuring exercise thresholds and form sensitivity.
+///
+/// When [initialSensitivity] is provided, shows additional sliders
+/// for adjusting form check sensitivity. When null, only the angle
+/// threshold sliders are shown.
 class ThresholdSettingsDialog extends StatefulWidget {
   final double initialTopThreshold;
   final double initialBottomThreshold;
+  final LateralRaiseSensitivity? initialSensitivity;
 
   const ThresholdSettingsDialog({
     super.key,
     required this.initialTopThreshold,
     required this.initialBottomThreshold,
+    this.initialSensitivity,
   });
 
   @override
@@ -19,18 +39,20 @@ class ThresholdSettingsDialog extends StatefulWidget {
 class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
   late double topThreshold;
   late double bottomThreshold;
+  late LateralRaiseSensitivity? sensitivity;
 
   @override
   void initState() {
     super.initState();
     topThreshold = widget.initialTopThreshold;
     bottomThreshold = widget.initialBottomThreshold;
+    sensitivity = widget.initialSensitivity;
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Threshold Settings'),
+      title: const Text('Settings'),
       content: SingleChildScrollView(
         child: SizedBox(
           width: 300,
@@ -78,7 +100,6 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
                 label: '${bottomThreshold.round()}°',
                 onChanged: (value) {
                   setState(() {
-                    // Only allow changing bottom threshold if it stays below top - 10
                     if (value <= topThreshold - 10) {
                       bottomThreshold = value;
                     }
@@ -89,7 +110,13 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
                 'Angle for "down" position',
                 style: TextStyle(fontSize: 10, color: Colors.grey),
               ),
-              const SizedBox(height: 8),
+
+              // Form Sensitivity section (only for exercises with form analysis)
+              if (sensitivity != null) ...[
+                const SizedBox(height: 16),
+                const Divider(),
+                _buildSensitivitySection(),
+              ],
             ],
           ),
         ),
@@ -101,12 +128,237 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
         ),
         ElevatedButton(
           onPressed: () {
-            Navigator.pop(context, {
-              'top': topThreshold,
-              'bottom': bottomThreshold,
-            });
+            Navigator.pop(
+              context,
+              ThresholdDialogResult(
+                topThreshold: topThreshold,
+                bottomThreshold: bottomThreshold,
+                sensitivity: sensitivity,
+              ),
+            );
           },
           child: const Text('Apply'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSensitivitySection() {
+    final s = sensitivity!;
+    return ExpansionTile(
+      title: const Text(
+        'Form Sensitivity',
+        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+      ),
+      initiallyExpanded: false,
+      tilePadding: EdgeInsets.zero,
+      children: [
+        const SizedBox(height: 8),
+
+        // --- Elbow ---
+        _buildSectionHeader('Elbow Straightness', Icons.fitness_center),
+        _buildSlider(
+          label: 'Bad',
+          severityColor: Colors.red,
+          value: s.elbowBadAngle,
+          min: 120,
+          max: 160,
+          unit: '°',
+          description: 'Angle below which arms are too bent',
+          effectHint: 'Lower = stricter',
+          onChanged: (v) => setState(() {
+            sensitivity = s.copyWith(
+              elbowBadAngle: v,
+              elbowWarnAngle: s.elbowWarnAngle < v + 5 ? v + 5 : null,
+            );
+          }),
+        ),
+        _buildSlider(
+          label: 'Warning',
+          severityColor: Colors.amber,
+          value: s.elbowWarnAngle,
+          min: 135,
+          max: 170,
+          unit: '°',
+          description: 'Angle below which a soft bend warning shows',
+          effectHint: 'Lower = stricter',
+          onChanged: (v) => setState(() {
+            if (v > s.elbowBadAngle + 4) {
+              sensitivity = s.copyWith(elbowWarnAngle: v);
+            }
+          }),
+        ),
+        const SizedBox(height: 12),
+
+        // --- Trunk ---
+        _buildSectionHeader('Trunk Stability', Icons.accessibility_new),
+        _buildSlider(
+          label: 'Warning',
+          severityColor: Colors.amber,
+          value: s.trunkLeanWarnAngle,
+          min: 4,
+          max: 20,
+          unit: '°',
+          description: 'Lean angle for warning',
+          effectHint: 'Higher = more lenient',
+          onChanged: (v) => setState(() {
+            sensitivity = s.copyWith(
+              trunkLeanWarnAngle: v,
+              trunkLeanBadAngle: s.trunkLeanBadAngle < v + 3 ? v + 3 : null,
+            );
+          }),
+        ),
+        _buildSlider(
+          label: 'Bad',
+          severityColor: Colors.red,
+          value: s.trunkLeanBadAngle,
+          min: 8,
+          max: 30,
+          unit: '°',
+          description: 'Lean angle for bad form',
+          effectHint: 'Higher = more lenient',
+          onChanged: (v) => setState(() {
+            if (v > s.trunkLeanWarnAngle + 2) {
+              sensitivity = s.copyWith(trunkLeanBadAngle: v);
+            }
+          }),
+        ),
+        const SizedBox(height: 12),
+
+        // --- Shoulders ---
+        _buildSectionHeader('Shoulder Shrug', Icons.person),
+        _buildSlider(
+          label: 'Warning',
+          severityColor: Colors.amber,
+          value: s.shrugWarnDrop * 100,
+          min: 5,
+          max: 25,
+          unit: '%',
+          description: 'Neck drop % for warning',
+          effectHint: 'Higher = more lenient',
+          onChanged: (v) => setState(() {
+            sensitivity = s.copyWith(
+              shrugWarnDrop: v / 100,
+              shrugBadDrop: s.shrugBadDrop < (v / 100) + 0.10
+                  ? (v / 100) + 0.10
+                  : null,
+            );
+          }),
+        ),
+        _buildSlider(
+          label: 'Bad',
+          severityColor: Colors.red,
+          value: s.shrugBadDrop * 100,
+          min: 15,
+          max: 50,
+          unit: '%',
+          description: 'Neck drop % for bad form',
+          effectHint: 'Higher = more lenient',
+          onChanged: (v) => setState(() {
+            if (v / 100 > s.shrugWarnDrop + 0.05) {
+              sensitivity = s.copyWith(shrugBadDrop: v / 100);
+            }
+          }),
+        ),
+        const SizedBox(height: 12),
+
+        // Reset button
+        Center(
+          child: TextButton.icon(
+            onPressed: () {
+              setState(() {
+                sensitivity = const LateralRaiseSensitivity.defaults();
+              });
+            },
+            icon: const Icon(Icons.restore, size: 16),
+            label: const Text('Reset to Defaults'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: Colors.grey),
+          const SizedBox(width: 6),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSlider({
+    required String label,
+    required Color severityColor,
+    required double value,
+    required double min,
+    required double max,
+    required String unit,
+    required String description,
+    required String effectHint,
+    required ValueChanged<double> onChanged,
+  }) {
+    // Clamp value into range to prevent slider errors
+    final clampedValue = value.clamp(min, max);
+    final divisions = ((max - min) * 2).round(); // 0.5 step precision
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            // Severity-colored label
+            Text(
+              '$label: ${clampedValue.toStringAsFixed(1)}$unit',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: severityColor,
+              ),
+            ),
+            const Spacer(),
+            // Directional effect hint
+            Text(
+              effectHint,
+              style: TextStyle(
+                fontSize: 10,
+                fontStyle: FontStyle.italic,
+                color: Colors.grey.shade500,
+              ),
+            ),
+          ],
+        ),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: severityColor.withValues(alpha: 0.7),
+            thumbColor: severityColor,
+          ),
+          child: Slider(
+            value: clampedValue,
+            min: min,
+            max: max,
+            divisions: divisions,
+            label: '${clampedValue.toStringAsFixed(1)}$unit',
+            onChanged: onChanged,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text(
+            description,
+            style: const TextStyle(fontSize: 10, color: Colors.grey),
+          ),
         ),
       ],
     );
