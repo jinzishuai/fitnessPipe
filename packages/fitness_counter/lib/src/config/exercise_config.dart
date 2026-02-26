@@ -1,4 +1,5 @@
 import '../models/landmark.dart';
+import 'form_sensitivity_config.dart';
 
 /// Abstract configuration for an exercise type.
 ///
@@ -26,4 +27,15 @@ abstract class ExerciseConfig {
 
   /// Default threshold values as (topThreshold, bottomThreshold).
   (double, double) get defaultThresholds;
+
+  /// Minimum cooldown between repeated feedback for the same issue code.
+  ///
+  /// Different exercises may have different-length feedback messages,
+  /// so this is configurable per exercise. The global minimum cooldown
+  /// between any feedback is controlled separately by [FeedbackCooldownManager].
+  Duration get feedbackCooldown => const Duration(seconds: 3);
+
+  /// Default form sensitivity config, or null if this exercise has no
+  /// form analysis. Override in subclasses that support form checks.
+  FormSensitivityConfig? get defaultFormSensitivity => null;
 }

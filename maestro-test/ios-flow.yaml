@@ -45,7 +45,6 @@ appId: com.fitnesspipe.fitnessPipe
     visible: "[1-9][0-9]*"
     timeout: 60000
 - assertVisible: "reps"
-- takeScreenshot: "single-squat-counter"
 
 # Switch back to Lateral Raise
 - tapOn: "Single Squat"
@@ -63,7 +62,6 @@ appId: com.fitnesspipe.fitnessPipe
     visible: "[1-9][0-9]*"
     timeout: 60000
 - assertVisible: "reps"
-- takeScreenshot: "lateral-raise-counter"
 
 # ── Landscape mode tests ─────────────────────────────────────────────
 # Switch to landscape and verify the app renders correctly.

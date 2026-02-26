@@ -1,5 +1,6 @@
 import '../models/landmark.dart';
 import 'exercise_config.dart';
+import 'form_sensitivity_config.dart';
 
 /// Configuration for the Lateral Raise exercise.
 class LateralRaiseConfig extends ExerciseConfig {
@@ -52,4 +53,8 @@ class LateralRaiseConfig extends ExerciseConfig {
 
   @override
   (double, double) get defaultThresholds => (70.0, 25.0);
+
+  @override
+  FormSensitivityConfig get defaultFormSensitivity =>
+      const LateralRaiseSensitivity.defaults();
 }
