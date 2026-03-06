@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
@@ -6,13 +8,22 @@ import 'exercise_selector.dart';
 /// Full-screen dialog that plays a looping instructional demo video
 /// for the given [exerciseType].
 ///
-/// The video is loaded from the bundled asset returned by
-/// [ExerciseType.demoVideoAsset] and loops until the user dismisses
-/// the dialog via the "X" button.
+/// When [autoClose] is true (first-time popup), the dialog automatically
+/// closes after 6 seconds with a visible 3-2-1 countdown. The user can
+/// still dismiss it early via the "X" button. When opened from the
+/// settings help menu, [autoClose] should be false and the dialog stays
+/// open until manually closed.
 class ExerciseDemoDialog extends StatefulWidget {
   final ExerciseType exerciseType;
 
-  const ExerciseDemoDialog({super.key, required this.exerciseType});
+  /// If true, auto-closes after 6 seconds with a countdown.
+  final bool autoClose;
+
+  const ExerciseDemoDialog({
+    super.key,
+    required this.exerciseType,
+    this.autoClose = false,
+  });
 
   @override
   State<ExerciseDemoDialog> createState() => _ExerciseDemoDialogState();
@@ -22,6 +33,10 @@ class _ExerciseDemoDialogState extends State<ExerciseDemoDialog> {
   late VideoPlayerController _controller;
   bool _isInitialized = false;
   String? _errorMessage;
+
+  // Auto-close countdown
+  Timer? _countdownTimer;
+  int _secondsRemaining = 6;
 
   @override
   void initState() {
@@ -42,6 +57,10 @@ class _ExerciseDemoDialogState extends State<ExerciseDemoDialog> {
         setState(() {
           _isInitialized = true;
         });
+        // Start auto-close countdown once video is playing
+        if (widget.autoClose) {
+          _startCountdown();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -52,8 +71,25 @@ class _ExerciseDemoDialogState extends State<ExerciseDemoDialog> {
     }
   }
 
+  void _startCountdown() {
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        _secondsRemaining--;
+      });
+      if (_secondsRemaining <= 0) {
+        timer.cancel();
+        Navigator.of(context).pop();
+      }
+    });
+  }
+
   @override
   void dispose() {
+    _countdownTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -66,65 +102,111 @@ class _ExerciseDemoDialogState extends State<ExerciseDemoDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: Stack(
-          children: [
-            // Video content
-            SizedBox(
-              width: double.infinity,
-              child: AspectRatio(
-                aspectRatio: _isInitialized
-                    ? _controller.value.aspectRatio
-                    : 16 / 9,
-                child: _buildVideoContent(),
-              ),
-            ),
+        child: IntrinsicWidth(
+          child: IntrinsicHeight(
+            child: Stack(
+              children: [
+                // Video content — preserves native aspect ratio
+                if (_isInitialized)
+                  AspectRatio(
+                    aspectRatio: _controller.value.aspectRatio,
+                    child: VideoPlayer(_controller),
+                  )
+                else
+                  const AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: SizedBox.expand(),
+                  ),
 
-            // Title overlay (top-left)
-            Positioned(
-              top: 12,
-              left: 16,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '${widget.exerciseType.displayName} Demo',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                // Loading / error overlay
+                if (!_isInitialized || _errorMessage != null)
+                  Positioned.fill(child: _buildStatusOverlay()),
+
+                // Title overlay (top-left)
+                Positioned(
+                  top: 12,
+                  left: 16,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${widget.exerciseType.displayName} Demo',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
 
-            // Close button (top-right)
-            Positioned(
-              top: 8,
-              right: 8,
-              child: Material(
-                color: Colors.black54,
-                shape: const CircleBorder(),
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: () => Navigator.of(context).pop(),
-                  child: const Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Icon(Icons.close, color: Colors.white, size: 24),
+                // Close button (top-right)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Material(
+                    color: Colors.black54,
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () => Navigator.of(context).pop(),
+                      child: const Padding(
+                        padding: EdgeInsets.all(8),
+                        child:
+                            Icon(Icons.close, color: Colors.white, size: 24),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+
+                // Auto-close countdown (bottom-center)
+                if (widget.autoClose && _isInitialized)
+                  Positioned(
+                    bottom: 12,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          _secondsRemaining <= 3
+                              ? 'Closing in $_secondsRemaining...'
+                              : 'Auto-closing in $_secondsRemaining s',
+                          style: TextStyle(
+                            color: _secondsRemaining <= 3
+                                ? Colors.orangeAccent
+                                : Colors.white70,
+                            fontSize: 14,
+                            fontWeight: _secondsRemaining <= 3
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildVideoContent() {
+  Widget _buildStatusOverlay() {
     if (_errorMessage != null) {
       return Center(
         child: Padding(
@@ -145,12 +227,8 @@ class _ExerciseDemoDialogState extends State<ExerciseDemoDialog> {
       );
     }
 
-    if (!_isInitialized) {
-      return const Center(
-        child: CircularProgressIndicator(color: Colors.white),
-      );
-    }
-
-    return VideoPlayer(_controller);
+    return const Center(
+      child: CircularProgressIndicator(color: Colors.white),
+    );
   }
 }
