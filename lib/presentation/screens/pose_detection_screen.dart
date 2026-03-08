@@ -910,7 +910,6 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                 // Virtual Camera Preview
                 Image.file(
                   _currentPreviewFrameFile!,
-                  key: ValueKey(_currentPreviewFrameFile!.path),
                   fit: BoxFit.cover,
                   gaplessPlayback: true, // Prevents flickering
                   excludeFromSemantics: true,
