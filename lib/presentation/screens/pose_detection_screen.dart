@@ -105,6 +105,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   VirtualCameraInputSource? _virtualInputSource;
   LibraryVideoInputSource? _libraryVideoInputSource;
   _PoseInputMode? _currentInputMode;
+  bool _isPickingLibraryVideo = false;
 
   // macOS camera
   CameraMacOSController? _macOSCameraController;
@@ -173,6 +174,10 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_isPickingLibraryVideo) {
+      return;
+    }
+
     if (state == AppLifecycleState.inactive) {
       _mobileInputSource?.dispose();
       _macOSCameraController?.destroy();
@@ -285,9 +290,17 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     await _mobileInputSource?.stop();
     await _virtualInputSource?.stop();
 
-    final selected = await _libraryVideoInputSource!.pickVideo(
-      forcePick: repick,
-    );
+    final needsPick =
+        repick || !(_libraryVideoInputSource?.hasSelectedVideo ?? false);
+    bool selected = true;
+    if (needsPick) {
+      _isPickingLibraryVideo = true;
+      try {
+        selected = await _libraryVideoInputSource!.pickVideo(forcePick: repick);
+      } finally {
+        _isPickingLibraryVideo = false;
+      }
+    }
     if (!selected) {
       throw const LibraryVideoSelectionCanceled();
     }
