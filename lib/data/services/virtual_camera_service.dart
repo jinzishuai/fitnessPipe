@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
 
-import '../../presentation/widgets/exercise_selector.dart';
+import '../../domain/models/exercise_type.dart';
 
 /// Service that mimics a camera by streaming images from assets.
 class VirtualCameraService {

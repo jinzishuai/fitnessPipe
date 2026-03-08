@@ -16,6 +16,7 @@ import '../../data/services/pose_input_source.dart';
 import '../../data/services/virtual_camera_input_source.dart';
 import '../../data/services/voice_guidance_service.dart';
 import '../../domain/interfaces/pose_detector.dart';
+import '../../domain/models/exercise_type.dart';
 import '../../domain/models/pose.dart';
 import '../../domain/models/pose_landmark.dart';
 import '../widgets/exercise_selector.dart';

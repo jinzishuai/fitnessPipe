@@ -1,7 +1,7 @@
 import 'dart:io';
 
+import '../../domain/models/exercise_type.dart';
 import 'pose_input_source.dart';
-import '../../presentation/widgets/exercise_selector.dart';
 import 'virtual_camera_service.dart';
 
 /// Adapts the simulator virtual camera to the shared input source contract.
