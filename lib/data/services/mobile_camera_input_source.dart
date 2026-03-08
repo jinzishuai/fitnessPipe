@@ -42,9 +42,23 @@ class MobileCameraInputSource implements PoseInputSource {
 
   bool get shouldUseVirtualFallback => _cameras.isEmpty;
 
+  bool hasLensDirection(mobile_camera.CameraLensDirection direction) {
+    return _cameras.any((camera) => camera.lensDirection == direction);
+  }
+
   void selectPreferredCamera() {
     if (_cameras.isEmpty) return;
     _selectedCameraIndex = _preferredFrontCameraIndex();
+  }
+
+  void selectLensDirection(mobile_camera.CameraLensDirection direction) {
+    if (_cameras.isEmpty) return;
+    final index = _cameras.indexWhere(
+      (camera) => camera.lensDirection == direction,
+    );
+    if (index >= 0) {
+      _selectedCameraIndex = index;
+    }
   }
 
   @override

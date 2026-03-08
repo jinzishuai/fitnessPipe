@@ -10,6 +10,7 @@ import 'package:google_mlkit_commons/google_mlkit_commons.dart';
 import 'package:native_device_orientation/native_device_orientation.dart';
 
 import '../../core/adapters/pose_adapter.dart';
+import '../../data/services/library_video_input_source.dart';
 import '../../data/ml_kit/ml_kit_pose_detector.dart';
 import '../../data/services/mobile_camera_input_source.dart';
 import '../../data/services/pose_input_source.dart';
@@ -27,6 +28,17 @@ import '../widgets/guides/lateral_raise_guide.dart';
 import '../widgets/rep_counter_overlay.dart';
 import '../widgets/skeleton_painter.dart';
 import '../widgets/threshold_settings_dialog.dart';
+
+enum _PoseInputMode {
+  frontCamera('Front Camera'),
+  backCamera('Back Camera'),
+  libraryVideo('Library Video'),
+  simulatorFixtures('Simulator Fixtures');
+
+  const _PoseInputMode(this.label);
+
+  final String label;
+}
 
 /// Main screen for pose detection with camera preview and skeleton overlay.
 class PoseDetectionScreen extends StatefulWidget {
@@ -91,6 +103,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   bool _isVirtualCamera = false;
   MobileCameraInputSource? _mobileInputSource;
   VirtualCameraInputSource? _virtualInputSource;
+  LibraryVideoInputSource? _libraryVideoInputSource;
+  _PoseInputMode? _currentInputMode;
 
   // macOS camera
   CameraMacOSController? _macOSCameraController;
@@ -137,6 +151,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     _mobileInputSource = MobileCameraInputSource(
       rotationProvider: _getMobileImageRotation,
     );
+    _libraryVideoInputSource = LibraryVideoInputSource();
 
     // Counter will be initialized when user selects an exercise
 
@@ -149,6 +164,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     _mobileInputSource?.dispose();
     _macOSCameraController?.destroy();
     _virtualInputSource?.dispose();
+    _libraryVideoInputSource?.dispose();
     _voiceGuidanceService.dispose();
     _feedbackClearTimer?.cancel();
     _poseDetector.dispose();
@@ -161,6 +177,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
       _mobileInputSource?.dispose();
       _macOSCameraController?.destroy();
       _virtualInputSource?.stop();
+      _libraryVideoInputSource?.stop();
     } else if (state == AppLifecycleState.resumed) {
       _initializeCamera();
     }
@@ -195,10 +212,16 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     final mobileInputSource = _mobileInputSource!;
     await mobileInputSource.initialize();
 
+    if (_currentInputMode == _PoseInputMode.libraryVideo) {
+      await _startLibraryVideo();
+      return;
+    }
+
     // If no cameras found on iOS, assume Simulator and try Virtual Camera
     // Note: checking if cameras is empty is a decent heuristic for Simulator on some versions,
     // but explicit platform check is better.
     if (mobileInputSource.shouldUseVirtualFallback && Platform.isIOS) {
+      _currentInputMode ??= _PoseInputMode.simulatorFixtures;
       await _initializeVirtualCamera();
       return;
     }
@@ -211,12 +234,33 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
       return;
     }
 
-    mobileInputSource.selectPreferredCamera();
+    final preferredMode =
+        _currentInputMode ??
+        (mobileInputSource.hasLensDirection(
+              mobile_camera.CameraLensDirection.front,
+            )
+            ? _PoseInputMode.frontCamera
+            : _PoseInputMode.backCamera);
+    _currentInputMode = preferredMode;
+
+    if (_currentInputMode == _PoseInputMode.backCamera &&
+        mobileInputSource.hasLensDirection(
+          mobile_camera.CameraLensDirection.back,
+        )) {
+      mobileInputSource.selectLensDirection(
+        mobile_camera.CameraLensDirection.back,
+      );
+    } else {
+      _currentInputMode = _PoseInputMode.frontCamera;
+      mobileInputSource.selectPreferredCamera();
+    }
     await _startMobileCamera();
   }
 
   Future<void> _initializeVirtualCamera() async {
     // Dispose any existing service to prevent multiple timers (issue #42)
+    await _mobileInputSource?.stop();
+    await _libraryVideoInputSource?.stop();
     await _virtualInputSource?.dispose();
 
     // Initialize with the currently selected exercise to avoid state reset
@@ -237,22 +281,40 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     });
   }
 
-  File? _currentVirtualFrameFile;
-  DateTime _lastVirtualFrameUpdate = DateTime(0);
+  Future<void> _startLibraryVideo({bool repick = false}) async {
+    await _mobileInputSource?.stop();
+    await _virtualInputSource?.stop();
+
+    final selected = await _libraryVideoInputSource!.pickVideo(
+      forcePick: repick,
+    );
+    if (!selected) {
+      throw const LibraryVideoSelectionCanceled();
+    }
+
+    await _libraryVideoInputSource!.start(_processInputFrame);
+    setState(() {
+      _isVirtualCamera = false;
+      _isLoading = false;
+    });
+  }
+
+  File? _currentPreviewFrameFile;
+  DateTime _lastPreviewFrameUpdate = DateTime(0);
 
   void _processInputFrame(PoseInputFrame frame) async {
     // Update the UI preview, throttled to ~10fps to allow the iOS
     // accessibility tree to stabilize (fixes Maestro element discovery, #50).
     if (frame.previewFile != null && mounted) {
       final now = DateTime.now();
-      if (now.difference(_lastVirtualFrameUpdate).inMilliseconds >= 100) {
-        _lastVirtualFrameUpdate = now;
+      if (now.difference(_lastPreviewFrameUpdate).inMilliseconds >= 100) {
+        _lastPreviewFrameUpdate = now;
         setState(() {
-          _currentVirtualFrameFile = frame.previewFile;
+          _currentPreviewFrameFile = frame.previewFile;
         });
       } else {
         // Still update the file reference for pose detection without setState
-        _currentVirtualFrameFile = frame.previewFile;
+        _currentPreviewFrameFile = frame.previewFile;
       }
     }
 
@@ -261,6 +323,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
 
   Future<void> _startMobileCamera() async {
     try {
+      await _virtualInputSource?.stop();
+      await _libraryVideoInputSource?.stop();
       await _mobileInputSource!.start(_processInputFrame);
 
       setState(() {
@@ -312,17 +376,57 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     debugPrint('macOS camera initialized');
   }
 
-  Future<void> _switchCamera() async {
-    if (_isMacOS) {
-      if (_macOSCameras == null || _macOSCameras!.length < 2) return;
-      _selectedMacOSCameraIndex =
-          (_selectedMacOSCameraIndex + 1) % _macOSCameras!.length;
-      _macOSCameraKey = GlobalKey(); // Force rebuild
-      setState(() {});
-    } else {
-      if ((_mobileInputSource?.sourceCount ?? 0) < 2) return;
-      await _mobileInputSource?.switchSource();
-      await _startMobileCamera();
+  Future<void> _handleInputModeSelection(_PoseInputMode mode) async {
+    final previousMode = _currentInputMode;
+    final repick =
+        mode == _PoseInputMode.libraryVideo &&
+        previousMode == _PoseInputMode.libraryVideo;
+
+    setState(() {
+      _errorMessage = null;
+      _isLoading = true;
+      _currentPose = null;
+      _cameraImageSize = null;
+      if (mode != _PoseInputMode.libraryVideo) {
+        _currentPreviewFrameFile = null;
+      }
+    });
+
+    try {
+      if (_isMacOS) {
+        return;
+      }
+
+      if (mode == _PoseInputMode.frontCamera) {
+        _currentInputMode = mode;
+        _mobileInputSource?.selectLensDirection(
+          mobile_camera.CameraLensDirection.front,
+        );
+        await _startMobileCamera();
+      } else if (mode == _PoseInputMode.backCamera) {
+        _currentInputMode = mode;
+        _mobileInputSource?.selectLensDirection(
+          mobile_camera.CameraLensDirection.back,
+        );
+        await _startMobileCamera();
+      } else if (mode == _PoseInputMode.libraryVideo) {
+        _currentInputMode = mode;
+        await _startLibraryVideo(repick: repick);
+      } else if (mode == _PoseInputMode.simulatorFixtures) {
+        _currentInputMode = mode;
+        await _initializeVirtualCamera();
+      }
+    } on LibraryVideoSelectionCanceled {
+      setState(() {
+        _currentInputMode = previousMode;
+        _isLoading = false;
+      });
+    } catch (error) {
+      setState(() {
+        _currentInputMode = previousMode;
+        _errorMessage = 'Failed to switch input: $error';
+        _isLoading = false;
+      });
     }
   }
 
@@ -620,11 +724,58 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     }
   }
 
-  int get _cameraCount {
-    if (_isMacOS) {
-      return _macOSCameras?.length ?? 0;
+  bool get _isFilePreviewMode =>
+      _currentInputMode == _PoseInputMode.libraryVideo ||
+      _currentInputMode == _PoseInputMode.simulatorFixtures;
+
+  bool get _canShowInputSelector {
+    if (_isMacOS) return false;
+    return _availableInputModes.length > 1;
+  }
+
+  List<_PoseInputMode> get _availableInputModes {
+    if (_isMacOS) return const [];
+
+    final modes = <_PoseInputMode>[];
+    final mobileInputSource = _mobileInputSource;
+    final hasFront =
+        mobileInputSource?.hasLensDirection(
+          mobile_camera.CameraLensDirection.front,
+        ) ??
+        false;
+    final hasBack =
+        mobileInputSource?.hasLensDirection(
+          mobile_camera.CameraLensDirection.back,
+        ) ??
+        false;
+
+    if (hasFront) modes.add(_PoseInputMode.frontCamera);
+    if (hasBack) modes.add(_PoseInputMode.backCamera);
+    if (Platform.isIOS) {
+      modes.add(_PoseInputMode.libraryVideo);
     }
-    return _mobileInputSource?.sourceCount ?? 0;
+    if (_isVirtualCamera ||
+        (Platform.isIOS &&
+            (mobileInputSource?.shouldUseVirtualFallback ?? false))) {
+      modes.add(_PoseInputMode.simulatorFixtures);
+    }
+    return modes;
+  }
+
+  String get _filePreviewPoseLabel {
+    return switch (_currentInputMode) {
+      _PoseInputMode.libraryVideo => 'Video Pose',
+      _PoseInputMode.simulatorFixtures => 'Virtual Pose',
+      _ => 'Pose',
+    };
+  }
+
+  String get _filePreviewBadgeLabel {
+    return switch (_currentInputMode) {
+      _PoseInputMode.libraryVideo => 'VIDEO REPLAY',
+      _PoseInputMode.simulatorFixtures => 'SIMULATOR MODE',
+      _ => '',
+    };
   }
 
   @override
@@ -635,11 +786,31 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         title: const Text('FitnessPipe'),
         backgroundColor: Colors.black87,
         actions: [
-          if (_cameraCount > 1)
-            IconButton(
+          if (_canShowInputSelector)
+            PopupMenuButton<_PoseInputMode>(
+              initialValue: _currentInputMode,
               icon: const Icon(Icons.cameraswitch),
-              onPressed: _switchCamera,
-              tooltip: 'Switch Camera',
+              tooltip: 'Switch Input',
+              onSelected: _handleInputModeSelection,
+              itemBuilder: (context) => _availableInputModes
+                  .map(
+                    (mode) => PopupMenuItem<_PoseInputMode>(
+                      value: mode,
+                      child: Row(
+                        children: [
+                          Icon(
+                            _currentInputMode == mode
+                                ? Icons.radio_button_checked
+                                : Icons.radio_button_off,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(mode.label),
+                        ],
+                      ),
+                    ),
+                  )
+                  .toList(),
             ),
           IconButton(
             icon: Icon(
@@ -696,8 +867,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
       );
     }
 
-    if (_isVirtualCamera) {
-      return _buildVirtualCameraPreview();
+    if (_isFilePreviewMode) {
+      return _buildFilePreview();
     } else if (_isMacOS) {
       return _buildMacOSCameraPreview();
     } else {
@@ -705,10 +876,10 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     }
   }
 
-  Widget _buildVirtualCameraPreview() {
+  Widget _buildFilePreview() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (_currentVirtualFrameFile == null) {
+        if (_currentPreviewFrameFile == null) {
           return const Center(child: CircularProgressIndicator());
         }
 
@@ -725,7 +896,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
               children: [
                 // Virtual Camera Preview
                 Image.file(
-                  _currentVirtualFrameFile!,
+                  _currentPreviewFrameFile!,
                   fit: BoxFit.cover,
                   gaplessPlayback: true, // Prevents flickering
                   excludeFromSemantics: true,
@@ -825,7 +996,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                         const SizedBox(width: 8),
                         Text(
                           _currentPose != null
-                              ? 'Virtual Pose: ${(_currentPose!.confidence * 100).toStringAsFixed(0)}%'
+                              ? '$_filePreviewPoseLabel: ${(_currentPose!.confidence * 100).toStringAsFixed(0)}%'
                               : 'No pose detected',
                           style: const TextStyle(
                             color: Colors.white,
@@ -870,22 +1041,24 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                     ),
                   ),
 
-                // Simulator Badge
-                Positioned(
-                  top: 16,
-                  right: 16,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    color: Colors.redAccent,
-                    child: const Text(
-                      'SIMULATOR MODE',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+                if (_filePreviewBadgeLabel.isNotEmpty)
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      color: _currentInputMode == _PoseInputMode.libraryVideo
+                          ? Colors.blueAccent
+                          : Colors.redAccent,
+                      child: Text(
+                        _filePreviewBadgeLabel,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
