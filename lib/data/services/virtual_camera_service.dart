@@ -43,6 +43,8 @@ class VirtualCameraService {
     ExerciseType initialExercise = ExerciseType.lateralRaise,
   }) : _currentExercise = initialExercise;
 
+  ExerciseType get currentExercise => _currentExercise;
+
   Size get currentImageSize {
     final config = _exerciseConfig[_currentExercise]!;
     return Size(config['width'] as double, config['height'] as double);

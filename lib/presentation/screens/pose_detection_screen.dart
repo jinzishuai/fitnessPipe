@@ -10,9 +10,10 @@ import 'package:google_mlkit_commons/google_mlkit_commons.dart';
 import 'package:native_device_orientation/native_device_orientation.dart';
 
 import '../../core/adapters/pose_adapter.dart';
-import '../../core/utils/camera_utils.dart';
 import '../../data/ml_kit/ml_kit_pose_detector.dart';
-import '../../data/services/virtual_camera_service.dart';
+import '../../data/services/mobile_camera_input_source.dart';
+import '../../data/services/pose_input_source.dart';
+import '../../data/services/virtual_camera_input_source.dart';
 import '../../data/services/voice_guidance_service.dart';
 import '../../domain/interfaces/pose_detector.dart';
 import '../../domain/models/pose.dart';
@@ -87,12 +88,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   // `availableCameras()` returns empty list on Simulator usually.
 
   bool _isVirtualCamera = false;
-  VirtualCameraService? _virtualCameraService;
-
-  // Mobile camera (iOS/Android)
-  List<mobile_camera.CameraDescription> _mobileCameras = [];
-  mobile_camera.CameraController? _mobileCameraController;
-  int _selectedMobileCameraIndex = 0;
+  MobileCameraInputSource? _mobileInputSource;
+  VirtualCameraInputSource? _virtualInputSource;
 
   // macOS camera
   CameraMacOSController? _macOSCameraController;
@@ -136,6 +133,9 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     WidgetsBinding.instance.addObserver(this);
     _poseDetector = MLKitPoseDetector();
     _voiceGuidanceService = VoiceGuidanceService();
+    _mobileInputSource = MobileCameraInputSource(
+      rotationProvider: _getMobileImageRotation,
+    );
 
     // Counter will be initialized when user selects an exercise
 
@@ -145,9 +145,9 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _mobileCameraController?.dispose();
+    _mobileInputSource?.dispose();
     _macOSCameraController?.destroy();
-    _virtualCameraService?.dispose();
+    _virtualInputSource?.dispose();
     _voiceGuidanceService.dispose();
     _feedbackClearTimer?.cancel();
     _poseDetector.dispose();
@@ -157,9 +157,9 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.inactive) {
-      _mobileCameraController?.dispose();
+      _mobileInputSource?.dispose();
       _macOSCameraController?.destroy();
-      _virtualCameraService?.stopStream();
+      _virtualInputSource?.stop();
     } else if (state == AppLifecycleState.resumed) {
       _initializeCamera();
     }
@@ -191,17 +191,18 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   }
 
   Future<void> _initializeMobileCamera() async {
-    _mobileCameras = await mobile_camera.availableCameras();
+    final mobileInputSource = _mobileInputSource!;
+    await mobileInputSource.initialize();
 
     // If no cameras found on iOS, assume Simulator and try Virtual Camera
     // Note: checking if cameras is empty is a decent heuristic for Simulator on some versions,
     // but explicit platform check is better.
-    if (_mobileCameras.isEmpty && Platform.isIOS) {
+    if (mobileInputSource.shouldUseVirtualFallback && Platform.isIOS) {
       await _initializeVirtualCamera();
       return;
     }
 
-    if (_mobileCameras.isEmpty) {
+    if (!mobileInputSource.hasCameras) {
       setState(() {
         _errorMessage = 'No cameras available';
         _isLoading = false;
@@ -209,22 +210,16 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
       return;
     }
 
-    // Prefer front camera
-    _selectedMobileCameraIndex = _mobileCameras.indexWhere(
-      (camera) =>
-          camera.lensDirection == mobile_camera.CameraLensDirection.front,
-    );
-    if (_selectedMobileCameraIndex < 0) _selectedMobileCameraIndex = 0;
-
-    await _startMobileCamera(_mobileCameras[_selectedMobileCameraIndex]);
+    mobileInputSource.selectPreferredCamera();
+    await _startMobileCamera();
   }
 
   Future<void> _initializeVirtualCamera() async {
     // Dispose any existing service to prevent multiple timers (issue #42)
-    _virtualCameraService?.dispose();
+    await _virtualInputSource?.dispose();
 
     // Initialize with the currently selected exercise to avoid state reset
-    _virtualCameraService = VirtualCameraService(
+    _virtualInputSource = VirtualCameraInputSource(
       initialExercise: _selectedExercise ?? ExerciseType.lateralRaise,
     );
 
@@ -233,7 +228,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     });
 
     // Start streaming
-    await _virtualCameraService!.startStream(_processVirtualCameraImage);
+    await _virtualInputSource!.start(_processInputFrame);
 
     // Initial loading done
     setState(() {
@@ -244,46 +239,31 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   File? _currentVirtualFrameFile;
   DateTime _lastVirtualFrameUpdate = DateTime(0);
 
-  void _processVirtualCameraImage(InputImage inputImage) async {
+  void _processInputFrame(PoseInputFrame frame) async {
     // Update the UI preview, throttled to ~10fps to allow the iOS
     // accessibility tree to stabilize (fixes Maestro element discovery, #50).
-    if (inputImage.filePath != null && mounted) {
+    if (frame.previewFile != null && mounted) {
       final now = DateTime.now();
       if (now.difference(_lastVirtualFrameUpdate).inMilliseconds >= 100) {
         _lastVirtualFrameUpdate = now;
         setState(() {
-          _currentVirtualFrameFile = File(inputImage.filePath!);
+          _currentVirtualFrameFile = frame.previewFile;
         });
       } else {
         // Still update the file reference for pose detection without setState
-        _currentVirtualFrameFile = File(inputImage.filePath!);
+        _currentVirtualFrameFile = frame.previewFile;
       }
     }
 
-    _processPoseDetection(inputImage);
+    _processPoseDetection(frame.inputImage, previewSize: frame.previewSize);
   }
 
-  Future<void> _startMobileCamera(
-    mobile_camera.CameraDescription camera,
-  ) async {
-    await _mobileCameraController?.dispose();
-
-    _mobileCameraController = mobile_camera.CameraController(
-      camera,
-      mobile_camera.ResolutionPreset.high,
-      enableAudio: false,
-      imageFormatGroup: Platform.isAndroid
-          ? mobile_camera.ImageFormatGroup.nv21
-          : mobile_camera.ImageFormatGroup.bgra8888,
-    );
-
+  Future<void> _startMobileCamera() async {
     try {
-      await _mobileCameraController!.initialize();
-      await _mobileCameraController!.startImageStream(
-        _processMobileCameraImage,
-      );
+      await _mobileInputSource!.start(_processInputFrame);
 
       setState(() {
+        _isVirtualCamera = false;
         _isLoading = false;
       });
     } on mobile_camera.CameraException catch (e) {
@@ -339,23 +319,13 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
       _macOSCameraKey = GlobalKey(); // Force rebuild
       setState(() {});
     } else {
-      if (_mobileCameras.length < 2) return;
-      _selectedMobileCameraIndex =
-          (_selectedMobileCameraIndex + 1) % _mobileCameras.length;
-      await _mobileCameraController?.stopImageStream();
-      await _startMobileCamera(_mobileCameras[_selectedMobileCameraIndex]);
+      if ((_mobileInputSource?.sourceCount ?? 0) < 2) return;
+      await _mobileInputSource?.switchSource();
+      await _startMobileCamera();
     }
   }
 
-  void _processMobileCameraImage(mobile_camera.CameraImage image) {
-    final rotation = _getMobileImageRotation();
-    final inputImage = CameraUtils.convertCameraImage(image, rotation);
-    if (inputImage != null) {
-      _processPoseDetection(inputImage);
-    }
-  }
-
-  void _processPoseDetection(InputImage inputImage) async {
+  void _processPoseDetection(InputImage inputImage, {Size? previewSize}) async {
     if (_isDetecting) return;
     _isDetecting = true;
 
@@ -366,8 +336,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         setState(() {
           if (inputImage.metadata?.size != null) {
             _cameraImageSize = inputImage.metadata!.size;
-          } else if (_isVirtualCamera) {
-            _cameraImageSize = _virtualCameraService?.currentImageSize;
+          } else if (previewSize != null) {
+            _cameraImageSize = previewSize;
           } else {
             _cameraImageSize = const Size(1, 1);
           }
@@ -512,7 +482,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
 
       // Update virtual camera video if active
       if (_isVirtualCamera && type != null) {
-        _virtualCameraService?.setExercise(type);
+        _virtualInputSource?.setExercise(type);
       }
     });
   }
@@ -609,10 +579,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   }
 
   InputImageRotation _getMobileImageRotation() {
-    if (_mobileCameraController == null) return InputImageRotation.rotation0deg;
-
-    final camera = _mobileCameras[_selectedMobileCameraIndex];
-    final sensorOrientation = camera.sensorOrientation;
+    final sensorOrientation = _mobileInputSource?.sensorOrientation ?? 0;
+    if (sensorOrientation == 0) return InputImageRotation.rotation0deg;
 
     // Store sensor orientation for skeleton painter
     _sensorOrientation = sensorOrientation;
@@ -655,7 +623,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     if (_isMacOS) {
       return _macOSCameras?.length ?? 0;
     }
-    return _mobileCameras.length;
+    return _mobileInputSource?.sourceCount ?? 0;
   }
 
   @override
@@ -1007,8 +975,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   }
 
   Widget _buildMobileCameraPreview() {
-    if (_mobileCameraController == null ||
-        !_mobileCameraController!.value.isInitialized) {
+    final controller = _mobileInputSource?.controller;
+    if (controller == null || !controller.value.isInitialized) {
       return const Center(
         child: Text(
           'Camera not available',
@@ -1017,7 +985,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
       );
     }
 
-    final previewSize = _mobileCameraController!.value.previewSize!;
+    final previewSize = controller.value.previewSize!;
 
     // Camera sensor outputs dimensions (may be landscape: w > h)
     // Calculate the portrait aspect ratio (< 1) for portrait mode
@@ -1048,7 +1016,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                 alignment: Alignment.center,
                 children: [
                   // Camera preview
-                  mobile_camera.CameraPreview(_mobileCameraController!),
+                  mobile_camera.CameraPreview(controller),
 
                   // Skeleton overlay
                   if (_currentPose != null)
@@ -1265,13 +1233,12 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                 Builder(
                   builder: (context) {
                     try {
-                      if (_mobileCameraController == null ||
-                          !_mobileCameraController!.value.isInitialized) {
+                      final activeController = _mobileInputSource?.controller;
+                      if (activeController == null ||
+                          !activeController.value.isInitialized) {
                         return const SizedBox.shrink();
                       }
-                      return mobile_camera.CameraPreview(
-                        _mobileCameraController!,
-                      );
+                      return mobile_camera.CameraPreview(activeController);
                     } catch (e) {
                       // Camera might be disposed during orientation change
                       return const SizedBox.shrink();
