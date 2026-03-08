@@ -83,7 +83,7 @@ class MobileCameraInputSource implements PoseInputSource {
   }
 
   Future<void> _startSelectedCamera(PoseInputFrameCallback onFrame) async {
-    await _controller?.dispose();
+    await dispose();
 
     final camera = _cameras[_selectedCameraIndex];
     _controller = mobile_camera.CameraController(
@@ -110,17 +110,26 @@ class MobileCameraInputSource implements PoseInputSource {
   @override
   Future<void> switchSource() async {
     if (_cameras.length < 2) return;
-    await _controller?.stopImageStream();
+    await stop();
     _selectedCameraIndex = (_selectedCameraIndex + 1) % _cameras.length;
   }
 
   @override
   Future<void> stop() async {
-    await _controller?.stopImageStream();
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+    if (!controller.value.isStreamingImages) return;
+
+    try {
+      await controller.stopImageStream();
+    } on mobile_camera.CameraException catch (_) {
+      // Ignore teardown races when no image stream is active.
+    }
   }
 
   @override
   Future<void> dispose() async {
+    await stop();
     await _controller?.dispose();
     _controller = null;
   }
