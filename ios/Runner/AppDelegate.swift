@@ -135,6 +135,8 @@ final class VideoFrameExtractorPlugin: NSObject, FlutterPlugin {
 }
 
 private final class VideoFrameSession {
+  private static let maxRetainedFrames = 30
+
   struct ExtractedFrame {
     let path: String
     let actualTimeMs: Int
@@ -206,7 +208,7 @@ private final class VideoFrameSession {
   }
 
   private func trimRetainedFrames() {
-    while retainedFrames.count > 2 {
+    while retainedFrames.count > VideoFrameSession.maxRetainedFrames {
       let oldFrame = retainedFrames.removeFirst()
       try? FileManager.default.removeItem(at: oldFrame)
     }
