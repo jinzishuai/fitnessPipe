@@ -158,8 +158,7 @@ class _ExerciseDemoDialogState extends State<ExerciseDemoDialog> {
                       onTap: () => Navigator.of(context).pop(),
                       child: const Padding(
                         padding: EdgeInsets.all(8),
-                        child:
-                            Icon(Icons.close, color: Colors.white, size: 24),
+                        child: Icon(Icons.close, color: Colors.white, size: 24),
                       ),
                     ),
                   ),
@@ -227,8 +226,6 @@ class _ExerciseDemoDialogState extends State<ExerciseDemoDialog> {
       );
     }
 
-    return const Center(
-      child: CircularProgressIndicator(color: Colors.white),
-    );
+    return const Center(child: CircularProgressIndicator(color: Colors.white));
   }
 }

@@ -59,10 +59,7 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
     return AlertDialog(
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text('Settings'),
-          _buildHelpButton(),
-        ],
+        children: [const Text('Settings'), _buildHelpButton()],
       ),
       content: SingleChildScrollView(
         child: SizedBox(
@@ -171,9 +168,8 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
           case 'view_demo':
             showDialog(
               context: context,
-              builder: (_) => ExerciseDemoDialog(
-                exerciseType: widget.exerciseType,
-              ),
+              builder: (_) =>
+                  ExerciseDemoDialog(exerciseType: widget.exerciseType),
             );
             break;
           // Future help options can be added here
