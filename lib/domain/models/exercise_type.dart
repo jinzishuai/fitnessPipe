@@ -17,4 +17,14 @@ enum ExerciseType {
         return ExerciseConfigs.singleSquat;
     }
   }
+
+  /// Asset path for the instructional demo video.
+  String get demoVideoAsset {
+    switch (this) {
+      case ExerciseType.lateralRaise:
+        return 'assets/demos/lateral_raise_demo.mp4';
+      case ExerciseType.singleSquat:
+        return 'assets/demos/single_squat_demo.mp4';
+    }
+  }
 }

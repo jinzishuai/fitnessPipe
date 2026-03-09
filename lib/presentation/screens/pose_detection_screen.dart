@@ -638,6 +638,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
       builder: (context) => ThresholdSettingsDialog(
         initialTopThreshold: currentTop,
         initialBottomThreshold: currentBottom,
+        exerciseType: _selectedExercise!,
         initialSensitivity: _selectedExercise == ExerciseType.lateralRaise
             ? _currentSensitivity
             : null,

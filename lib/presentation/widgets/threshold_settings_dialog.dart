@@ -2,7 +2,7 @@ import 'package:fitness_counter/fitness_counter.dart';
 import 'package:flutter/material.dart';
 
 import 'exercise_demo_dialog.dart';
-import 'exercise_selector.dart';
+import '../../domain/models/exercise_type.dart';
 
 /// Dialog result containing angle thresholds and optional sensitivity config.
 class ThresholdDialogResult {

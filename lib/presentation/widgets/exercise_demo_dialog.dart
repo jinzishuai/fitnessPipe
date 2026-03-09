@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
-import 'exercise_selector.dart';
+import '../../domain/models/exercise_type.dart';
 
 /// Full-screen dialog that plays a looping instructional demo video
 /// for the given [exerciseType].

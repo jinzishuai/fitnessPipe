@@ -1,6 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../presentation/widgets/exercise_selector.dart';
+import '../../domain/models/exercise_type.dart';
 
 /// Service that tracks whether the user has seen the instructional demo
 /// for each exercise. Uses [SharedPreferences] for persistence.

@@ -56,6 +56,12 @@ dependencies:
   # Text-to-Speech for voice form correction guidance
   flutter_tts: ^4.2.0
 
+  # Video playback for exercise demo videos
+  video_player: ^2.9.2
+
+  # Persistent storage for first-time demo tracking
+  shared_preferences: ^2.3.4
+
   # Pick library videos for replay-based pose testing
   image_picker: ^1.1.2
 
@@ -85,6 +91,7 @@ flutter:
   assets:
     - assets/fixtures/lateral_raise/
     - assets/fixtures/single_squat/
+    - assets/demos/
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 
