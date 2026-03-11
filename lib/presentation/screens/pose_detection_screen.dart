@@ -12,6 +12,7 @@ import 'package:native_device_orientation/native_device_orientation.dart';
 import '../../core/adapters/pose_adapter.dart';
 import '../../data/services/library_video_input_source.dart';
 import '../../data/ml_kit/ml_kit_pose_detector.dart';
+import '../../data/services/exercise_demo_service.dart';
 import '../../data/services/mobile_camera_input_source.dart';
 import '../../data/services/pose_input_source.dart';
 import '../../data/services/virtual_camera_input_source.dart';
@@ -28,6 +29,7 @@ import '../widgets/guides/lateral_raise_guide.dart';
 import '../widgets/rep_counter_overlay.dart';
 import '../widgets/skeleton_painter.dart';
 import '../widgets/threshold_settings_dialog.dart';
+import '../widgets/exercise_demo_dialog.dart';
 
 enum _PoseInputMode {
   frontCamera('Front Camera'),
@@ -72,6 +74,9 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   late final VoiceGuidanceService _voiceGuidanceService;
   FeedbackCooldownManager? _feedbackCooldownManager;
   Timer? _feedbackClearTimer;
+
+  // Exercise demo tracking
+  final ExerciseDemoService _exerciseDemoService = ExerciseDemoService();
 
   // Threshold configuration
   double _topThreshold = 70.0;
@@ -603,6 +608,27 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         _virtualInputSource?.setExercise(type);
       }
     });
+
+    // Show demo popup if this is the first time the user selects this exercise
+    if (type != null) {
+      _showDemoIfFirstTime(type);
+    }
+  }
+
+  Future<void> _showDemoIfFirstTime(ExerciseType type) async {
+    final hasSeen = await _exerciseDemoService.hasSeenDemo(type);
+    if (!hasSeen && mounted) {
+      await _exerciseDemoService.markDemoSeen(type);
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (_) => ExerciseDemoDialog(
+            exerciseType: type,
+            autoClose: true,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _showThresholdSettings() async {
