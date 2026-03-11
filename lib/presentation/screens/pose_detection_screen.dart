@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
 import 'package:native_device_orientation/native_device_orientation.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../core/adapters/pose_adapter.dart';
 import '../../data/services/library_video_input_source.dart';
@@ -152,6 +153,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    WakelockPlus.enable();
     _poseDetector = MLKitPoseDetector();
     _voiceGuidanceService = VoiceGuidanceService();
     _mobileInputSource = MobileCameraInputSource(
@@ -167,6 +169,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    WakelockPlus.disable();
     _mobileInputSource?.dispose();
     _macOSCameraController?.destroy();
     _virtualInputSource?.dispose();
@@ -184,6 +187,9 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     }
 
     if (state == AppLifecycleState.inactive) {
+      setState(() {
+        _isLoading = true;
+      });
       _mobileInputSource?.dispose();
       _macOSCameraController?.destroy();
       _virtualInputSource?.stop();
@@ -622,10 +628,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
       if (mounted) {
         showDialog(
           context: context,
-          builder: (_) => ExerciseDemoDialog(
-            exerciseType: type,
-            autoClose: true,
-          ),
+          builder: (_) =>
+              ExerciseDemoDialog(exerciseType: type, autoClose: true),
         );
       }
     }
