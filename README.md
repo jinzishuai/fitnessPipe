@@ -46,13 +46,14 @@ FitnessPipe is a cross-platform Flutter application that uses AI-powered pose es
    cd macos && pod install && cd ..
    ```
 
-4. **Configure iOS Development Team** (required for iOS builds)
+4. **Configure iOS Development Team** (required for iOS device builds)
    ```bash
    # Copy the template
    cp ios/Config.local.xcconfig.template ios/Config.local.xcconfig
    
-   # Edit ios/Config.local.xcconfig and replace YOUR_TEAM_ID with your Apple Developer Team ID
-   # You can find your Team ID in Xcode > Preferences > Accounts
+   # Edit ios/Config.local.xcconfig and set:
+   #   DEVELOPMENT_TEAM = your Apple Developer Team ID (Xcode > Preferences > Accounts)
+   #   PRODUCT_BUNDLE_IDENTIFIER = a unique bundle ID, e.g. com.yourname.fitnessPipe
    ```
 
 ### Running the App
