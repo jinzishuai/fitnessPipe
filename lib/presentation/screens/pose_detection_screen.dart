@@ -78,6 +78,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
 
   // Exercise demo tracking
   final ExerciseDemoService _exerciseDemoService = ExerciseDemoService();
+  bool _isDemoShowing = false;
 
   // Threshold configuration
   double _topThreshold = 70.0;
@@ -488,6 +489,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
 
   void _processPoseWithCounter(Pose pose) {
     if (_selectedExercise == null) return;
+    if (_isDemoShowing) return;
 
     final poseFrame = _poseAdapter.convert(pose);
     RepEvent? event;
@@ -623,6 +625,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   Future<void> _showDemoIfFirstTime(ExerciseType type) async {
     final hasSeen = await _exerciseDemoService.hasSeenDemo(type);
     if (!hasSeen && mounted && _selectedExercise == type) {
+      setState(() => _isDemoShowing = true);
       if (mounted) {
         await showDialog(
           context: context,
@@ -631,6 +634,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         );
       }
       if (mounted) {
+        setState(() => _isDemoShowing = false);
         await _exerciseDemoService.markDemoSeen(type);
       }
     }
