@@ -5,7 +5,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../domain/models/exercise_type.dart';
 
-/// Full-screen dialog that plays a looping instructional demo video
+/// Overlay dialog that plays a looping instructional demo video
 /// for the given [exerciseType].
 ///
 /// When [autoClose] is true (first-time popup), the dialog automatically
@@ -153,13 +153,14 @@ class _ExerciseDemoDialogState extends State<ExerciseDemoDialog> {
                   child: Material(
                     color: Colors.black54,
                     shape: const CircleBorder(),
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: () => Navigator.of(context).pop(),
-                      child: const Padding(
-                        padding: EdgeInsets.all(8),
-                        child: Icon(Icons.close, color: Colors.white, size: 24),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.close,
+                        color: Colors.white,
+                        size: 24,
                       ),
+                      tooltip: 'Close',
+                      onPressed: () => Navigator.of(context).pop(),
                     ),
                   ),
                 ),

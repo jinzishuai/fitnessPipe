@@ -4,7 +4,7 @@
 
 FitnessPipe is a cross-platform Flutter application that uses AI-powered pose estimation to track your exercise form in real-time. Built with Google ML Kit for pose detection, it works completely offline with all ML models bundled in the app.
 
-![Flutter](https://img.shields.io/badge/Flutter-3.10.4+-02569B?logo=flutter)
+![Flutter](https://img.shields.io/badge/Flutter-3.38.0+-02569B?logo=flutter)
 ![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20macOS%20%7C%20Android-lightgrey)
 
 ## ✨ Features
@@ -20,8 +20,8 @@ FitnessPipe is a cross-platform Flutter application that uses AI-powered pose es
 
 ### Prerequisites
 
-- **Flutter SDK**: 3.10.4 or higher
-- **Dart SDK**: 3.10.4 or higher
+- **Flutter SDK**: 3.38.0 or higher
+- **Dart SDK**: 3.8.0 or higher
 - **Platform-specific tools**:
   - **iOS/macOS**: Xcode 14.0+, CocoaPods
   - **Android**: Android Studio, Android SDK 21+

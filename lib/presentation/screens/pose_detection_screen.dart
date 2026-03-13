@@ -153,7 +153,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    WakelockPlus.enable();
+    unawaited(WakelockPlus.enable());
     _poseDetector = MLKitPoseDetector();
     _voiceGuidanceService = VoiceGuidanceService();
     _mobileInputSource = MobileCameraInputSource(
@@ -169,7 +169,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    WakelockPlus.disable();
+    unawaited(WakelockPlus.disable());
     _mobileInputSource?.dispose();
     _macOSCameraController?.destroy();
     _virtualInputSource?.dispose();
@@ -571,7 +571,6 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   void _onExerciseSelected(ExerciseType? type) {
     setState(() {
       _selectedExercise = type;
-      _selectedExercise = type;
       _lateralRaiseCounter = null;
       _lateralRaiseFormAnalyzer = null;
       _singleSquatCounter = null;
@@ -617,20 +616,22 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
 
     // Show demo popup if this is the first time the user selects this exercise
     if (type != null) {
-      _showDemoIfFirstTime(type);
+      unawaited(_showDemoIfFirstTime(type));
     }
   }
 
   Future<void> _showDemoIfFirstTime(ExerciseType type) async {
     final hasSeen = await _exerciseDemoService.hasSeenDemo(type);
-    if (!hasSeen && mounted) {
-      await _exerciseDemoService.markDemoSeen(type);
+    if (!hasSeen && mounted && _selectedExercise == type) {
       if (mounted) {
-        showDialog(
+        await showDialog(
           context: context,
           builder: (_) =>
               ExerciseDemoDialog(exerciseType: type, autoClose: true),
         );
+      }
+      if (mounted) {
+        await _exerciseDemoService.markDemoSeen(type);
       }
     }
   }
