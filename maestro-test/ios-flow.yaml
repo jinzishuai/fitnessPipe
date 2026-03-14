@@ -74,3 +74,6 @@ appId: com.fitnesspipe.fitnessPipe
 - extendedWaitUntil:
     visible: "FitnessPipe"
     timeout: 10000
+
+# End the test by going to the home screen
+- pressKey: Home
