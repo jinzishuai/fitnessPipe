@@ -22,7 +22,7 @@ appId: com.fitnesspipe.fitnessPipe
 - tapOn: "Lateral Raise"
 - extendedWaitUntil:
     visible: "Lateral Raise"
-    timeout: 5000
+    timeout: 11000
 
 # Wait for counter to increment > 0 (virtual pose needs time for detection + counting)
 - extendedWaitUntil:
