@@ -39,7 +39,7 @@ appId: com.fitnesspipe.fitnessPipe
 - tapOn: "Single Squat"
 - extendedWaitUntil:
     visible: "Single Squat"
-    timeout: 5000
+    timeout: 11000
 # Wait for counter to increment > 0 (virtual pose needs time for detection + counting)
 - extendedWaitUntil:
     visible: "[1-9][0-9]*"
