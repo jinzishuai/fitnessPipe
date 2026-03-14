@@ -22,7 +22,7 @@ appId: com.fitnesspipe.fitnessPipe
 - tapOn: "Lateral Raise"
 - extendedWaitUntil:
     visible: "Lateral Raise"
-    timeout: 5000
+    timeout: 11000
 
 # Wait for counter to increment > 0 (virtual pose needs time for detection + counting)
 - extendedWaitUntil:
@@ -39,7 +39,7 @@ appId: com.fitnesspipe.fitnessPipe
 - tapOn: "Single Squat"
 - extendedWaitUntil:
     visible: "Single Squat"
-    timeout: 5000
+    timeout: 11000
 # Wait for counter to increment > 0 (virtual pose needs time for detection + counting)
 - extendedWaitUntil:
     visible: "[1-9][0-9]*"
@@ -74,3 +74,6 @@ appId: com.fitnesspipe.fitnessPipe
 - extendedWaitUntil:
     visible: "FitnessPipe"
     timeout: 10000
+
+# End the test by going to the home screen
+- pressKey: Home

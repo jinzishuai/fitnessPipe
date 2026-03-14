@@ -1,6 +1,9 @@
 import 'package:fitness_counter/fitness_counter.dart';
 import 'package:flutter/material.dart';
 
+import 'exercise_demo_dialog.dart';
+import '../../domain/models/exercise_type.dart';
+
 /// Dialog result containing angle thresholds and optional sensitivity config.
 class ThresholdDialogResult {
   final double topThreshold;
@@ -23,11 +26,13 @@ class ThresholdSettingsDialog extends StatefulWidget {
   final double initialTopThreshold;
   final double initialBottomThreshold;
   final LateralRaiseSensitivity? initialSensitivity;
+  final ExerciseType exerciseType;
 
   const ThresholdSettingsDialog({
     super.key,
     required this.initialTopThreshold,
     required this.initialBottomThreshold,
+    required this.exerciseType,
     this.initialSensitivity,
   });
 
@@ -52,7 +57,10 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Settings'),
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [const Text('Settings'), _buildHelpButton()],
+      ),
       content: SingleChildScrollView(
         child: SizedBox(
           width: 300,
@@ -139,6 +147,46 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
           },
           child: const Text('Apply'),
         ),
+      ],
+    );
+  }
+
+  Widget _buildHelpButton() {
+    return PopupMenuButton<String>(
+      icon: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.grey),
+        ),
+        child: const Icon(Icons.question_mark, size: 18, color: Colors.grey),
+      ),
+      tooltip: 'Help',
+      onSelected: (value) {
+        switch (value) {
+          case 'view_demo':
+            showDialog(
+              context: context,
+              builder: (_) =>
+                  ExerciseDemoDialog(exerciseType: widget.exerciseType),
+            );
+            break;
+          // Future help options can be added here
+        }
+      },
+      itemBuilder: (context) => const [
+        PopupMenuItem<String>(
+          value: 'view_demo',
+          child: Row(
+            children: [
+              Icon(Icons.play_circle_outline, size: 20),
+              SizedBox(width: 8),
+              Text('View Exercise Demo'),
+            ],
+          ),
+        ),
+        // Additional help items can be added here for scalability
       ],
     );
   }

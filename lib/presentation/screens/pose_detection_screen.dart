@@ -8,10 +8,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
 import 'package:native_device_orientation/native_device_orientation.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../core/adapters/pose_adapter.dart';
 import '../../data/services/library_video_input_source.dart';
 import '../../data/ml_kit/ml_kit_pose_detector.dart';
+import '../../data/services/exercise_demo_service.dart';
 import '../../data/services/mobile_camera_input_source.dart';
 import '../../data/services/pose_input_source.dart';
 import '../../data/services/virtual_camera_input_source.dart';
@@ -28,6 +30,7 @@ import '../widgets/guides/lateral_raise_guide.dart';
 import '../widgets/rep_counter_overlay.dart';
 import '../widgets/skeleton_painter.dart';
 import '../widgets/threshold_settings_dialog.dart';
+import '../widgets/exercise_demo_dialog.dart';
 
 enum _PoseInputMode {
   frontCamera('Front Camera'),
@@ -72,6 +75,10 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   late final VoiceGuidanceService _voiceGuidanceService;
   FeedbackCooldownManager? _feedbackCooldownManager;
   Timer? _feedbackClearTimer;
+
+  // Exercise demo tracking
+  final ExerciseDemoService _exerciseDemoService = ExerciseDemoService();
+  bool _isDemoShowing = false;
 
   // Threshold configuration
   double _topThreshold = 70.0;
@@ -147,6 +154,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    unawaited(WakelockPlus.enable());
     _poseDetector = MLKitPoseDetector();
     _voiceGuidanceService = VoiceGuidanceService();
     _mobileInputSource = MobileCameraInputSource(
@@ -162,6 +170,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    unawaited(WakelockPlus.disable());
     _mobileInputSource?.dispose();
     _macOSCameraController?.destroy();
     _virtualInputSource?.dispose();
@@ -179,6 +188,9 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     }
 
     if (state == AppLifecycleState.inactive) {
+      setState(() {
+        _isLoading = true;
+      });
       _mobileInputSource?.dispose();
       _macOSCameraController?.destroy();
       _virtualInputSource?.stop();
@@ -477,6 +489,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
 
   void _processPoseWithCounter(Pose pose) {
     if (_selectedExercise == null) return;
+    if (_isDemoShowing) return;
 
     final poseFrame = _poseAdapter.convert(pose);
     RepEvent? event;
@@ -560,7 +573,6 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   void _onExerciseSelected(ExerciseType? type) {
     setState(() {
       _selectedExercise = type;
-      _selectedExercise = type;
       _lateralRaiseCounter = null;
       _lateralRaiseFormAnalyzer = null;
       _singleSquatCounter = null;
@@ -603,6 +615,29 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         _virtualInputSource?.setExercise(type);
       }
     });
+
+    // Show demo popup if this is the first time the user selects this exercise
+    if (type != null) {
+      unawaited(_showDemoIfFirstTime(type));
+    }
+  }
+
+  Future<void> _showDemoIfFirstTime(ExerciseType type) async {
+    final hasSeen = await _exerciseDemoService.hasSeenDemo(type);
+    if (!hasSeen && mounted && _selectedExercise == type) {
+      setState(() => _isDemoShowing = true);
+      if (mounted) {
+        await showDialog(
+          context: context,
+          builder: (_) =>
+              ExerciseDemoDialog(exerciseType: type, autoClose: true),
+        );
+      }
+      if (mounted) {
+        setState(() => _isDemoShowing = false);
+        await _exerciseDemoService.markDemoSeen(type);
+      }
+    }
   }
 
   Future<void> _showThresholdSettings() async {
@@ -638,6 +673,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
       builder: (context) => ThresholdSettingsDialog(
         initialTopThreshold: currentTop,
         initialBottomThreshold: currentBottom,
+        exerciseType: _selectedExercise!,
         initialSensitivity: _selectedExercise == ExerciseType.lateralRaise
             ? _currentSensitivity
             : null,
