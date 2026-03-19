@@ -1,7 +1,6 @@
 import 'package:fitness_counter/fitness_counter.dart';
 import 'package:flutter/material.dart';
 
-import 'exercise_demo_dialog.dart';
 import '../../domain/models/exercise_type.dart';
 
 /// Dialog result containing angle thresholds and optional sensitivity config.
@@ -27,6 +26,7 @@ class ThresholdSettingsDialog extends StatefulWidget {
   final double initialBottomThreshold;
   final LateralRaiseSensitivity? initialSensitivity;
   final ExerciseType exerciseType;
+  final VoidCallback? onShowDemo;
 
   const ThresholdSettingsDialog({
     super.key,
@@ -34,6 +34,7 @@ class ThresholdSettingsDialog extends StatefulWidget {
     required this.initialBottomThreshold,
     required this.exerciseType,
     this.initialSensitivity,
+    this.onShowDemo,
   });
 
   @override
@@ -56,97 +57,108 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final hasThresholds = widget.exerciseType.config.hasThresholds;
+
     return AlertDialog(
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [const Text('Settings'), _buildHelpButton()],
       ),
-      content: SingleChildScrollView(
-        child: SizedBox(
-          width: 300,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Adjust thresholds based on your range of motion',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-              const SizedBox(height: 24),
+      content: hasThresholds
+          ? SingleChildScrollView(
+              child: SizedBox(
+                width: 300,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Adjust thresholds based on your range of motion',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 24),
 
-              // Top threshold slider
-              Text('Top Threshold: ${topThreshold.round()}°'),
-              Slider(
-                value: topThreshold,
-                min: 30,
-                max: 90,
-                divisions: 60,
-                label: '${topThreshold.round()}°',
-                onChanged: (value) {
-                  setState(() {
-                    topThreshold = value;
-                    // Ensure bottom is always lower than top
-                    if (bottomThreshold >= topThreshold - 10) {
-                      bottomThreshold = topThreshold - 10;
-                    }
-                  });
-                },
-              ),
-              const Text(
-                'Angle needed to reach "up" position',
-                style: TextStyle(fontSize: 10, color: Colors.grey),
-              ),
-              const SizedBox(height: 24),
+                    // Top threshold slider
+                    Text('Top Threshold: ${topThreshold.round()}°'),
+                    Slider(
+                      value: topThreshold,
+                      min: 30,
+                      max: 90,
+                      divisions: 60,
+                      label: '${topThreshold.round()}°',
+                      onChanged: (value) {
+                        setState(() {
+                          topThreshold = value;
+                          // Ensure bottom is always lower than top
+                          if (bottomThreshold >= topThreshold - 10) {
+                            bottomThreshold = topThreshold - 10;
+                          }
+                        });
+                      },
+                    ),
+                    const Text(
+                      'Angle needed to reach "up" position',
+                      style: TextStyle(fontSize: 10, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 24),
 
-              // Bottom threshold slider
-              Text('Bottom Threshold: ${bottomThreshold.round()}°'),
-              Slider(
-                value: bottomThreshold,
-                min: 10,
-                max: 40,
-                divisions: 30,
-                label: '${bottomThreshold.round()}°',
-                onChanged: (value) {
-                  setState(() {
-                    if (value <= topThreshold - 10) {
-                      bottomThreshold = value;
-                    }
-                  });
-                },
-              ),
-              const Text(
-                'Angle for "down" position',
-                style: TextStyle(fontSize: 10, color: Colors.grey),
-              ),
+                    // Bottom threshold slider
+                    Text('Bottom Threshold: ${bottomThreshold.round()}°'),
+                    Slider(
+                      value: bottomThreshold,
+                      min: 10,
+                      max: 40,
+                      divisions: 30,
+                      label: '${bottomThreshold.round()}°',
+                      onChanged: (value) {
+                        setState(() {
+                          if (value <= topThreshold - 10) {
+                            bottomThreshold = value;
+                          }
+                        });
+                      },
+                    ),
+                    const Text(
+                      'Angle for "down" position',
+                      style: TextStyle(fontSize: 10, color: Colors.grey),
+                    ),
 
-              // Form Sensitivity section (only for exercises with form analysis)
-              if (sensitivity != null) ...[
-                const SizedBox(height: 16),
-                const Divider(),
-                _buildSensitivitySection(),
-              ],
-            ],
-          ),
-        ),
-      ),
+                    // Form Sensitivity section (only for exercises with form analysis)
+                    if (sensitivity != null) ...[
+                      const SizedBox(height: 16),
+                      const Divider(),
+                      _buildSensitivitySection(),
+                    ],
+                  ],
+                ),
+              ),
+            )
+          : SizedBox(
+              width: 300,
+              child: Text(
+                'Use the help menu (?) to view the exercise demo.',
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+              ),
+            ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(hasThresholds ? 'Cancel' : 'Close'),
         ),
-        ElevatedButton(
-          onPressed: () {
-            Navigator.pop(
-              context,
-              ThresholdDialogResult(
-                topThreshold: topThreshold,
-                bottomThreshold: bottomThreshold,
-                sensitivity: sensitivity,
-              ),
-            );
-          },
-          child: const Text('Apply'),
-        ),
+        if (hasThresholds)
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(
+                context,
+                ThresholdDialogResult(
+                  topThreshold: topThreshold,
+                  bottomThreshold: bottomThreshold,
+                  sensitivity: sensitivity,
+                ),
+              );
+            },
+            child: const Text('Apply'),
+          ),
       ],
     );
   }
@@ -166,11 +178,8 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
       onSelected: (value) {
         switch (value) {
           case 'view_demo':
-            showDialog(
-              context: context,
-              builder: (_) =>
-                  ExerciseDemoDialog(exerciseType: widget.exerciseType),
-            );
+            Navigator.of(context).pop(); // close settings first
+            widget.onShowDemo?.call(); // let parent handle demo
             break;
           // Future help options can be added here
         }
