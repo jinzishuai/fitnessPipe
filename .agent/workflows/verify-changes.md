@@ -11,12 +11,17 @@ After making any code changes, run this verification workflow:
 flutter analyze
 ```
 
-2. Run all tests:
+2. Run root-level tests:
 ```bash
 flutter test
 ```
 
-3. Format code:
+3. Run package tests:
+```bash
+cd packages/fitness_counter && flutter test
+```
+
+4. Format code:
 ```bash
 dart format lib/ test/ packages/ --set-exit-if-changed
 ```

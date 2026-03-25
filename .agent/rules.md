@@ -12,6 +12,7 @@ These rules must be followed by the AI agent when developing this Flutter projec
 2. **Run tests** after implementing or modifying functionality:
    ```bash
    flutter test
+   cd packages/fitness_counter && flutter test
    ```
 
 3. **Format code** before committing:

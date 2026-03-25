@@ -9,7 +9,7 @@
 We should fix any analysis errors and run tests before committing any code change. Also make sure the codes are properly formatted.
 
 ```bash
-flutter analyze && flutter test && dart format lib/ test/ packages/ --set-exit-if-changed
+flutter analyze && flutter test && (cd packages/fitness_counter && flutter test) && dart format lib/ test/ packages/ --set-exit-if-changed
 ```
 
 ### Key Constraints
