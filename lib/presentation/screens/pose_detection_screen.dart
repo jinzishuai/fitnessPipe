@@ -598,7 +598,6 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         _lateralRaiseCounter = LateralRaiseCounter(
           topThreshold: _topThreshold,
           bottomThreshold: _bottomThreshold,
-          readyHoldTime: const Duration(milliseconds: 300),
         );
         _lateralRaiseFormAnalyzer = LateralRaiseFormAnalyzer(
           sensitivity: _currentSensitivity,
@@ -629,6 +628,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     bool autoClose = false,
   }) async {
     setState(() => _isDemoShowing = true);
+    _voiceGuidanceService.stop(); // Silence any in-progress TTS immediately
     if (mounted) {
       await showDialog(
         context: context,
@@ -694,7 +694,6 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
           _lateralRaiseCounter = LateralRaiseCounter(
             topThreshold: _topThreshold,
             bottomThreshold: _bottomThreshold,
-            readyHoldTime: const Duration(milliseconds: 300),
           );
 
           // Apply sensitivity changes

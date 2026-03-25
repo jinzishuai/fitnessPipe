@@ -177,6 +177,21 @@ class VoiceGuidanceService {
     await _tts.speak(phrase);
   }
 
+  /// Stop any currently speaking utterance immediately.
+  ///
+  /// Unlike [setEnabled], this does **not** disable future speech — it only
+  /// cancels the in-progress utterance. Use this when the user triggers
+  /// a demo video and you want to silence feedback without toggling the
+  /// enabled state.
+  void stop() {
+    if (_isSpeaking) {
+      debugPrint('TTS_STOP: stopping current utterance');
+      _tts.stop();
+      _isSpeaking = false;
+      _currentSeverity = null;
+    }
+  }
+
   /// Enable or disable voice guidance.
   void setEnabled(bool enabled) {
     _isEnabled = enabled;

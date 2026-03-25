@@ -53,6 +53,7 @@ class LateralRaiseCounter implements ExerciseCounter {
     double? bottomThreshold,
     double? topThreshold,
     double smoothingAlpha = 0.3,
+    int smoothingWarmupFrames = 5,
     Duration? readyHoldTime,
     Duration? minRepDuration,
     Duration? maxRepDuration,
@@ -61,11 +62,14 @@ class LateralRaiseCounter implements ExerciseCounter {
        topThreshold = topThreshold ?? 80.0,
        risingThreshold = (bottomThreshold ?? 20.0) + 5.0, // Hysteresis
        fallingThreshold = (topThreshold ?? 80.0) - 5.0, // Hysteresis
-       readyHoldTime = readyHoldTime ?? const Duration(milliseconds: 500),
+       readyHoldTime = readyHoldTime ?? const Duration(milliseconds: 300),
        minRepDuration = minRepDuration ?? const Duration(milliseconds: 500),
        maxRepDuration = maxRepDuration ?? const Duration(seconds: 5),
        debounceTime = debounceTime ?? const Duration(milliseconds: 100),
-       _smoother = AngleSmoother(alpha: smoothingAlpha);
+       _smoother = AngleSmoother(
+         alpha: smoothingAlpha,
+         warmupFrames: smoothingWarmupFrames,
+       );
 
   @override
   Set<LandmarkId> get requiredLandmarks => {
