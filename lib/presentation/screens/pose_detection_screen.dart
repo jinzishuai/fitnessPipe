@@ -627,17 +627,21 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     ExerciseType type, {
     bool autoClose = false,
   }) async {
+    if (!mounted) return;
+
     setState(() => _isDemoShowing = true);
     _voiceGuidanceService.stop(); // Silence any in-progress TTS immediately
-    if (mounted) {
+
+    try {
       await showDialog(
         context: context,
         builder: (_) =>
             ExerciseDemoDialog(exerciseType: type, autoClose: autoClose),
       );
-    }
-    if (mounted) {
-      setState(() => _isDemoShowing = false);
+    } finally {
+      if (mounted) {
+        setState(() => _isDemoShowing = false);
+      }
     }
   }
 

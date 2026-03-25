@@ -183,12 +183,17 @@ class VoiceGuidanceService {
   /// cancels the in-progress utterance. Use this when the user triggers
   /// a demo video and you want to silence feedback without toggling the
   /// enabled state.
-  void stop() {
-    if (_isSpeaking) {
+  Future<void> stop() async {
+    // Also stop if we're in the "starting" window where latency measurement
+    // has begun but the TTS engine has not yet reported that it is speaking.
+    if (_isSpeaking || _latencyStopwatch.isRunning) {
       debugPrint('TTS_STOP: stopping current utterance');
-      _tts.stop();
+      await _tts.stop();
       _isSpeaking = false;
       _currentSeverity = null;
+      if (_latencyStopwatch.isRunning) {
+        _latencyStopwatch.stop();
+      }
     }
   }
 

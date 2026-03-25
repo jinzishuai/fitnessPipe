@@ -18,7 +18,7 @@ flutter test
 
 3. Run package tests:
 ```bash
-cd packages/fitness_counter && flutter test
+(cd packages/fitness_counter && flutter test)
 ```
 
 4. Format code:
