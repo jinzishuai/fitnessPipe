@@ -226,18 +226,21 @@ void main() {
     });
 
     test('smoothing reduces jitter', () {
+      // Disable warm-up so we test pure EMA smoothing behavior
+      final smoothCounter = LateralRaiseCounter(smoothingWarmupFrames: 0);
+
       final downPose1 = createArmsDownPose();
       final downPose2 = createArmsMidRaisePose();
 
       // Process alternating poses (simulating jitter)
-      counter.processPose(downPose1);
-      final angle1 = counter.state.smoothedAngle;
+      smoothCounter.processPose(downPose1);
+      final angle1 = smoothCounter.state.smoothedAngle;
 
-      counter.processPose(downPose2);
-      final angle2 = counter.state.smoothedAngle;
+      smoothCounter.processPose(downPose2);
+      final angle2 = smoothCounter.state.smoothedAngle;
 
-      counter.processPose(downPose1);
-      final angle3 = counter.state.smoothedAngle;
+      smoothCounter.processPose(downPose1);
+      final angle3 = smoothCounter.state.smoothedAngle;
 
       // Smoothed angles should not jump as much as raw angles would
       // The third smoothed angle should be between first and second

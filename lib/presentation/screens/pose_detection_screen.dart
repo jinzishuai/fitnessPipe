@@ -598,7 +598,6 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         _lateralRaiseCounter = LateralRaiseCounter(
           topThreshold: _topThreshold,
           bottomThreshold: _bottomThreshold,
-          readyHoldTime: const Duration(milliseconds: 300),
         );
         _lateralRaiseFormAnalyzer = LateralRaiseFormAnalyzer(
           sensitivity: _currentSensitivity,
@@ -622,19 +621,35 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     }
   }
 
+  /// Centralized demo playback — sets [_isDemoShowing] so pose processing
+  /// is paused while the video is on screen.
+  Future<void> _showExerciseDemo(
+    ExerciseType type, {
+    bool autoClose = false,
+  }) async {
+    if (!mounted) return;
+
+    setState(() => _isDemoShowing = true);
+    _voiceGuidanceService.stop(); // Silence any in-progress TTS immediately
+
+    try {
+      await showDialog(
+        context: context,
+        builder: (_) =>
+            ExerciseDemoDialog(exerciseType: type, autoClose: autoClose),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isDemoShowing = false);
+      }
+    }
+  }
+
   Future<void> _showDemoIfFirstTime(ExerciseType type) async {
     final hasSeen = await _exerciseDemoService.hasSeenDemo(type);
     if (!hasSeen && mounted && _selectedExercise == type) {
-      setState(() => _isDemoShowing = true);
+      await _showExerciseDemo(type, autoClose: true);
       if (mounted) {
-        await showDialog(
-          context: context,
-          builder: (_) =>
-              ExerciseDemoDialog(exerciseType: type, autoClose: true),
-        );
-      }
-      if (mounted) {
-        setState(() => _isDemoShowing = false);
         await _exerciseDemoService.markDemoSeen(type);
       }
     }
@@ -644,19 +659,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     // Determine which thresholds to show based on selected exercise
     if (_selectedExercise == null) return;
 
-    // Check if this exercise has configurable thresholds
-    if (!_selectedExercise!.config.hasThresholds) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'No thresholds to adjust for ${_selectedExercise!.displayName}',
-            ),
-          ),
-        );
-      }
-      return;
-    }
+    // Show settings dialog for all exercises (threshold sliders are
+    // conditionally visible inside the dialog based on hasThresholds).
 
     double currentTop;
     double currentBottom;
@@ -668,15 +672,17 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
       currentBottom = _squatBottomThreshold;
     }
 
+    final exerciseType = _selectedExercise!;
     final result = await showDialog<ThresholdDialogResult>(
       context: context,
       builder: (context) => ThresholdSettingsDialog(
         initialTopThreshold: currentTop,
         initialBottomThreshold: currentBottom,
-        exerciseType: _selectedExercise!,
-        initialSensitivity: _selectedExercise == ExerciseType.lateralRaise
+        exerciseType: exerciseType,
+        initialSensitivity: exerciseType == ExerciseType.lateralRaise
             ? _currentSensitivity
             : null,
+        onShowDemo: () => _showExerciseDemo(exerciseType),
       ),
     );
 
@@ -692,7 +698,6 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
           _lateralRaiseCounter = LateralRaiseCounter(
             topThreshold: _topThreshold,
             bottomThreshold: _bottomThreshold,
-            readyHoldTime: const Duration(milliseconds: 300),
           );
 
           // Apply sensitivity changes
@@ -825,6 +830,16 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
       _PoseInputMode.simulatorFixtures => 'SIMULATOR MODE',
       _ => '',
     };
+  }
+
+  /// Builds the settings action button next to the exercise selector.
+  Widget _buildExerciseActionButton() {
+    return IconButton(
+      onPressed: _showThresholdSettings,
+      icon: const Icon(Icons.settings, color: Colors.white),
+      style: IconButton.styleFrom(backgroundColor: Colors.black87),
+      tooltip: 'Settings',
+    );
   }
 
   @override
@@ -981,14 +996,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                       ),
                       if (_selectedExercise != null) ...[
                         const SizedBox(width: 8),
-                        IconButton(
-                          onPressed: _showThresholdSettings,
-                          icon: const Icon(Icons.settings, color: Colors.white),
-                          style: IconButton.styleFrom(
-                            backgroundColor: Colors.black87,
-                          ),
-                          tooltip: 'Adjust Thresholds',
-                        ),
+                        _buildExerciseActionButton(),
                       ],
                     ],
                   ),
@@ -1271,17 +1279,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                         ),
                         if (_selectedExercise != null) ...[
                           const SizedBox(width: 8),
-                          IconButton(
-                            onPressed: _showThresholdSettings,
-                            icon: const Icon(
-                              Icons.settings,
-                              color: Colors.white,
-                            ),
-                            style: IconButton.styleFrom(
-                              backgroundColor: Colors.black87,
-                            ),
-                            tooltip: 'Adjust Thresholds',
-                          ),
+                          _buildExerciseActionButton(),
                         ],
                       ],
                     ),
@@ -1508,14 +1506,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
                       ),
                       if (_selectedExercise != null) ...[
                         const SizedBox(width: 8),
-                        IconButton(
-                          onPressed: _showThresholdSettings,
-                          icon: const Icon(Icons.settings, color: Colors.white),
-                          style: IconButton.styleFrom(
-                            backgroundColor: Colors.black87,
-                          ),
-                          tooltip: 'Adjust Thresholds',
-                        ),
+                        _buildExerciseActionButton(),
                       ],
                     ],
                   ),

@@ -157,15 +157,16 @@ flutter analyze
 
 # Run tests
 flutter test
+(cd packages/fitness_counter && flutter test)
 
 # Format code
-dart format lib/ test/
+dart format lib/ test/ packages/
 ```
 
 Or use the verification workflow:
 
 ```bash
-flutter analyze && flutter test && dart format lib/ test/ --set-exit-if-changed
+flutter analyze && flutter test && (cd packages/fitness_counter && flutter test) && dart format lib/ test/ packages/ --set-exit-if-changed
 ```
 
 ### Architecture
@@ -201,6 +202,7 @@ The app requires camera access:
 
 ```bash
 flutter test
+(cd packages/fitness_counter && flutter test)
 ```
 
 ### Run Specific Test File
@@ -233,8 +235,8 @@ Contributions are welcome! Please read [AGENTS.md](AGENTS.md) for development gu
 
 1. Create a feature branch
 2. Make your changes
-3. Run verification: `flutter analyze && flutter test`
-4. Format code: `dart format lib/ test/`
+3. Run verification: `flutter analyze && flutter test && (cd packages/fitness_counter && flutter test)`
+4. Format code: `dart format lib/ test/ packages/`
 5. Submit a pull request
 
 ## 📝 License
