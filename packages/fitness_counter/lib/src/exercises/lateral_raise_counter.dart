@@ -62,7 +62,7 @@ class LateralRaiseCounter implements ExerciseCounter {
        topThreshold = topThreshold ?? 80.0,
        risingThreshold = (bottomThreshold ?? 20.0) + 5.0, // Hysteresis
        fallingThreshold = (topThreshold ?? 80.0) - 5.0, // Hysteresis
-       readyHoldTime = readyHoldTime ?? const Duration(milliseconds: 300),
+       readyHoldTime = readyHoldTime ?? const Duration(milliseconds: 150),
        minRepDuration = minRepDuration ?? const Duration(milliseconds: 500),
        maxRepDuration = maxRepDuration ?? const Duration(seconds: 5),
        debounceTime = debounceTime ?? const Duration(milliseconds: 100),
