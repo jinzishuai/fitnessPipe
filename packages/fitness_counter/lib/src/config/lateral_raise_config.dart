@@ -57,4 +57,7 @@ class LateralRaiseConfig extends ExerciseConfig {
   @override
   FormSensitivityConfig get defaultFormSensitivity =>
       const LateralRaiseSensitivity.defaults();
+
+  @override
+  String get startPositionPrompt => 'Lower arms to start';
 }

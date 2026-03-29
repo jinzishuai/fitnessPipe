@@ -34,4 +34,7 @@ class SingleSquatConfig extends ExerciseConfig {
 
   @override
   (double, double) get defaultThresholds => (170.0, 160.0);
+
+  @override
+  String get startPositionPrompt => 'Stand straight to begin';
 }

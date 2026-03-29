@@ -26,6 +26,11 @@ class VoiceGuidanceService {
   /// The severity of the currently-speaking message (for interruption logic).
   FormStatus? _currentSeverity;
 
+  /// Tracks when the start-position prompt was last spoken, to avoid
+  /// repeating every frame. Uses the same cooldown as form feedback (3s).
+  DateTime? _lastStartPromptTime;
+  static const Duration _startPromptCooldown = Duration(seconds: 3);
+
   /// Maps issue codes to short, actionable voice phrases.
   static const Map<String, String> _voicePhrases = {
     'ELBOW_BENT': 'Keep your arms straight',
@@ -175,6 +180,39 @@ class VoiceGuidanceService {
       'TTS_SPEAK: "$phrase" [${feedback.issue.severity.name}] code=${feedback.issue.code}',
     );
     await _tts.speak(phrase);
+  }
+
+  /// Speak an exercise start-position prompt
+  /// (e.g. "Lower arms to start", "Stand straight to begin").
+  ///
+  /// Uses a 3-second cooldown (matching [FeedbackCooldownManager] per-code
+  /// default) to avoid overwhelming the user with repeated instructions.
+  /// This prompt has lower priority than form corrections and will not
+  /// interrupt an in-progress utterance.
+  Future<void> speakStartPrompt(String prompt) async {
+    if (!_isEnabled || prompt.isEmpty) return;
+
+    // Don't interrupt any in-progress speech
+    if (_isSpeaking) return;
+
+    // Throttle: only re-speak after cooldown
+    final now = DateTime.now();
+    if (_lastStartPromptTime != null &&
+        now.difference(_lastStartPromptTime!) < _startPromptCooldown) {
+      return;
+    }
+
+    await _initCompleter.future;
+
+    _lastStartPromptTime = now;
+
+    debugPrint('TTS_START_PROMPT: "$prompt"');
+    await _tts.speak(prompt);
+  }
+
+  /// Reset the start-prompt cooldown (e.g. when exercise changes).
+  void resetStartPromptCooldown() {
+    _lastStartPromptTime = null;
   }
 
   /// Stop any currently speaking utterance immediately.

@@ -38,4 +38,10 @@ abstract class ExerciseConfig {
   /// Default form sensitivity config, or null if this exercise has no
   /// form analysis. Override in subclasses that support form checks.
   FormSensitivityConfig? get defaultFormSensitivity => null;
+
+  /// Short instruction shown (and spoken via TTS) when the user has not yet
+  /// reached the exercise's starting position.
+  ///
+  /// Examples: `'Lower arms to start'`, `'Stand straight to begin'`.
+  String get startPositionPrompt;
 }
