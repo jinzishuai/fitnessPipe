@@ -13,6 +13,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   LateralRaiseCounter? _lateralRaiseCounter;
   LateralRaiseFormAnalyzer? _lateralRaiseFormAnalyzer;
   SingleSquatCounter? _singleSquatCounter;
+  BenchPressCounter? _benchPressCounter;
+  BenchPressFormAnalyzer? _benchPressFormAnalyzer;
   int _repCount = 0;
   String _phaseLabel = 'Ready';
   Color _phaseColor = Colors.grey;
@@ -38,6 +40,12 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   // Form sensitivity (lateral raise)
   LateralRaiseSensitivity _currentSensitivity =
       const LateralRaiseSensitivity.defaults();
+
+  // Bench Press
+  double _benchPressTopThreshold = 150.0;
+  double _benchPressBottomThreshold = 90.0;
+  final BenchPressSensitivity _benchPressSensitivity =
+      const BenchPressSensitivity.defaults();
 
   // UI state
   bool _isLoading = true;
@@ -94,6 +102,9 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         bottomThreshold: _bottomThreshold,
         currentPhase: _lateralRaiseCounter!.state.phase,
       );
+    } else if (_selectedExercise == ExerciseType.benchPress &&
+        _benchPressCounter != null) {
+      return BenchPressGuide(currentPhase: _benchPressCounter!.state.phase);
     }
     // Other exercises don't have guides yet
     return null;
@@ -509,6 +520,50 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         };
         _phaseLabel = label;
         _phaseColor = color;
+      } else if (_selectedExercise == ExerciseType.benchPress &&
+          _benchPressCounter != null) {
+        event = _benchPressCounter!.processPose(poseFrame);
+        final state = _benchPressCounter!.state;
+        _repCount = state.repCount;
+        _currentAngle = state.smoothedAngle;
+
+        // Form Analysis
+        if (_benchPressFormAnalyzer != null) {
+          _currentFeedback = _benchPressFormAnalyzer!.analyzeFrame(
+            poseFrame.landmarks,
+          );
+
+          if (_currentFeedback != null && _feedbackCooldownManager != null) {
+            final filtered = _feedbackCooldownManager!.processFeedback(
+              _currentFeedback!,
+            );
+            if (filtered != null) {
+              _displayedFeedback = filtered;
+              _voiceGuidanceService.speak(filtered);
+              _feedbackClearTimer?.cancel();
+              _feedbackClearTimer = Timer(const Duration(seconds: 3), () {
+                if (mounted) {
+                  setState(() {
+                    _displayedFeedback = null;
+                  });
+                }
+              });
+            }
+          }
+        }
+
+        final (label, color) = switch (state.phase) {
+          BenchPressPhase.waiting => ('Ready...', Colors.grey),
+          BenchPressPhase.up => (
+            'Down ↓',
+            Colors.blue,
+          ), // Starting down from up
+          BenchPressPhase.falling => ('Lowering...', Colors.orange),
+          BenchPressPhase.down => ('Up ↑', Colors.green),
+          BenchPressPhase.rising => ('Pressing...', Colors.orange),
+        };
+        _phaseLabel = label;
+        _phaseColor = color;
       }
     });
 
@@ -532,6 +587,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
       _lateralRaiseCounter = null;
       _lateralRaiseFormAnalyzer = null;
       _singleSquatCounter = null;
+      _benchPressCounter = null;
+      _benchPressFormAnalyzer = null;
       _repCount = 0;
       _currentFeedback = null;
       _displayedFeedback = null;
@@ -563,6 +620,14 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         _singleSquatCounter = SingleSquatCounter(
           topThreshold: _squatTopThreshold,
           bottomThreshold: _squatBottomThreshold,
+        );
+      } else if (type == ExerciseType.benchPress) {
+        _benchPressCounter = BenchPressCounter(
+          topThreshold: _benchPressTopThreshold,
+          bottomThreshold: _benchPressBottomThreshold,
+        );
+        _benchPressFormAnalyzer = BenchPressFormAnalyzer(
+          sensitivity: _benchPressSensitivity,
         );
       }
 
@@ -624,9 +689,12 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     if (_selectedExercise == ExerciseType.lateralRaise) {
       currentTop = _topThreshold;
       currentBottom = _bottomThreshold;
-    } else {
+    } else if (_selectedExercise == ExerciseType.singleSquat) {
       currentTop = _squatTopThreshold;
       currentBottom = _squatBottomThreshold;
+    } else {
+      currentTop = _benchPressTopThreshold;
+      currentBottom = _benchPressBottomThreshold;
     }
 
     final exerciseType = _selectedExercise!;
@@ -669,6 +737,13 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
             topThreshold: _squatTopThreshold,
             bottomThreshold: _squatBottomThreshold,
           );
+        } else if (_selectedExercise == ExerciseType.benchPress) {
+          _benchPressTopThreshold = newTop;
+          _benchPressBottomThreshold = newBottom;
+          _benchPressCounter = BenchPressCounter(
+            topThreshold: _benchPressTopThreshold,
+            bottomThreshold: _benchPressBottomThreshold,
+          );
         }
 
         // Reset state
@@ -684,6 +759,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
     setState(() {
       _lateralRaiseCounter?.reset();
       _singleSquatCounter?.reset();
+      _benchPressCounter?.reset();
       _feedbackCooldownManager?.reset();
       _feedbackClearTimer?.cancel();
       _repCount = 0;

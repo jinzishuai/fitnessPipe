@@ -3,7 +3,8 @@ import 'package:fitness_counter/fitness_counter.dart';
 /// Exercise types available for rep counting.
 enum ExerciseType {
   lateralRaise('Lateral Raise'),
-  singleSquat('Single Squat');
+  singleSquat('Single Squat'),
+  benchPress('Bench Press');
 
   final String displayName;
   const ExerciseType(this.displayName);
@@ -15,6 +16,8 @@ enum ExerciseType {
         return ExerciseConfigs.lateralRaise;
       case ExerciseType.singleSquat:
         return ExerciseConfigs.singleSquat;
+      case ExerciseType.benchPress:
+        return ExerciseConfigs.benchPress;
     }
   }
 
@@ -25,6 +28,8 @@ enum ExerciseType {
         return 'assets/demos/lateral_raise_demo.mp4';
       case ExerciseType.singleSquat:
         return 'assets/demos/single_squat_demo.mp4';
+      case ExerciseType.benchPress:
+        return 'assets/demos/bench_press_demo.mp4';
     }
   }
 }

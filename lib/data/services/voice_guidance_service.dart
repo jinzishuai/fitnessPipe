@@ -33,11 +33,21 @@ class VoiceGuidanceService {
 
   /// Maps issue codes to short, actionable voice phrases.
   static const Map<String, String> _voicePhrases = {
+    // Lateral Raise Form
     'ELBOW_BENT': 'Keep your arms straight',
     'ELBOW_SOFT': 'Extend your elbows more',
     'TRUNK_LEAN': 'Keep your torso upright',
     'TRUNK_SHIFT': 'Keep your hips centered',
     'SHRUGGING': 'Relax your shoulders away from ears',
+
+    // Bench Press Form
+    'ELBOW_FLARE_BAD': 'Tuck your elbows, flaring is dangerous',
+    'ELBOW_FLARE_WARN': 'Tuck your elbows closer to your body',
+    'UNEVEN_PRESS_BAD': 'Push evenly with both arms',
+    'UNEVEN_PRESS_WARN': 'Keep the bar level',
+    'HIPS_RISING_BAD': 'Keep your glutes on the bench',
+    'HIPS_RISING_WARN': 'Don\'t lift your hips',
+    
     // LOW_CONFIDENCE is intentionally absent — always silent
   };
 
@@ -222,16 +232,12 @@ class VoiceGuidanceService {
   /// a demo video and you want to silence feedback without toggling the
   /// enabled state.
   Future<void> stop() async {
-    // Also stop if we're in the "starting" window where latency measurement
-    // has begun but the TTS engine has not yet reported that it is speaking.
-    if (_isSpeaking || _latencyStopwatch.isRunning) {
-      debugPrint('TTS_STOP: stopping current utterance');
-      await _tts.stop();
-      _isSpeaking = false;
-      _currentSeverity = null;
-      if (_latencyStopwatch.isRunning) {
-        _latencyStopwatch.stop();
-      }
+    debugPrint('TTS_STOP: stopping current utterance');
+    await _tts.stop();
+    _isSpeaking = false;
+    _currentSeverity = null;
+    if (_latencyStopwatch.isRunning) {
+      _latencyStopwatch.stop();
     }
   }
 

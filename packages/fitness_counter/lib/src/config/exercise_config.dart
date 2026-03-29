@@ -28,6 +28,12 @@ abstract class ExerciseConfig {
   /// Default threshold values as (topThreshold, bottomThreshold).
   (double, double) get defaultThresholds;
 
+  /// Slider bounds for top threshold configuration as (min, max).
+  (double, double) get topThresholdBounds => (30.0, 90.0);
+
+  /// Slider bounds for bottom threshold configuration as (min, max).
+  (double, double) get bottomThresholdBounds => (10.0, 40.0);
+
   /// Minimum cooldown between repeated feedback for the same issue code.
   ///
   /// Different exercises may have different-length feedback messages,
