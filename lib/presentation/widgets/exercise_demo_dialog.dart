@@ -51,7 +51,9 @@ class _ExerciseDemoDialogState extends State<ExerciseDemoDialog> {
 
     try {
       await _controller.initialize();
-      await _controller.setVolume(0.0); // Mute video audio to prevent overlapping voices
+      await _controller.setVolume(
+        0.0,
+      ); // Mute video audio to prevent overlapping voices
       await _controller.setLooping(true);
       await _controller.play();
       if (mounted) {

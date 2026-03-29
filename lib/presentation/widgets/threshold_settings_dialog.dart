@@ -84,7 +84,14 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
                       value: topThreshold,
                       min: widget.exerciseType.config.topThresholdBounds.$1,
                       max: widget.exerciseType.config.topThresholdBounds.$2,
-                      divisions: (widget.exerciseType.config.topThresholdBounds.$2 - widget.exerciseType.config.topThresholdBounds.$1).round(),
+                      divisions:
+                          (widget.exerciseType.config.topThresholdBounds.$2 -
+                                  widget
+                                      .exerciseType
+                                      .config
+                                      .topThresholdBounds
+                                      .$1)
+                              .round(),
                       label: '${topThreshold.round()}°',
                       onChanged: (value) {
                         setState(() {
@@ -93,8 +100,17 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
                           if (bottomThreshold >= topThreshold - 10) {
                             bottomThreshold = topThreshold - 10;
                             // Clamp bottomThreshold to min bounds
-                            if (bottomThreshold < widget.exerciseType.config.bottomThresholdBounds.$1) {
-                              bottomThreshold = widget.exerciseType.config.bottomThresholdBounds.$1;
+                            if (bottomThreshold <
+                                widget
+                                    .exerciseType
+                                    .config
+                                    .bottomThresholdBounds
+                                    .$1) {
+                              bottomThreshold = widget
+                                  .exerciseType
+                                  .config
+                                  .bottomThresholdBounds
+                                  .$1;
                             }
                           }
                         });
@@ -112,7 +128,14 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
                       value: bottomThreshold,
                       min: widget.exerciseType.config.bottomThresholdBounds.$1,
                       max: widget.exerciseType.config.bottomThresholdBounds.$2,
-                      divisions: (widget.exerciseType.config.bottomThresholdBounds.$2 - widget.exerciseType.config.bottomThresholdBounds.$1).round(),
+                      divisions:
+                          (widget.exerciseType.config.bottomThresholdBounds.$2 -
+                                  widget
+                                      .exerciseType
+                                      .config
+                                      .bottomThresholdBounds
+                                      .$1)
+                              .round(),
                       label: '${bottomThreshold.round()}°',
                       onChanged: (value) {
                         setState(() {

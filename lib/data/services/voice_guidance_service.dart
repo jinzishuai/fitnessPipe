@@ -47,7 +47,7 @@ class VoiceGuidanceService {
     'UNEVEN_PRESS_WARN': 'Keep the bar level',
     'HIPS_RISING_BAD': 'Keep your glutes on the bench',
     'HIPS_RISING_WARN': 'Don\'t lift your hips',
-    
+
     // LOW_CONFIDENCE is intentionally absent — always silent
   };
 
