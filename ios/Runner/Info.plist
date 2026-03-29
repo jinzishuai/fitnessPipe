@@ -30,6 +30,10 @@
 	<string>This app requires camera access for pose detection to track your exercise form.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>This app needs photo library access so you can replay a recorded workout video for pose testing.</string>
+	<key>NSUserActivityTypes</key>
+	<array>
+		<string>io.jinzishuai.fitnesspipe</string>
+	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
