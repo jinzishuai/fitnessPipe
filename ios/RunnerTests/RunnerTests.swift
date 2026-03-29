@@ -4,9 +4,19 @@ import XCTest
 
 class RunnerTests: XCTestCase {
 
-  func testExample() {
-    // If you add code to the Runner application, consider adding tests here.
-    // See https://developer.apple.com/documentation/xctest for more information about using XCTest.
+  func testInfoPlistDeclaresFlutterSceneDelegate() {
+    let plist = Bundle.main.infoDictionary
+
+    let sceneManifest = plist?["UIApplicationSceneManifest"] as? [String: Any]
+    let sceneConfigurations = sceneManifest?["UISceneConfigurations"] as? [String: Any]
+    let applicationScenes =
+      sceneConfigurations?["UIWindowSceneSessionRoleApplication"] as? [[String: Any]]
+    let firstScene = applicationScenes?.first
+    let delegateClassName = firstScene?["UISceneDelegateClassName"] as? String
+    let productModuleName = plist?["CFBundleExecutable"] as? String
+
+    XCTAssertNotNil(productModuleName, "CFBundleExecutable must be set in Info.plist")
+    XCTAssertEqual(delegateClassName, "\(productModuleName!).SceneDelegate")
   }
 
 }
