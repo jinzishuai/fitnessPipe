@@ -33,6 +33,13 @@ class VirtualCameraService {
       'width': 1920.0,
       'height': 1080.0,
     },
+    ExerciseType.benchPress: {
+      'prefix': 'assets/fixtures/bench_press/frame_',
+      'count': 192,
+      'fps': 24,
+      'width': 1280.0,
+      'height': 720.0,
+    },
   };
 
   ExerciseType _currentExercise;

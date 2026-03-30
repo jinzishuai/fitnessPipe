@@ -26,13 +26,28 @@ class VoiceGuidanceService {
   /// The severity of the currently-speaking message (for interruption logic).
   FormStatus? _currentSeverity;
 
+  /// Tracks when the start-position prompt was last spoken, to avoid
+  /// repeating every frame. Uses the same cooldown as form feedback (3s).
+  DateTime? _lastStartPromptTime;
+  static const Duration _startPromptCooldown = Duration(seconds: 3);
+
   /// Maps issue codes to short, actionable voice phrases.
   static const Map<String, String> _voicePhrases = {
+    // Lateral Raise Form
     'ELBOW_BENT': 'Keep your arms straight',
     'ELBOW_SOFT': 'Extend your elbows more',
     'TRUNK_LEAN': 'Keep your torso upright',
     'TRUNK_SHIFT': 'Keep your hips centered',
     'SHRUGGING': 'Relax your shoulders away from ears',
+
+    // Bench Press Form
+    'ELBOW_FLARE_BAD': 'Tuck your elbows, flaring is dangerous',
+    'ELBOW_FLARE_WARN': 'Tuck your elbows closer to your body',
+    'UNEVEN_PRESS_BAD': 'Push evenly with both arms',
+    'UNEVEN_PRESS_WARN': 'Keep the bar level',
+    'HIPS_RISING_BAD': 'Keep your glutes on the bench',
+    'HIPS_RISING_WARN': 'Don\'t lift your hips',
+
     // LOW_CONFIDENCE is intentionally absent — always silent
   };
 
@@ -177,6 +192,39 @@ class VoiceGuidanceService {
     await _tts.speak(phrase);
   }
 
+  /// Speak an exercise start-position prompt
+  /// (e.g. "Lower arms to start", "Stand straight to begin").
+  ///
+  /// Uses a 3-second cooldown (matching [FeedbackCooldownManager] per-code
+  /// default) to avoid overwhelming the user with repeated instructions.
+  /// This prompt has lower priority than form corrections and will not
+  /// interrupt an in-progress utterance.
+  Future<void> speakStartPrompt(String prompt) async {
+    if (!_isEnabled || prompt.isEmpty) return;
+
+    // Don't interrupt any in-progress speech
+    if (_isSpeaking) return;
+
+    // Throttle: only re-speak after cooldown
+    final now = DateTime.now();
+    if (_lastStartPromptTime != null &&
+        now.difference(_lastStartPromptTime!) < _startPromptCooldown) {
+      return;
+    }
+
+    await _initCompleter.future;
+
+    _lastStartPromptTime = now;
+
+    debugPrint('TTS_START_PROMPT: "$prompt"');
+    await _tts.speak(prompt);
+  }
+
+  /// Reset the start-prompt cooldown (e.g. when exercise changes).
+  void resetStartPromptCooldown() {
+    _lastStartPromptTime = null;
+  }
+
   /// Stop any currently speaking utterance immediately.
   ///
   /// Unlike [setEnabled], this does **not** disable future speech — it only
@@ -184,16 +232,12 @@ class VoiceGuidanceService {
   /// a demo video and you want to silence feedback without toggling the
   /// enabled state.
   Future<void> stop() async {
-    // Also stop if we're in the "starting" window where latency measurement
-    // has begun but the TTS engine has not yet reported that it is speaking.
-    if (_isSpeaking || _latencyStopwatch.isRunning) {
-      debugPrint('TTS_STOP: stopping current utterance');
-      await _tts.stop();
-      _isSpeaking = false;
-      _currentSeverity = null;
-      if (_latencyStopwatch.isRunning) {
-        _latencyStopwatch.stop();
-      }
+    debugPrint('TTS_STOP: stopping current utterance');
+    await _tts.stop();
+    _isSpeaking = false;
+    _currentSeverity = null;
+    if (_latencyStopwatch.isRunning) {
+      _latencyStopwatch.stop();
     }
   }
 

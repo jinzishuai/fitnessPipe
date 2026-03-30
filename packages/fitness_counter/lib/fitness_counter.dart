@@ -25,6 +25,7 @@ export 'src/models/counter_event.dart';
 export 'src/models/counter_state.dart';
 export 'src/models/landmark.dart';
 export 'src/models/pose_frame.dart';
+export 'src/models/form_feedback.dart';
 
 // Core
 export 'src/core/angle_calculator.dart';
@@ -34,7 +35,9 @@ export 'src/core/smoothing.dart';
 // Exercises
 export 'src/exercises/lateral_raise_counter.dart';
 export 'src/exercises/single_squat_counter.dart';
+export 'src/exercises/bench_press_counter.dart';
 export 'src/form_analyzers/lateral_raise_form_analyzer.dart';
+export 'src/form_analyzers/bench_press_form_analyzer.dart';
 export 'src/form_analyzers/feedback_cooldown_manager.dart';
 
 // Exercise Configs
@@ -43,3 +46,5 @@ export 'src/config/exercise_configs.dart';
 export 'src/config/form_sensitivity_config.dart';
 export 'src/config/lateral_raise_config.dart';
 export 'src/config/single_squat_config.dart';
+export 'src/config/bench_press_config.dart';
+export 'src/config/bench_press_sensitivity_config.dart';

@@ -28,6 +28,12 @@ abstract class ExerciseConfig {
   /// Default threshold values as (topThreshold, bottomThreshold).
   (double, double) get defaultThresholds;
 
+  /// Slider bounds for top threshold configuration as (min, max).
+  (double, double) get topThresholdBounds => (30.0, 90.0);
+
+  /// Slider bounds for bottom threshold configuration as (min, max).
+  (double, double) get bottomThresholdBounds => (10.0, 40.0);
+
   /// Minimum cooldown between repeated feedback for the same issue code.
   ///
   /// Different exercises may have different-length feedback messages,
@@ -38,4 +44,10 @@ abstract class ExerciseConfig {
   /// Default form sensitivity config, or null if this exercise has no
   /// form analysis. Override in subclasses that support form checks.
   FormSensitivityConfig? get defaultFormSensitivity => null;
+
+  /// Short instruction shown (and spoken via TTS) when the user has not yet
+  /// reached the exercise's starting position.
+  ///
+  /// Examples: `'Lower arms to start'`, `'Stand straight to begin'`.
+  String get startPositionPrompt;
 }

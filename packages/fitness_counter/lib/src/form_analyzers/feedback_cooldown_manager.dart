@@ -1,4 +1,4 @@
-import '../form_analyzers/lateral_raise_form_analyzer.dart';
+import '../models/form_feedback.dart';
 
 /// A single filtered feedback item ready for display/voice.
 class FilteredFeedback {

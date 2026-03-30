@@ -168,3 +168,72 @@ double calculateAverageKneeAngle({
     return leftAngle ?? rightAngle ?? 0.0;
   }
 }
+
+/// Calculate the elbow angle (Shoulder-Elbow-Wrist).
+///
+/// Returns angle in degrees (0-180). 180 is straight arm, 90 is bent right angle.
+double calculateElbowAngle({
+  required Landmark shoulder,
+  required Landmark elbow,
+  required Landmark wrist,
+}) {
+  // Vector from elbow to shoulder (upper arm)
+  final upperArmX = shoulder.x - elbow.x;
+  final upperArmY = shoulder.y - elbow.y;
+
+  // Vector from elbow to wrist (forearm)
+  final forearmX = wrist.x - elbow.x;
+  final forearmY = wrist.y - elbow.y;
+
+  // Calculate magnitudes
+  final upperArmMag = sqrt(upperArmX * upperArmX + upperArmY * upperArmY);
+  final forearmMag = sqrt(forearmX * forearmX + forearmY * forearmY);
+
+  if (upperArmMag == 0 || forearmMag == 0) return 0.0;
+
+  // Dot product
+  final dotProduct = upperArmX * forearmX + upperArmY * forearmY;
+
+  // Cosine of angle
+  final cosAngle = dotProduct / (upperArmMag * forearmMag);
+
+  final clampedCos = cosAngle.clamp(-1.0, 1.0);
+  final angleRadians = acos(clampedCos);
+
+  return angleRadians * 180.0 / pi;
+}
+
+/// Calculate the average elbow angle from both arms.
+double calculateAverageElbowAngle({
+  Landmark? leftShoulder,
+  Landmark? leftElbow,
+  Landmark? leftWrist,
+  Landmark? rightShoulder,
+  Landmark? rightElbow,
+  Landmark? rightWrist,
+}) {
+  double? leftAngle;
+  double? rightAngle;
+
+  if (leftShoulder != null && leftElbow != null && leftWrist != null) {
+    leftAngle = calculateElbowAngle(
+      shoulder: leftShoulder,
+      elbow: leftElbow,
+      wrist: leftWrist,
+    );
+  }
+
+  if (rightShoulder != null && rightElbow != null && rightWrist != null) {
+    rightAngle = calculateElbowAngle(
+      shoulder: rightShoulder,
+      elbow: rightElbow,
+      wrist: rightWrist,
+    );
+  }
+
+  if (leftAngle != null && rightAngle != null) {
+    return (leftAngle + rightAngle) / 2.0;
+  } else {
+    return leftAngle ?? rightAngle ?? 0.0;
+  }
+}

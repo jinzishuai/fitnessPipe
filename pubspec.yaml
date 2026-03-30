@@ -94,6 +94,7 @@ flutter:
   assets:
     - assets/fixtures/lateral_raise/
     - assets/fixtures/single_squat/
+    - assets/fixtures/bench_press/
     - assets/demos/
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg

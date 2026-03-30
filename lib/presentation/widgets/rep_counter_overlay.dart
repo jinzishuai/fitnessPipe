@@ -8,6 +8,10 @@ class RepCounterOverlay extends StatelessWidget {
   final double currentAngle;
   final bool isActive;
 
+  /// Exercise-specific prompt shown when user hasn't reached the starting
+  /// position yet (e.g., "Lower arms to start", "Stand straight to begin").
+  final String startPrompt;
+
   const RepCounterOverlay({
     super.key,
     required this.repCount,
@@ -15,6 +19,7 @@ class RepCounterOverlay extends StatelessWidget {
     required this.phaseColor,
     required this.currentAngle,
     this.isActive = false,
+    this.startPrompt = '',
   });
 
   @override
@@ -33,10 +38,10 @@ class RepCounterOverlay extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             // Guidance prompt (Only when inactive)
-            if (!isActive) ...[
-              const Text(
-                'Lower arms to start',
-                style: TextStyle(
+            if (!isActive && startPrompt.isNotEmpty) ...[
+              Text(
+                startPrompt,
+                style: const TextStyle(
                   color: Colors.redAccent,
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
