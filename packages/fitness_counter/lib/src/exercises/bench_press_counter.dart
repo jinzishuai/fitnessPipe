@@ -110,10 +110,10 @@ class BenchPressCounter implements ExerciseCounter {
         event = _processUp(angle, timestamp);
         break;
       case BenchPressPhase.falling:
-        event = _processFalling(angle);
+        event = _processFalling(angle, timestamp);
         break;
       case BenchPressPhase.down:
-        event = _processDown(angle);
+        event = _processDown(angle, timestamp);
         break;
       case BenchPressPhase.rising:
         event = _processRising(angle, timestamp);
@@ -145,25 +145,25 @@ class BenchPressCounter implements ExerciseCounter {
     return null;
   }
 
-  RepEvent? _processFalling(double angle) {
+  RepEvent? _processFalling(double angle, DateTime timestamp) {
     // Track peak angle (minimum angle reached, max elbow bend)
     if (angle < _peakAngle) {
       _peakAngle = angle;
     }
 
     if (angle <= bottomThreshold) {
-      return _changePhase(BenchPressPhase.down, angle, DateTime.now());
+      return _changePhase(BenchPressPhase.down, angle, timestamp);
     } else if (angle > topThreshold) {
       _repStartTime = null;
       _peakAngle = 180.0;
-      return _changePhase(BenchPressPhase.up, angle, DateTime.now());
+      return _changePhase(BenchPressPhase.up, angle, timestamp);
     }
     return null;
   }
 
-  RepEvent? _processDown(double angle) {
+  RepEvent? _processDown(double angle, DateTime timestamp) {
     if (angle > risingThreshold) {
-      return _changePhase(BenchPressPhase.rising, angle, DateTime.now());
+      return _changePhase(BenchPressPhase.rising, angle, timestamp);
     }
     return null;
   }

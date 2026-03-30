@@ -146,4 +146,132 @@ void main() {
       expect(average, equals(0.0));
     });
   });
+
+  group('calculateElbowAngle', () {
+    test('returns ~180 degrees for straight arm', () {
+      final shoulder = Landmark(x: 0.5, y: 0.3, confidence: 1.0);
+      final elbow = Landmark(x: 0.5, y: 0.5, confidence: 1.0);
+      final wrist = Landmark(x: 0.5, y: 0.7, confidence: 1.0);
+
+      final angle = calculateElbowAngle(
+        shoulder: shoulder,
+        elbow: elbow,
+        wrist: wrist,
+      );
+
+      expect(angle, closeTo(180, 1.0));
+    });
+
+    test('returns ~90 degrees for right angle bent arm', () {
+      final shoulder = Landmark(x: 0.5, y: 0.3, confidence: 1.0);
+      final elbow = Landmark(x: 0.5, y: 0.5, confidence: 1.0);
+      final wrist = Landmark(x: 0.7, y: 0.5, confidence: 1.0);
+
+      final angle = calculateElbowAngle(
+        shoulder: shoulder,
+        elbow: elbow,
+        wrist: wrist,
+      );
+
+      expect(angle, closeTo(90, 1.0));
+    });
+
+    test('returns ~0 degrees for fully folded arm', () {
+      final shoulder = Landmark(x: 0.5, y: 0.3, confidence: 1.0);
+      final elbow = Landmark(x: 0.5, y: 0.5, confidence: 1.0);
+      final wrist = Landmark(x: 0.5, y: 0.3, confidence: 1.0);
+
+      final angle = calculateElbowAngle(
+        shoulder: shoulder,
+        elbow: elbow,
+        wrist: wrist,
+      );
+
+      expect(angle, closeTo(0, 1.0));
+    });
+
+    test('handles edge case of zero-length upper arm vector', () {
+      final shoulder = Landmark(x: 0.5, y: 0.5, confidence: 1.0);
+      final elbow = Landmark(x: 0.5, y: 0.5, confidence: 1.0);
+      final wrist = Landmark(x: 0.5, y: 0.7, confidence: 1.0);
+
+      final angle = calculateElbowAngle(
+        shoulder: shoulder,
+        elbow: elbow,
+        wrist: wrist,
+      );
+
+      expect(angle, equals(0.0));
+    });
+
+    test('handles edge case of zero-length forearm vector', () {
+      final shoulder = Landmark(x: 0.5, y: 0.3, confidence: 1.0);
+      final elbow = Landmark(x: 0.5, y: 0.5, confidence: 1.0);
+      final wrist = Landmark(x: 0.5, y: 0.5, confidence: 1.0);
+
+      final angle = calculateElbowAngle(
+        shoulder: shoulder,
+        elbow: elbow,
+        wrist: wrist,
+      );
+
+      expect(angle, equals(0.0));
+    });
+  });
+
+  group('calculateAverageElbowAngle', () {
+    test('returns average when both arms visible', () {
+      final leftShoulder = Landmark(x: 0.3, y: 0.3, confidence: 1.0);
+      final leftElbow = Landmark(x: 0.3, y: 0.5, confidence: 1.0);
+      final leftWrist = Landmark(x: 0.5, y: 0.5, confidence: 1.0); // 90 deg
+
+      final rightShoulder = Landmark(x: 0.7, y: 0.3, confidence: 1.0);
+      final rightElbow = Landmark(x: 0.7, y: 0.5, confidence: 1.0);
+      final rightWrist = Landmark(x: 0.7, y: 0.7, confidence: 1.0); // 180 deg
+
+      final avg = calculateAverageElbowAngle(
+        leftShoulder: leftShoulder,
+        leftElbow: leftElbow,
+        leftWrist: leftWrist,
+        rightShoulder: rightShoulder,
+        rightElbow: rightElbow,
+        rightWrist: rightWrist,
+      );
+
+      expect(avg, closeTo(135.0, 1.0));
+    });
+
+    test('returns left angle when only left arm visible', () {
+      final leftShoulder = Landmark(x: 0.3, y: 0.3, confidence: 1.0);
+      final leftElbow = Landmark(x: 0.3, y: 0.5, confidence: 1.0);
+      final leftWrist = Landmark(x: 0.3, y: 0.7, confidence: 1.0);
+
+      final avg = calculateAverageElbowAngle(
+        leftShoulder: leftShoulder,
+        leftElbow: leftElbow,
+        leftWrist: leftWrist,
+      );
+
+      expect(avg, closeTo(180.0, 1.0));
+    });
+
+    test('returns right angle when only right arm visible', () {
+      final rightShoulder = Landmark(x: 0.7, y: 0.3, confidence: 1.0);
+      final rightElbow = Landmark(x: 0.7, y: 0.5, confidence: 1.0);
+      final rightWrist = Landmark(x: 0.7, y: 0.7, confidence: 1.0);
+
+      final avg = calculateAverageElbowAngle(
+        rightShoulder: rightShoulder,
+        rightElbow: rightElbow,
+        rightWrist: rightWrist,
+      );
+
+      expect(avg, closeTo(180.0, 1.0));
+    });
+
+    test('returns 0 when no arms visible', () {
+      final avg = calculateAverageElbowAngle();
+      expect(avg, equals(0.0));
+    });
+  });
 }
