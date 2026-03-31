@@ -7,7 +7,7 @@ import '../../domain/models/exercise_type.dart';
 class ThresholdDialogResult {
   final double topThreshold;
   final double bottomThreshold;
-  final LateralRaiseSensitivity? sensitivity;
+  final FormSensitivityConfig? sensitivity;
 
   const ThresholdDialogResult({
     required this.topThreshold,
@@ -24,7 +24,7 @@ class ThresholdDialogResult {
 class ThresholdSettingsDialog extends StatefulWidget {
   final double initialTopThreshold;
   final double initialBottomThreshold;
-  final LateralRaiseSensitivity? initialSensitivity;
+  final FormSensitivityConfig? initialSensitivity;
   final ExerciseType exerciseType;
   final VoidCallback? onShowDemo;
 
@@ -45,7 +45,7 @@ class ThresholdSettingsDialog extends StatefulWidget {
 class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
   late double topThreshold;
   late double bottomThreshold;
-  late LateralRaiseSensitivity? sensitivity;
+  late FormSensitivityConfig? sensitivity;
 
   @override
   void initState() {
@@ -229,6 +229,15 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
 
   Widget _buildSensitivitySection() {
     final s = sensitivity!;
+    if (s is LateralRaiseSensitivity) {
+      return _buildLateralRaiseSensitivity(s);
+    } else if (s is SingleSquatSensitivity) {
+      return _buildSingleSquatSensitivity(s);
+    }
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildLateralRaiseSensitivity(LateralRaiseSensitivity s) {
     return ExpansionTile(
       title: const Text(
         'Form Sensitivity',
@@ -352,6 +361,141 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
             onPressed: () {
               setState(() {
                 sensitivity = const LateralRaiseSensitivity.defaults();
+              });
+            },
+            icon: const Icon(Icons.restore, size: 16),
+            label: const Text('Reset to Defaults'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSingleSquatSensitivity(SingleSquatSensitivity s) {
+    return ExpansionTile(
+      title: const Text(
+        'Form Sensitivity',
+        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+      ),
+      initiallyExpanded: false,
+      tilePadding: EdgeInsets.zero,
+      children: [
+        const SizedBox(height: 8),
+
+        // --- Knee Valgus ---
+        _buildSectionHeader('Knee Alignment', Icons.airline_seat_legroom_normal),
+        _buildSlider(
+          label: 'Warning',
+          severityColor: Colors.amber,
+          value: s.kneeValgusWarnRatio * 100,
+          min: 3,
+          max: 15,
+          unit: '%',
+          description: 'Knee inward deviation % of hip width',
+          effectHint: 'Lower = stricter',
+          onChanged: (v) => setState(() {
+            sensitivity = s.copyWith(
+              kneeValgusWarnRatio: v / 100,
+              kneeValgusBadRatio:
+                  s.kneeValgusBadRatio < (v / 100) + 0.03
+                      ? (v / 100) + 0.03
+                      : null,
+            );
+          }),
+        ),
+        _buildSlider(
+          label: 'Bad',
+          severityColor: Colors.red,
+          value: s.kneeValgusBadRatio * 100,
+          min: 8,
+          max: 25,
+          unit: '%',
+          description: 'Knee inward deviation % for bad form',
+          effectHint: 'Lower = stricter',
+          onChanged: (v) => setState(() {
+            if (v / 100 > s.kneeValgusWarnRatio + 0.02) {
+              sensitivity = s.copyWith(kneeValgusBadRatio: v / 100);
+            }
+          }),
+        ),
+        const SizedBox(height: 12),
+
+        // --- Trunk Lean ---
+        _buildSectionHeader('Trunk Lean', Icons.accessibility_new),
+        _buildSlider(
+          label: 'Warning',
+          severityColor: Colors.amber,
+          value: s.trunkLeanWarnAngle,
+          min: 15,
+          max: 45,
+          unit: '°',
+          description: 'Forward lean angle for warning',
+          effectHint: 'Higher = more lenient',
+          onChanged: (v) => setState(() {
+            sensitivity = s.copyWith(
+              trunkLeanWarnAngle: v,
+              trunkLeanBadAngle: s.trunkLeanBadAngle < v + 5 ? v + 5 : null,
+            );
+          }),
+        ),
+        _buildSlider(
+          label: 'Bad',
+          severityColor: Colors.red,
+          value: s.trunkLeanBadAngle,
+          min: 25,
+          max: 60,
+          unit: '°',
+          description: 'Forward lean angle for bad form',
+          effectHint: 'Higher = more lenient',
+          onChanged: (v) => setState(() {
+            if (v > s.trunkLeanWarnAngle + 5) {
+              sensitivity = s.copyWith(trunkLeanBadAngle: v);
+            }
+          }),
+        ),
+        const SizedBox(height: 12),
+
+        // --- Depth ---
+        _buildSectionHeader('Squat Depth', Icons.arrow_downward),
+        _buildSlider(
+          label: 'Warning',
+          severityColor: Colors.amber,
+          value: s.depthWarnAngle,
+          min: 100,
+          max: 140,
+          unit: '°',
+          description: 'Knee angle above which depth is insufficient',
+          effectHint: 'Lower = deeper required',
+          onChanged: (v) => setState(() {
+            sensitivity = s.copyWith(
+              depthWarnAngle: v,
+              depthGoodAngle: s.depthGoodAngle > v - 10 ? v - 10 : null,
+            );
+          }),
+        ),
+        _buildSlider(
+          label: 'Good',
+          severityColor: Colors.green,
+          value: s.depthGoodAngle,
+          min: 70,
+          max: 130,
+          unit: '°',
+          description: 'Knee angle at which depth is good',
+          effectHint: 'Lower = deeper required',
+          onChanged: (v) => setState(() {
+            if (v < s.depthWarnAngle - 10) {
+              sensitivity = s.copyWith(depthGoodAngle: v);
+            }
+          }),
+        ),
+        const SizedBox(height: 12),
+
+        // Reset button
+        Center(
+          child: TextButton.icon(
+            onPressed: () {
+              setState(() {
+                sensitivity = const SingleSquatSensitivity.defaults();
               });
             },
             icon: const Icon(Icons.restore, size: 16),

@@ -27,6 +27,7 @@ import '../widgets/form_feedback_overlay.dart';
 import '../widgets/guides/exercise_guide.dart';
 import '../widgets/guides/lateral_raise_guide.dart';
 import '../widgets/guides/bench_press_guide.dart';
+import '../widgets/guides/single_squat_guide.dart';
 
 import '../widgets/rep_counter_overlay.dart';
 import '../widgets/skeleton_painter.dart';
