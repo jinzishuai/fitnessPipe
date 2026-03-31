@@ -41,8 +41,13 @@ class SingleSquatFormAnalyzer {
 
   static const int _sustainedFrameThreshold = 6;
 
-  SingleSquatFormAnalyzer({SingleSquatSensitivity? sensitivity})
-    : _sensitivity = sensitivity ?? const SingleSquatSensitivity.defaults();
+  /// Angle threshold describing when the user is standing upright.
+  final double standingThreshold;
+
+  SingleSquatFormAnalyzer({
+    SingleSquatSensitivity? sensitivity,
+    this.standingThreshold = 170.0,
+  }) : _sensitivity = sensitivity ?? const SingleSquatSensitivity.defaults();
 
   void updateSensitivity(SingleSquatSensitivity newSensitivity) {
     _sensitivity = newSensitivity;
@@ -281,11 +286,10 @@ class SingleSquatFormAnalyzer {
 
     final smoothedKneeAngle = _kneeAngleSmoother.smooth(kneeAngle);
     metrics['knee_angle'] = smoothedKneeAngle;
-    metrics['min_knee_angle_in_rep'] = _minKneeAngleInRep;
 
     if (!_wasDescending) {
-      // Not yet descending — check if we're starting a descent
-      if (smoothedKneeAngle < 160.0) {
+      // Not yet descending — check if we're starting a descent (10 degrees below standing)
+      if (smoothedKneeAngle < standingThreshold - 10.0) {
         _wasDescending = true;
         _minKneeAngleInRep = smoothedKneeAngle;
       }
@@ -295,11 +299,12 @@ class SingleSquatFormAnalyzer {
         _minKneeAngleInRep = smoothedKneeAngle;
       }
 
-      // Detect ascending phase: angle returning past standing threshold
-      if (smoothedKneeAngle > 165.0) {
+      // Detect ascending phase: angle returning past standing threshold - 5
+      if (smoothedKneeAngle > standingThreshold - 5.0) {
         // Check depth: only give feedback once per rep
         if (!_depthFeedbackGiven &&
-            _minKneeAngleInRep > _sensitivity.depthWarnAngle) {
+            _minKneeAngleInRep > _sensitivity.depthWarnAngle &&
+            _minKneeAngleInRep > _sensitivity.depthGoodAngle) {
           issues.add(
             const FormIssue(
               code: 'DEPTH_WARN',
@@ -311,12 +316,15 @@ class SingleSquatFormAnalyzer {
         }
 
         // Reset for next rep once mostly upright
-        if (smoothedKneeAngle > 170.0) {
+        if (smoothedKneeAngle > standingThreshold) {
           _wasDescending = false;
           _minKneeAngleInRep = 180.0;
           _depthFeedbackGiven = false;
         }
       }
     }
+
+    // Assign min angle to metric after all potential updates
+    metrics['min_knee_angle_in_rep'] = _minKneeAngleInRep;
   }
 }

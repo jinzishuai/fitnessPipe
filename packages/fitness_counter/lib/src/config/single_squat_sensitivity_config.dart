@@ -35,7 +35,7 @@ class SingleSquatSensitivity extends FormSensitivityConfig {
   // Knee angle (hip-knee-ankle) below which depth is "sufficient".
   // 180° = straight leg;  90° = thigh parallel to floor.
 
-  /// Knee angle below which a depth WARNING is issued (not quite parallel).
+  /// Knee angle above which a depth WARNING is issued (not deep enough / not quite parallel).
   final double depthWarnAngle;
 
   /// Knee angle at or below which depth is considered good (at/below parallel).

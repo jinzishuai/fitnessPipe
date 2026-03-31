@@ -651,6 +651,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         );
         _singleSquatFormAnalyzer = SingleSquatFormAnalyzer(
           sensitivity: _singleSquatSensitivity,
+          standingThreshold: _squatTopThreshold,
         );
       } else if (type == ExerciseType.benchPress) {
         _benchPressCounter = BenchPressCounter(
@@ -803,6 +804,9 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
       _lateralRaiseCounter?.reset();
       _singleSquatCounter?.reset();
       _benchPressCounter?.reset();
+      _lateralRaiseFormAnalyzer?.reset();
+      _singleSquatFormAnalyzer?.reset();
+      _benchPressFormAnalyzer?.reset();
       _feedbackCooldownManager?.reset();
       _feedbackClearTimer?.cancel();
       _repCount = 0;
