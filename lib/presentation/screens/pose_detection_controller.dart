@@ -738,8 +738,8 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
         initialSensitivity: exerciseType == ExerciseType.lateralRaise
             ? _currentSensitivity
             : exerciseType == ExerciseType.singleSquat
-                ? _singleSquatSensitivity
-                : null,
+            ? _singleSquatSensitivity
+            : null,
         onShowDemo: () => _showExerciseDemo(exerciseType),
       ),
     );

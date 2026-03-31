@@ -383,7 +383,10 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
         const SizedBox(height: 8),
 
         // --- Knee Valgus ---
-        _buildSectionHeader('Knee Alignment', Icons.airline_seat_legroom_normal),
+        _buildSectionHeader(
+          'Knee Alignment',
+          Icons.airline_seat_legroom_normal,
+        ),
         _buildSlider(
           label: 'Warning',
           severityColor: Colors.amber,
@@ -396,10 +399,9 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
           onChanged: (v) => setState(() {
             sensitivity = s.copyWith(
               kneeValgusWarnRatio: v / 100,
-              kneeValgusBadRatio:
-                  s.kneeValgusBadRatio < (v / 100) + 0.03
-                      ? (v / 100) + 0.03
-                      : null,
+              kneeValgusBadRatio: s.kneeValgusBadRatio < (v / 100) + 0.03
+                  ? (v / 100) + 0.03
+                  : null,
             );
           }),
         ),

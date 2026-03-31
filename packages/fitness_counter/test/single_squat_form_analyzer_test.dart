@@ -116,42 +116,12 @@ void main() {
           z: 0,
           confidence: 0.99,
         ),
-        LandmarkId.leftHip: Landmark(
-          x: 0.5,
-          y: 0.5,
-          z: 0,
-          confidence: 0.99,
-        ),
-        LandmarkId.rightHip: Landmark(
-          x: 0.5,
-          y: 0.5,
-          z: 0,
-          confidence: 0.99,
-        ),
-        LandmarkId.leftKnee: Landmark(
-          x: 0.5,
-          y: 0.7,
-          z: 0,
-          confidence: 0.99,
-        ),
-        LandmarkId.rightKnee: Landmark(
-          x: 0.5,
-          y: 0.7,
-          z: 0,
-          confidence: 0.99,
-        ),
-        LandmarkId.leftAnkle: Landmark(
-          x: 0.5,
-          y: 0.9,
-          z: 0,
-          confidence: 0.99,
-        ),
-        LandmarkId.rightAnkle: Landmark(
-          x: 0.5,
-          y: 0.9,
-          z: 0,
-          confidence: 0.99,
-        ),
+        LandmarkId.leftHip: Landmark(x: 0.5, y: 0.5, z: 0, confidence: 0.99),
+        LandmarkId.rightHip: Landmark(x: 0.5, y: 0.5, z: 0, confidence: 0.99),
+        LandmarkId.leftKnee: Landmark(x: 0.5, y: 0.7, z: 0, confidence: 0.99),
+        LandmarkId.rightKnee: Landmark(x: 0.5, y: 0.7, z: 0, confidence: 0.99),
+        LandmarkId.leftAnkle: Landmark(x: 0.5, y: 0.9, z: 0, confidence: 0.99),
+        LandmarkId.rightAnkle: Landmark(x: 0.5, y: 0.9, z: 0, confidence: 0.99),
       };
       final feedback = analyzer.analyzeFrame(landmarks);
       expect(feedback.status, equals(FormStatus.warning));
@@ -209,8 +179,7 @@ void main() {
 
       expect(
         feedback.issues.any(
-          (i) =>
-              i.code == 'KNEE_VALGUS_WARN' || i.code == 'KNEE_VALGUS_BAD',
+          (i) => i.code == 'KNEE_VALGUS_WARN' || i.code == 'KNEE_VALGUS_BAD',
         ),
         isFalse,
         reason: 'Should not flag valgus when knees are over ankles',
@@ -225,10 +194,7 @@ void main() {
       // dy = |0.28 - 0.50| = 0.22 → dx = 0.154
       // shoulder centerX = 0.525 + 0.154 = 0.679
       // lShoulder = 0.719, rShoulder = 0.639 → center = 0.679
-      final landmarks = makeLandmarks(
-        lShoulderX: 0.72,
-        rShoulderX: 0.64,
-      );
+      final landmarks = makeLandmarks(lShoulderX: 0.72, rShoulderX: 0.64);
 
       FormFeedback feedback = const FormFeedback(status: FormStatus.good);
       for (int i = 0; i < 25; i++) {
@@ -251,10 +217,7 @@ void main() {
       // dx = 0.30 → atan2(0.30, 0.22) = 53.7° > 45°
       // shoulder centerX = 0.525 + 0.30 = 0.825
       // lShoulder 0.865, rShoulder 0.785 → center = 0.825
-      final landmarks = makeLandmarks(
-        lShoulderX: 0.865,
-        rShoulderX: 0.785,
-      );
+      final landmarks = makeLandmarks(lShoulderX: 0.865, rShoulderX: 0.785);
 
       FormFeedback feedback = const FormFeedback(status: FormStatus.good);
       for (int i = 0; i < 25; i++) {
@@ -278,8 +241,7 @@ void main() {
 
       expect(
         feedback.issues.any(
-          (i) =>
-              i.code == 'TRUNK_LEAN_WARN' || i.code == 'TRUNK_LEAN_BAD',
+          (i) => i.code == 'TRUNK_LEAN_WARN' || i.code == 'TRUNK_LEAN_BAD',
         ),
         isFalse,
         reason: 'Should not flag trunk lean for upright posture',
@@ -383,8 +345,7 @@ void main() {
 
       expect(
         feedback.issues.any(
-          (i) =>
-              i.code == 'KNEE_VALGUS_WARN' || i.code == 'KNEE_VALGUS_BAD',
+          (i) => i.code == 'KNEE_VALGUS_WARN' || i.code == 'KNEE_VALGUS_BAD',
         ),
         isFalse,
         reason: 'Very lenient thresholds should not trigger valgus',
@@ -463,7 +424,11 @@ void main() {
       }
 
       // The demo video shows mostly good form.
-      expect(badCount, equals(0), reason: 'Good form should have no BAD issues');
+      expect(
+        badCount,
+        equals(0),
+        reason: 'Good form should have no BAD issues',
+      );
       // Allow depth warnings since the demo is a shallow squat
       expect(
         warningCount,
