@@ -12,7 +12,7 @@ void main() {
     });
 
     // ── Helper: create a landmarks map ────────────────────────────────────
-    Map<LandmarkId, Landmark> _makeLandmarks({
+    Map<LandmarkId, Landmark> makeLandmarks({
       // Shoulder positions (for trunk lean)
       double lShoulderX = 0.56,
       double lShoulderY = 0.28,
@@ -90,7 +90,7 @@ void main() {
 
     test('returns good status for proper form', () {
       // Good form: upright trunk, knees over toes, straight legs
-      final landmarks = _makeLandmarks();
+      final landmarks = makeLandmarks();
       final feedback = analyzer.analyzeFrame(landmarks);
       expect(feedback.status, equals(FormStatus.good));
       expect(feedback.issues, isEmpty);
@@ -165,7 +165,7 @@ void main() {
       // For warnRatio = 0.08: kneeDist must be < 0.05 * (1-0.08) = 0.046
       // lKnee=0.523, rKnee=0.497 → kneeDist = 0.026 → ratio = 1-0.026/0.05 = 0.48 → BAD
       // For milder: lKnee=0.535, rKnee=0.49 → dist = 0.045 → ratio = 1-0.045/0.05 = 0.10 → WARN
-      final landmarks = _makeLandmarks(lKneeX: 0.535, rKneeX: 0.49);
+      final landmarks = makeLandmarks(lKneeX: 0.535, rKneeX: 0.49);
 
       // Need sustained frames (6+) to trigger warning
       FormFeedback feedback = const FormFeedback(status: FormStatus.good);
@@ -184,7 +184,7 @@ void main() {
       // hipDist = 0.05
       // For badRatio = 0.15: kneeDist must be < 0.05 * (1-0.15) = 0.0425
       // lKnee=0.52, rKnee=0.50 → dist = 0.02 → ratio = 1-0.02/0.05 = 0.60 → BAD
-      final landmarks = _makeLandmarks(lKneeX: 0.52, rKneeX: 0.50);
+      final landmarks = makeLandmarks(lKneeX: 0.52, rKneeX: 0.50);
 
       // Feed multiple frames so smoother converges
       FormFeedback feedback = const FormFeedback(status: FormStatus.good);
@@ -201,7 +201,7 @@ void main() {
 
     test('no knee valgus warning for good alignment', () {
       // Knees tracking nicely over ankles
-      final landmarks = _makeLandmarks(lKneeX: 0.59, rKneeX: 0.47);
+      final landmarks = makeLandmarks(lKneeX: 0.59, rKneeX: 0.47);
       FormFeedback feedback = const FormFeedback(status: FormStatus.good);
       for (int i = 0; i < 10; i++) {
         feedback = analyzer.analyzeFrame(landmarks);
@@ -225,7 +225,7 @@ void main() {
       // dy = |0.28 - 0.50| = 0.22 → dx = 0.154
       // shoulder centerX = 0.525 + 0.154 = 0.679
       // lShoulder = 0.719, rShoulder = 0.639 → center = 0.679
-      final landmarks = _makeLandmarks(
+      final landmarks = makeLandmarks(
         lShoulderX: 0.72,
         rShoulderX: 0.64,
       );
@@ -251,7 +251,7 @@ void main() {
       // dx = 0.30 → atan2(0.30, 0.22) = 53.7° > 45°
       // shoulder centerX = 0.525 + 0.30 = 0.825
       // lShoulder 0.865, rShoulder 0.785 → center = 0.825
-      final landmarks = _makeLandmarks(
+      final landmarks = makeLandmarks(
         lShoulderX: 0.865,
         rShoulderX: 0.785,
       );
@@ -270,7 +270,7 @@ void main() {
 
     test('no trunk lean issue for upright posture', () {
       // Default landmarks have very upright posture
-      final landmarks = _makeLandmarks();
+      final landmarks = makeLandmarks();
       FormFeedback feedback = const FormFeedback(status: FormStatus.good);
       for (int i = 0; i < 10; i++) {
         feedback = analyzer.analyzeFrame(landmarks);
@@ -302,7 +302,7 @@ void main() {
 
       // Phase 1: Standing (straight legs, knee angle ~175°)
       for (int i = 0; i < 5; i++) {
-        analyzer.analyzeFrame(_makeLandmarks());
+        analyzer.analyzeFrame(makeLandmarks());
       }
 
       // Phase 2: Shallow descent
@@ -311,7 +311,7 @@ void main() {
       // This gives a clear knee bend but above 120° (warn threshold)
       for (int i = 0; i < 40; i++) {
         analyzer.analyzeFrame(
-          _makeLandmarks(
+          makeLandmarks(
             lHipY: 0.58,
             rHipY: 0.58,
             lKneeX: 0.61,
@@ -326,7 +326,7 @@ void main() {
       // on one of these frames
       bool depthWarnSeen = false;
       for (int i = 0; i < 15; i++) {
-        final fb = analyzer.analyzeFrame(_makeLandmarks());
+        final fb = analyzer.analyzeFrame(makeLandmarks());
         if (fb.issues.any((i) => i.code == 'DEPTH_WARN')) {
           depthWarnSeen = true;
         }
@@ -344,13 +344,13 @@ void main() {
     test('reset clears all state', () {
       // Feed some bad data
       for (int i = 0; i < 10; i++) {
-        analyzer.analyzeFrame(_makeLandmarks(lKneeX: 0.58));
+        analyzer.analyzeFrame(makeLandmarks(lKneeX: 0.58));
       }
 
       analyzer.reset();
 
       // After reset, good data should produce good feedback
-      final feedback = analyzer.analyzeFrame(_makeLandmarks());
+      final feedback = analyzer.analyzeFrame(makeLandmarks());
       // May still be good or have minor issues from one frame, but should
       // not have accumulated valgus warnings.
       expect(
@@ -375,7 +375,7 @@ void main() {
       analyzer.updateSensitivity(newSensitivity);
 
       // With very lenient thresholds, even bad form should pass
-      final landmarks = _makeLandmarks(lKneeX: 0.52, rKneeX: 0.50);
+      final landmarks = makeLandmarks(lKneeX: 0.52, rKneeX: 0.50);
       FormFeedback feedback = const FormFeedback(status: FormStatus.good);
       for (int i = 0; i < 10; i++) {
         feedback = analyzer.analyzeFrame(landmarks);
@@ -394,13 +394,13 @@ void main() {
     // ── Metrics Tests ────────────────────────────────────────────────────
 
     test('debug metrics are populated', () {
-      final landmarks = _makeLandmarks();
+      final landmarks = makeLandmarks();
       final feedback = analyzer.analyzeFrame(landmarks);
       expect(feedback.debugMetrics, isNotNull);
-      expect(feedback.debugMetrics!, contains('trunk_lean'));
-      expect(feedback.debugMetrics!, contains('valgus_left'));
-      expect(feedback.debugMetrics!, contains('valgus_right'));
-      expect(feedback.debugMetrics!, contains('knee_angle'));
+      expect(feedback.debugMetrics, contains('trunk_lean'));
+      expect(feedback.debugMetrics, contains('valgus_left'));
+      expect(feedback.debugMetrics, contains('valgus_right'));
+      expect(feedback.debugMetrics, contains('knee_angle'));
     });
   });
 
@@ -480,7 +480,7 @@ void main() {
 
       for (var frame in frames) {
         final feedback = analyzer.analyzeFrame(frame.landmarks);
-        final trunkLean = feedback.debugMetrics?['trunk_lean'] ?? 0.0;
+        final trunkLean = feedback.debugMetrics['trunk_lean'] ?? 0.0;
         if (trunkLean > maxTrunkLean) maxTrunkLean = trunkLean;
       }
 
