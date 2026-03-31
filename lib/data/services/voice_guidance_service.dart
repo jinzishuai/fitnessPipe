@@ -48,6 +48,13 @@ class VoiceGuidanceService {
     'HIPS_RISING_BAD': 'Keep your glutes on the bench',
     'HIPS_RISING_WARN': 'Don\'t lift your hips',
 
+    // Single Squat Form
+    'KNEE_VALGUS_BAD': 'Push your knees outward, they are caving in',
+    'KNEE_VALGUS_WARN': 'Keep your knees over your toes',
+    'TRUNK_LEAN_BAD': 'Keep your chest up, do not lean too far forward',
+    'TRUNK_LEAN_WARN': 'Keep your chest up',
+    'DEPTH_WARN': 'Try to squat lower',
+
     // LOW_CONFIDENCE is intentionally absent — always silent
   };
 
