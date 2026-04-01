@@ -42,6 +42,9 @@ class _ExerciseDemoDialogState extends State<ExerciseDemoDialog> {
   void initState() {
     super.initState();
     _initializeVideo();
+    if (widget.autoClose) {
+      _startCountdown();
+    }
   }
 
   Future<void> _initializeVideo() async {
@@ -50,7 +53,7 @@ class _ExerciseDemoDialogState extends State<ExerciseDemoDialog> {
     );
 
     try {
-      await _controller.initialize();
+      await _controller.initialize().timeout(const Duration(seconds: 4));
       await _controller.setVolume(
         0.0,
       ); // Mute video audio to prevent overlapping voices
@@ -60,10 +63,6 @@ class _ExerciseDemoDialogState extends State<ExerciseDemoDialog> {
         setState(() {
           _isInitialized = true;
         });
-        // Start auto-close countdown once video is playing
-        if (widget.autoClose) {
-          _startCountdown();
-        }
       }
     } catch (e) {
       if (mounted) {
@@ -169,7 +168,7 @@ class _ExerciseDemoDialogState extends State<ExerciseDemoDialog> {
                 ),
 
                 // Auto-close countdown (bottom-center)
-                if (widget.autoClose && _isInitialized)
+                if (widget.autoClose)
                   Positioned(
                     bottom: 12,
                     left: 0,

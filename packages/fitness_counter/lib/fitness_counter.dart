@@ -38,6 +38,7 @@ export 'src/exercises/single_squat_counter.dart';
 export 'src/exercises/bench_press_counter.dart';
 export 'src/form_analyzers/lateral_raise_form_analyzer.dart';
 export 'src/form_analyzers/bench_press_form_analyzer.dart';
+export 'src/form_analyzers/single_squat_form_analyzer.dart';
 export 'src/form_analyzers/feedback_cooldown_manager.dart';
 
 // Exercise Configs
@@ -48,3 +49,4 @@ export 'src/config/lateral_raise_config.dart';
 export 'src/config/single_squat_config.dart';
 export 'src/config/bench_press_config.dart';
 export 'src/config/bench_press_sensitivity_config.dart';
+export 'src/config/single_squat_sensitivity_config.dart';
