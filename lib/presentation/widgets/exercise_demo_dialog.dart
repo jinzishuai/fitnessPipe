@@ -60,16 +60,16 @@ class _ExerciseDemoDialogState extends State<ExerciseDemoDialog> {
         setState(() {
           _isInitialized = true;
         });
-        // Start auto-close countdown once video is playing
-        if (widget.autoClose) {
-          _startCountdown();
-        }
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _errorMessage = 'Failed to load demo video: $e';
         });
+      }
+    } finally {
+      if (mounted && widget.autoClose) {
+        _startCountdown();
       }
     }
   }
