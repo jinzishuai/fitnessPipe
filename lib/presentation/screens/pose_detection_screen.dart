@@ -10,6 +10,8 @@ import 'package:google_mlkit_commons/google_mlkit_commons.dart';
 import 'package:native_device_orientation/native_device_orientation.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import 'pose_detection_input_mode.dart';
+
 import '../../core/adapters/pose_adapter.dart';
 import '../../data/services/library_video_input_source.dart';
 import '../../data/ml_kit/ml_kit_pose_detector.dart';
@@ -34,19 +36,10 @@ import '../widgets/skeleton_painter.dart';
 import '../widgets/threshold_settings_dialog.dart';
 import '../widgets/exercise_demo_dialog.dart';
 
-// The _PoseDetectionScreenState class with all business logic and UI.
 part 'pose_detection_controller.dart';
-
-enum _PoseInputMode {
-  frontCamera('Front Camera'),
-  backCamera('Back Camera'),
-  libraryVideo('Library Video'),
-  simulatorFixtures('Simulator Fixtures');
-
-  const _PoseInputMode(this.label);
-
-  final String label;
-}
+part 'pose_detection_camera.dart';
+part 'pose_detection_exercise.dart';
+part 'pose_detection_view.dart';
 
 /// Main screen for pose detection with camera preview and skeleton overlay.
 class PoseDetectionScreen extends StatefulWidget {
