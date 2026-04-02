@@ -60,3 +60,4 @@ maestro-screenshots/
 # Maestro takeScreenshot outputs (saved to project root)
 single-squat-counter.png
 lateral-raise-counter.png
+.worktrees/
