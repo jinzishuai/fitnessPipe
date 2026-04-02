@@ -46,8 +46,23 @@ appId: com.fitnesspipe.fitnessPipe
     timeout: 60000
 - assertVisible: "reps"
 
-# Switch back to Lateral Raise
+# Exercise Navigation — switch to Bench Press
 - tapOn: "Single Squat"
+- extendedWaitUntil:
+    visible: "Bench Press"
+    timeout: 5000
+- tapOn: "Bench Press"
+- extendedWaitUntil:
+    visible: "Bench Press"
+    timeout: 11000
+# Wait for counter to increment > 0 (virtual pose needs time for detection + counting)
+- extendedWaitUntil:
+    visible: "[1-9][0-9]*"
+    timeout: 60000
+- assertVisible: "reps"
+
+# Switch back to Lateral Raise
+- tapOn: "Bench Press"
 - extendedWaitUntil:
     visible: "Lateral Raise"
     timeout: 5000
