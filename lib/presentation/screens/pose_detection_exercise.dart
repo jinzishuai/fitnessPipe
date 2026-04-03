@@ -256,19 +256,19 @@ extension _PoseDetectionScreenExercise on _PoseDetectionScreenState {
     }
 
     final exerciseType = _selectedExercise!;
-    final result = await showDialog<ThresholdDialogResult>(
+    final result = await showThresholdSettingsSheet(
       context: context,
-      builder: (context) => ThresholdSettingsDialog(
-        initialTopThreshold: currentTop,
-        initialBottomThreshold: currentBottom,
-        exerciseType: exerciseType,
-        initialSensitivity: exerciseType == ExerciseType.lateralRaise
-            ? _currentSensitivity
-            : exerciseType == ExerciseType.singleSquat
-            ? _singleSquatSensitivity
-            : null,
-        onShowDemo: () => _showExerciseDemo(exerciseType),
-      ),
+      initialTopThreshold: currentTop,
+      initialBottomThreshold: currentBottom,
+      exerciseType: exerciseType,
+      initialSensitivity: exerciseType == ExerciseType.lateralRaise
+          ? _currentSensitivity
+          : exerciseType == ExerciseType.singleSquat
+          ? _singleSquatSensitivity
+          : exerciseType == ExerciseType.benchPress
+          ? _benchPressSensitivity
+          : null,
+      onShowDemo: () => _showExerciseDemo(exerciseType),
     );
 
     if (result != null) {
@@ -311,6 +311,12 @@ extension _PoseDetectionScreenExercise on _PoseDetectionScreenState {
             topThreshold: _benchPressTopThreshold,
             bottomThreshold: _benchPressBottomThreshold,
           );
+
+          if (result.sensitivity is BenchPressSensitivity) {
+            _benchPressSensitivity =
+                result.sensitivity! as BenchPressSensitivity;
+            _benchPressFormAnalyzer?.updateSensitivity(_benchPressSensitivity);
+          }
         }
 
         _repCount = 0;

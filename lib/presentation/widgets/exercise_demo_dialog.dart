@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../domain/models/exercise_type.dart';
+import '../theme/app_theme.dart';
 
 /// Overlay dialog that plays a looping instructional demo video
 /// for the given [exerciseType].
@@ -34,7 +35,6 @@ class _ExerciseDemoDialogState extends State<ExerciseDemoDialog> {
   bool _isInitialized = false;
   String? _errorMessage;
 
-  // Auto-close countdown
   Timer? _countdownTimer;
   int _secondsRemaining = 6;
 
@@ -54,9 +54,7 @@ class _ExerciseDemoDialogState extends State<ExerciseDemoDialog> {
 
     try {
       await _controller.initialize().timeout(const Duration(seconds: 4));
-      await _controller.setVolume(
-        0.0,
-      ); // Mute video audio to prevent overlapping voices
+      await _controller.setVolume(0.0);
       await _controller.setLooping(true);
       await _controller.play();
       if (mounted) {
@@ -98,9 +96,11 @@ class _ExerciseDemoDialogState extends State<ExerciseDemoDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.fpTheme;
+
     return Dialog(
-      backgroundColor: Colors.black,
-      insetPadding: const EdgeInsets.all(16),
+      backgroundColor: const Color(0xFF1C1C1E),
+      insetPadding: const EdgeInsets.all(20),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
@@ -108,7 +108,6 @@ class _ExerciseDemoDialogState extends State<ExerciseDemoDialog> {
           child: IntrinsicHeight(
             child: Stack(
               children: [
-                // Video content — preserves native aspect ratio
                 if (_isInitialized)
                   AspectRatio(
                     aspectRatio: _controller.value.aspectRatio,
@@ -120,7 +119,6 @@ class _ExerciseDemoDialogState extends State<ExerciseDemoDialog> {
                     child: SizedBox.expand(),
                   ),
 
-                // Loading / error overlay
                 if (!_isInitialized || _errorMessage != null)
                   Positioned.fill(child: _buildStatusOverlay()),
 
@@ -128,21 +126,18 @@ class _ExerciseDemoDialogState extends State<ExerciseDemoDialog> {
                 Positioned(
                   top: 12,
                   left: 16,
-                  child: Container(
+                  child: GlassContainer(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
-                      vertical: 6,
+                      vertical: 8,
                     ),
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    borderRadius: 10,
                     child: Text(
                       '${widget.exerciseType.displayName} Demo',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -152,46 +147,48 @@ class _ExerciseDemoDialogState extends State<ExerciseDemoDialog> {
                 Positioned(
                   top: 8,
                   right: 8,
-                  child: Material(
-                    color: Colors.black54,
-                    shape: const CircleBorder(),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.close,
-                        color: Colors.white,
-                        size: 24,
+                  child: GlassContainer(
+                    padding: EdgeInsets.zero,
+                    borderRadius: 20,
+                    child: SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        tooltip: 'Close',
+                        onPressed: () => Navigator.of(context).pop(),
+                        padding: EdgeInsets.zero,
                       ),
-                      tooltip: 'Close',
-                      onPressed: () => Navigator.of(context).pop(),
                     ),
                   ),
                 ),
 
-                // Auto-close countdown (bottom-center)
+                // Auto-close countdown
                 if (widget.autoClose)
                   Positioned(
                     bottom: 12,
                     left: 0,
                     right: 0,
                     child: Center(
-                      child: Container(
+                      child: GlassContainer(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 8,
                         ),
-                        decoration: BoxDecoration(
-                          color: Colors.black54,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
+                        borderRadius: 20,
                         child: Text(
                           _secondsRemaining <= 3
                               ? 'Closing in $_secondsRemaining...'
                               : 'Auto-closing in $_secondsRemaining s',
                           style: TextStyle(
                             color: _secondsRemaining <= 3
-                                ? Colors.orangeAccent
+                                ? theme.feedbackWarning
                                 : Colors.white70,
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: _secondsRemaining <= 3
                                 ? FontWeight.bold
                                 : FontWeight.normal,
