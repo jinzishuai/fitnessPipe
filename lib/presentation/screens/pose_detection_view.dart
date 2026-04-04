@@ -6,7 +6,6 @@ extension _PoseDetectionScreenView on _PoseDetectionScreenState {
       backgroundColor: Colors.black,
       appBar: AppBar(
         title: const Text('FitnessPipe'),
-        backgroundColor: Colors.black87,
         actions: [
           if (_canShowInputSelector)
             PopupMenuButton<PoseDetectionInputMode>(
@@ -49,15 +48,17 @@ extension _PoseDetectionScreenView on _PoseDetectionScreenState {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(color: Colors.green),
-            SizedBox(height: 16),
+            CircularProgressIndicator(
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 16),
             Text(
               'Initializing camera...',
-              style: TextStyle(color: Colors.white),
+              style: Theme.of(context).textTheme.bodyLarge,
             ),
           ],
         ),
@@ -75,7 +76,7 @@ extension _PoseDetectionScreenView on _PoseDetectionScreenState {
               const SizedBox(height: 16),
               Text(
                 _errorMessage!,
-                style: const TextStyle(color: Colors.white),
+                style: Theme.of(context).textTheme.bodyLarge,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
@@ -96,6 +97,33 @@ extension _PoseDetectionScreenView on _PoseDetectionScreenState {
     } else {
       return _buildMobileCameraPreview();
     }
+  }
+
+  CameraOverlay _buildOverlay() {
+    return CameraOverlay(
+      selectedExercise: _selectedExercise,
+      onExerciseSelected: _onExerciseSelected,
+      onShowSettings: _showThresholdSettings,
+      onReset: _resetCounter,
+      onToggleVoice: () {
+        _updateState(() {
+          _voiceGuidanceService.setEnabled(!_voiceGuidanceService.isEnabled);
+        });
+      },
+      voiceEnabled: _voiceGuidanceService.isEnabled,
+      isActive: _phaseColor != Colors.grey,
+      repCount: _repCount,
+      phaseLabel: _phaseLabel,
+      phaseColor: _phaseColor,
+      currentAngle: _currentAngle,
+      startPrompt: _selectedExercise?.config.startPositionPrompt ?? '',
+      displayedFeedback: _displayedFeedback,
+      hasPose: _currentPose != null,
+      poseConfidence: _currentPose?.confidence,
+      poseLabel: _filePreviewPoseLabel,
+      badgeLabel: _filePreviewBadgeLabel,
+      badgeColor: _filePreviewBadgeColor,
+    );
   }
 
   Widget _buildFilePreview() {
@@ -137,126 +165,7 @@ extension _PoseDetectionScreenView on _PoseDetectionScreenState {
                       ),
                     ),
                   ),
-                Positioned(
-                  top: 16,
-                  left: 16,
-                  child: Row(
-                    children: [
-                      ExerciseSelectorDropdown(
-                        selectedExercise: _selectedExercise,
-                        onChanged: _onExerciseSelected,
-                      ),
-                      if (_selectedExercise != null) ...[
-                        const SizedBox(width: 8),
-                        _buildExerciseActionButton(),
-                      ],
-                    ],
-                  ),
-                ),
-                if (_selectedExercise != null)
-                  RepCounterOverlay(
-                    isActive: _phaseColor != Colors.grey,
-                    repCount: _repCount,
-                    phaseLabel: _phaseLabel,
-                    phaseColor: _phaseColor,
-                    currentAngle: _currentAngle,
-                    startPrompt:
-                        _selectedExercise?.config.startPositionPrompt ?? '',
-                  ),
-                if (_selectedExercise != null)
-                  Positioned(
-                    bottom: 16,
-                    right: 16,
-                    child: FloatingActionButton(
-                      onPressed: _resetCounter,
-                      backgroundColor: Colors.black87,
-                      child: const Icon(Icons.refresh, color: Colors.white),
-                    ),
-                  ),
-                Positioned(
-                  bottom: 16,
-                  left: 16,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 10,
-                          height: 10,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _currentPose != null
-                                ? Colors.greenAccent
-                                : Colors.red,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _currentPose != null
-                              ? '$_filePreviewPoseLabel: ${(_currentPose!.confidence * 100).toStringAsFixed(0)}%'
-                              : 'No pose detected',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                if (_displayedFeedback != null)
-                  FormFeedbackOverlay(
-                    feedback: FormFeedback(
-                      status: _displayedFeedback!.status,
-                      issues: [_displayedFeedback!.issue],
-                    ),
-                  ),
-                if (_selectedExercise != null)
-                  Positioned(
-                    bottom: 16,
-                    right: 80,
-                    child: FloatingActionButton(
-                      mini: true,
-                      onPressed: () {
-                        _updateState(() {
-                          _voiceGuidanceService.setEnabled(
-                            !_voiceGuidanceService.isEnabled,
-                          );
-                        });
-                      },
-                      backgroundColor: Colors.black87,
-                      child: Icon(
-                        _voiceGuidanceService.isEnabled
-                            ? Icons.volume_up
-                            : Icons.volume_off,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                if (_filePreviewBadgeLabel.isNotEmpty)
-                  Positioned(
-                    top: 16,
-                    right: 16,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      color: _filePreviewBadgeColor,
-                      child: Text(
-                        _filePreviewBadgeLabel,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
+                _buildOverlay(),
               ],
             ),
           ),
@@ -391,110 +300,7 @@ extension _PoseDetectionScreenView on _PoseDetectionScreenState {
                         ),
                       ),
                     ),
-                  Positioned(
-                    top: 16,
-                    left: 16,
-                    child: Row(
-                      children: [
-                        ExerciseSelectorDropdown(
-                          selectedExercise: _selectedExercise,
-                          onChanged: _onExerciseSelected,
-                        ),
-                        if (_selectedExercise != null) ...[
-                          const SizedBox(width: 8),
-                          _buildExerciseActionButton(),
-                        ],
-                      ],
-                    ),
-                  ),
-                  if (_selectedExercise != null)
-                    RepCounterOverlay(
-                      isActive: _phaseColor != Colors.grey,
-                      repCount: _repCount,
-                      phaseLabel: _phaseLabel,
-                      phaseColor: _phaseColor,
-                      currentAngle: _currentAngle,
-                      startPrompt:
-                          _selectedExercise?.config.startPositionPrompt ?? '',
-                    ),
-                  if (_displayedFeedback != null)
-                    FormFeedbackOverlay(
-                      feedback: FormFeedback(
-                        status: _displayedFeedback!.status,
-                        issues: [_displayedFeedback!.issue],
-                      ),
-                    ),
-                  if (_selectedExercise != null)
-                    Positioned(
-                      bottom: 16,
-                      right: 80,
-                      child: FloatingActionButton(
-                        mini: true,
-                        onPressed: () {
-                          _updateState(() {
-                            _voiceGuidanceService.setEnabled(
-                              !_voiceGuidanceService.isEnabled,
-                            );
-                          });
-                        },
-                        backgroundColor: Colors.black87,
-                        child: Icon(
-                          _voiceGuidanceService.isEnabled
-                              ? Icons.volume_up
-                              : Icons.volume_off,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  if (_selectedExercise != null)
-                    Positioned(
-                      bottom: 16,
-                      right: 16,
-                      child: FloatingActionButton(
-                        onPressed: _resetCounter,
-                        backgroundColor: Colors.black87,
-                        child: const Icon(Icons.refresh, color: Colors.white),
-                      ),
-                    ),
-                  Positioned(
-                    bottom: 16,
-                    left: 16,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 10,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: _currentPose != null
-                                  ? Colors.greenAccent
-                                  : Colors.red,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _currentPose != null
-                                ? 'Pose: ${(_currentPose!.confidence * 100).toStringAsFixed(0)}%'
-                                : 'No pose detected',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  _buildOverlay(),
                 ],
               ),
             ),
@@ -593,110 +399,7 @@ extension _PoseDetectionScreenView on _PoseDetectionScreenState {
                       ),
                     ),
                   ),
-                Positioned(
-                  top: 16,
-                  left: 16,
-                  child: Row(
-                    children: [
-                      ExerciseSelectorDropdown(
-                        selectedExercise: _selectedExercise,
-                        onChanged: _onExerciseSelected,
-                      ),
-                      if (_selectedExercise != null) ...[
-                        const SizedBox(width: 8),
-                        _buildExerciseActionButton(),
-                      ],
-                    ],
-                  ),
-                ),
-                if (_selectedExercise != null)
-                  RepCounterOverlay(
-                    isActive: _phaseColor != Colors.grey,
-                    repCount: _repCount,
-                    phaseLabel: _phaseLabel,
-                    phaseColor: _phaseColor,
-                    currentAngle: _currentAngle,
-                    startPrompt:
-                        _selectedExercise?.config.startPositionPrompt ?? '',
-                  ),
-                if (_displayedFeedback != null)
-                  FormFeedbackOverlay(
-                    feedback: FormFeedback(
-                      status: _displayedFeedback!.status,
-                      issues: [_displayedFeedback!.issue],
-                    ),
-                  ),
-                if (_selectedExercise != null)
-                  Positioned(
-                    bottom: 16,
-                    right: 16,
-                    child: FloatingActionButton(
-                      onPressed: _resetCounter,
-                      backgroundColor: Colors.black87,
-                      child: const Icon(Icons.refresh, color: Colors.white),
-                    ),
-                  ),
-                if (_selectedExercise != null)
-                  Positioned(
-                    bottom: 16,
-                    right: 80,
-                    child: FloatingActionButton(
-                      mini: true,
-                      onPressed: () {
-                        _updateState(() {
-                          _voiceGuidanceService.setEnabled(
-                            !_voiceGuidanceService.isEnabled,
-                          );
-                        });
-                      },
-                      backgroundColor: Colors.black87,
-                      child: Icon(
-                        _voiceGuidanceService.isEnabled
-                            ? Icons.volume_up
-                            : Icons.volume_off,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                Positioned(
-                  bottom: 16,
-                  left: 16,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 10,
-                          height: 10,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _currentPose != null
-                                ? Colors.greenAccent
-                                : Colors.red,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _currentPose != null
-                              ? 'Pose: ${(_currentPose!.confidence * 100).toStringAsFixed(0)}%'
-                              : 'No pose detected',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                _buildOverlay(),
               ],
             ),
           ),
@@ -707,15 +410,6 @@ extension _PoseDetectionScreenView on _PoseDetectionScreenState {
         }
         return previewWidget;
       },
-    );
-  }
-
-  Widget _buildExerciseActionButton() {
-    return IconButton(
-      onPressed: _showThresholdSettings,
-      icon: const Icon(Icons.settings, color: Colors.white),
-      style: IconButton.styleFrom(backgroundColor: Colors.black87),
-      tooltip: 'Settings',
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:fitness_counter/fitness_counter.dart';
 import 'package:flutter/material.dart';
 
 import '../../domain/models/exercise_type.dart';
+import '../theme/app_theme.dart';
 
 /// Dialog result containing angle thresholds and optional sensitivity config.
 class ThresholdDialogResult {
@@ -16,19 +17,41 @@ class ThresholdDialogResult {
   });
 }
 
-/// Dialog for configuring exercise thresholds and form sensitivity.
+/// Shows a bottom sheet for configuring exercise thresholds and form sensitivity.
 ///
-/// When [initialSensitivity] is provided, shows additional sliders
-/// for adjusting form check sensitivity. When null, only the angle
-/// threshold sliders are shown.
-class ThresholdSettingsDialog extends StatefulWidget {
+/// Returns a [ThresholdDialogResult] if the user applies changes, or null
+/// if they dismiss without applying.
+Future<ThresholdDialogResult?> showThresholdSettingsSheet({
+  required BuildContext context,
+  required double initialTopThreshold,
+  required double initialBottomThreshold,
+  required ExerciseType exerciseType,
+  FormSensitivityConfig? initialSensitivity,
+  VoidCallback? onShowDemo,
+}) {
+  return showModalBottomSheet<ThresholdDialogResult>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    builder: (context) => ThresholdSettingsSheet(
+      initialTopThreshold: initialTopThreshold,
+      initialBottomThreshold: initialBottomThreshold,
+      exerciseType: exerciseType,
+      initialSensitivity: initialSensitivity,
+      onShowDemo: onShowDemo,
+    ),
+  );
+}
+
+/// Bottom sheet content for configuring exercise thresholds and form sensitivity.
+class ThresholdSettingsSheet extends StatefulWidget {
   final double initialTopThreshold;
   final double initialBottomThreshold;
   final FormSensitivityConfig? initialSensitivity;
   final ExerciseType exerciseType;
   final VoidCallback? onShowDemo;
 
-  const ThresholdSettingsDialog({
+  const ThresholdSettingsSheet({
     super.key,
     required this.initialTopThreshold,
     required this.initialBottomThreshold,
@@ -38,11 +61,10 @@ class ThresholdSettingsDialog extends StatefulWidget {
   });
 
   @override
-  State<ThresholdSettingsDialog> createState() =>
-      _ThresholdSettingsDialogState();
+  State<ThresholdSettingsSheet> createState() => _ThresholdSettingsSheetState();
 }
 
-class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
+class _ThresholdSettingsSheetState extends State<ThresholdSettingsSheet> {
   late double topThreshold;
   late double bottomThreshold;
   late FormSensitivityConfig? sensitivity;
@@ -58,157 +80,225 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
   @override
   Widget build(BuildContext context) {
     final hasThresholds = widget.exerciseType.config.hasThresholds;
+    final theme = context.fpTheme;
 
-    return AlertDialog(
-      title: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [const Text('Settings'), _buildHelpButton()],
-      ),
-      content: hasThresholds
-          ? SingleChildScrollView(
-              child: SizedBox(
-                width: 300,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Adjust thresholds based on your range of motion',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
+    return DraggableScrollableSheet(
+      initialChildSize: 0.65,
+      minChildSize: 0.4,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (context, scrollController) {
+        return Column(
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 12, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Settings',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
-                    const SizedBox(height: 24),
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildHelpButton(theme),
+                      const SizedBox(width: 4),
+                      if (hasThresholds)
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(
+                              context,
+                              ThresholdDialogResult(
+                                topThreshold: topThreshold,
+                                bottomThreshold: bottomThreshold,
+                                sensitivity: sensitivity,
+                              ),
+                            );
+                          },
+                          child: Text(
+                            'Apply',
+                            style: TextStyle(
+                              color: theme.accentGreen,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const Divider(color: Colors.white12),
 
-                    // Top threshold slider
-                    Text('Top Threshold: ${topThreshold.round()}°'),
-                    Slider(
-                      value: topThreshold,
-                      min: widget.exerciseType.config.topThresholdBounds.$1,
-                      max: widget.exerciseType.config.topThresholdBounds.$2,
-                      divisions:
-                          (widget.exerciseType.config.topThresholdBounds.$2 -
-                                  widget
-                                      .exerciseType
-                                      .config
-                                      .topThresholdBounds
-                                      .$1)
-                              .round(),
-                      label: '${topThreshold.round()}°',
-                      onChanged: (value) {
-                        setState(() {
-                          topThreshold = value;
-                          // Ensure bottom is always lower than top
-                          if (bottomThreshold >= topThreshold - 10) {
-                            bottomThreshold = topThreshold - 10;
-                            // Clamp bottomThreshold to min bounds
-                            if (bottomThreshold <
-                                widget
-                                    .exerciseType
-                                    .config
-                                    .bottomThresholdBounds
-                                    .$1) {
-                              bottomThreshold = widget
-                                  .exerciseType
-                                  .config
-                                  .bottomThresholdBounds
-                                  .$1;
-                            }
-                          }
-                        });
-                      },
-                    ),
-                    const Text(
-                      'Angle needed to reach "up" position',
-                      style: TextStyle(fontSize: 10, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 24),
+            // Content
+            Expanded(
+              child: hasThresholds
+                  ? ListView(
+                      controller: scrollController,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      children: [
+                        const SizedBox(height: 8),
+                        Text(
+                          'Adjust thresholds based on your range of motion',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
 
-                    // Bottom threshold slider
-                    Text('Bottom Threshold: ${bottomThreshold.round()}°'),
-                    Slider(
-                      value: bottomThreshold,
-                      min: widget.exerciseType.config.bottomThresholdBounds.$1,
-                      max: widget.exerciseType.config.bottomThresholdBounds.$2,
-                      divisions:
-                          (widget.exerciseType.config.bottomThresholdBounds.$2 -
-                                  widget
+                        // Top threshold
+                        _buildThresholdSlider(
+                          label: 'Top Threshold',
+                          value: topThreshold,
+                          min: widget.exerciseType.config.topThresholdBounds.$1,
+                          max: widget.exerciseType.config.topThresholdBounds.$2,
+                          description: 'Angle needed to reach "up" position',
+                          onChanged: (value) {
+                            setState(() {
+                              topThreshold = value;
+                              if (bottomThreshold >= topThreshold - 10) {
+                                bottomThreshold = topThreshold - 10;
+                                if (bottomThreshold <
+                                    widget
+                                        .exerciseType
+                                        .config
+                                        .bottomThresholdBounds
+                                        .$1) {
+                                  bottomThreshold = widget
                                       .exerciseType
                                       .config
                                       .bottomThresholdBounds
-                                      .$1)
-                              .round(),
-                      label: '${bottomThreshold.round()}°',
-                      onChanged: (value) {
-                        setState(() {
-                          if (value <= topThreshold - 10) {
-                            bottomThreshold = value;
-                          }
-                        });
-                      },
-                    ),
-                    const Text(
-                      'Angle for "down" position',
-                      style: TextStyle(fontSize: 10, color: Colors.grey),
-                    ),
+                                      .$1;
+                                }
+                              }
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
 
-                    // Form Sensitivity section (only for exercises with form analysis)
-                    if (sensitivity != null) ...[
-                      const SizedBox(height: 16),
-                      const Divider(),
-                      _buildSensitivitySection(),
-                    ],
-                  ],
-                ),
-              ),
-            )
-          : SizedBox(
-              width: 300,
-              child: Text(
-                'Use the help menu (?) to view the exercise demo.',
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-              ),
+                        // Bottom threshold
+                        _buildThresholdSlider(
+                          label: 'Bottom Threshold',
+                          value: bottomThreshold,
+                          min: widget
+                              .exerciseType
+                              .config
+                              .bottomThresholdBounds
+                              .$1,
+                          max: widget
+                              .exerciseType
+                              .config
+                              .bottomThresholdBounds
+                              .$2,
+                          description: 'Angle for "down" position',
+                          onChanged: (value) {
+                            setState(() {
+                              if (value <= topThreshold - 10) {
+                                bottomThreshold = value;
+                              }
+                            });
+                          },
+                        ),
+
+                        // Form Sensitivity section
+                        if (sensitivity != null) ...[
+                          const SizedBox(height: 16),
+                          const Divider(color: Colors.white12),
+                          _buildSensitivitySection(),
+                        ],
+
+                        const SizedBox(height: 32),
+                      ],
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Text(
+                        'Use the help menu (?) to view the exercise demo.',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ),
             ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(hasThresholds ? 'Cancel' : 'Close'),
-        ),
-        if (hasThresholds)
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(
-                context,
-                ThresholdDialogResult(
-                  topThreshold: topThreshold,
-                  bottomThreshold: bottomThreshold,
-                  sensitivity: sensitivity,
-                ),
-              );
-            },
-            child: const Text('Apply'),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildThresholdSlider({
+    required String label,
+    required double value,
+    required double min,
+    required double max,
+    required String description,
+    required ValueChanged<double> onChanged,
+  }) {
+    final theme = context.fpTheme;
+    final divisions = (max - min).round();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$label: ${value.round()}°',
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
           ),
+        ),
+        const SizedBox(height: 4),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: theme.accentGreen,
+            thumbColor: theme.accentGreen,
+            inactiveTrackColor: const Color(0xFF3A3A3C),
+          ),
+          child: Slider(
+            value: value,
+            min: min,
+            max: max,
+            divisions: divisions,
+            label: '${value.round()}°',
+            onChanged: onChanged,
+          ),
+        ),
+        Text(
+          description,
+          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+        ),
       ],
     );
   }
 
-  Widget _buildHelpButton() {
+  Widget _buildHelpButton(FitnessPipeTheme theme) {
     return PopupMenuButton<String>(
       icon: Container(
         width: 32,
         height: 32,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.grey),
+          border: Border.all(color: Colors.white24),
         ),
-        child: const Icon(Icons.question_mark, size: 18, color: Colors.grey),
+        child: const Icon(Icons.question_mark, size: 16, color: Colors.white54),
       ),
       tooltip: 'Help',
       onSelected: (value) {
         switch (value) {
           case 'view_demo':
-            Navigator.of(context).pop(); // close settings first
-            widget.onShowDemo?.call(); // let parent handle demo
+            Navigator.of(context).pop();
+            widget.onShowDemo?.call();
             break;
-          // Future help options can be added here
         }
       },
       itemBuilder: (context) => const [
@@ -222,7 +312,6 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
             ],
           ),
         ),
-        // Additional help items can be added here for scalability
       ],
     );
   }
@@ -233,26 +322,31 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
       return _buildLateralRaiseSensitivity(s);
     } else if (s is SingleSquatSensitivity) {
       return _buildSingleSquatSensitivity(s);
+    } else if (s is BenchPressSensitivity) {
+      return _buildBenchPressSensitivity(s);
     }
     return const SizedBox.shrink();
   }
 
   Widget _buildLateralRaiseSensitivity(LateralRaiseSensitivity s) {
+    final theme = context.fpTheme;
+
     return ExpansionTile(
       title: const Text(
         'Form Sensitivity',
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
       ),
       initiallyExpanded: false,
       tilePadding: EdgeInsets.zero,
+      iconColor: Colors.white54,
+      collapsedIconColor: Colors.white54,
       children: [
         const SizedBox(height: 8),
 
-        // --- Elbow ---
         _buildSectionHeader('Elbow Straightness', Icons.fitness_center),
-        _buildSlider(
+        _buildSensitivitySlider(
           label: 'Bad',
-          severityColor: Colors.red,
+          severityColor: theme.feedbackBad,
           value: s.elbowBadAngle,
           min: 120,
           max: 160,
@@ -266,9 +360,9 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
             );
           }),
         ),
-        _buildSlider(
+        _buildSensitivitySlider(
           label: 'Warning',
-          severityColor: Colors.amber,
+          severityColor: theme.feedbackWarning,
           value: s.elbowWarnAngle,
           min: 135,
           max: 170,
@@ -283,11 +377,10 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
         ),
         const SizedBox(height: 12),
 
-        // --- Trunk ---
         _buildSectionHeader('Trunk Stability', Icons.accessibility_new),
-        _buildSlider(
+        _buildSensitivitySlider(
           label: 'Warning',
-          severityColor: Colors.amber,
+          severityColor: theme.feedbackWarning,
           value: s.trunkLeanWarnAngle,
           min: 4,
           max: 20,
@@ -301,9 +394,9 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
             );
           }),
         ),
-        _buildSlider(
+        _buildSensitivitySlider(
           label: 'Bad',
-          severityColor: Colors.red,
+          severityColor: theme.feedbackBad,
           value: s.trunkLeanBadAngle,
           min: 8,
           max: 30,
@@ -318,11 +411,10 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
         ),
         const SizedBox(height: 12),
 
-        // --- Shoulders ---
         _buildSectionHeader('Shoulder Shrug', Icons.person),
-        _buildSlider(
+        _buildSensitivitySlider(
           label: 'Warning',
-          severityColor: Colors.amber,
+          severityColor: theme.feedbackWarning,
           value: s.shrugWarnDrop * 100,
           min: 5,
           max: 25,
@@ -338,9 +430,9 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
             );
           }),
         ),
-        _buildSlider(
+        _buildSensitivitySlider(
           label: 'Bad',
-          severityColor: Colors.red,
+          severityColor: theme.feedbackBad,
           value: s.shrugBadDrop * 100,
           min: 15,
           max: 50,
@@ -355,7 +447,6 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
         ),
         const SizedBox(height: 12),
 
-        // Reset button
         Center(
           child: TextButton.icon(
             onPressed: () {
@@ -372,24 +463,27 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
   }
 
   Widget _buildSingleSquatSensitivity(SingleSquatSensitivity s) {
+    final theme = context.fpTheme;
+
     return ExpansionTile(
       title: const Text(
         'Form Sensitivity',
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
       ),
       initiallyExpanded: false,
       tilePadding: EdgeInsets.zero,
+      iconColor: Colors.white54,
+      collapsedIconColor: Colors.white54,
       children: [
         const SizedBox(height: 8),
 
-        // --- Knee Valgus ---
         _buildSectionHeader(
           'Knee Alignment',
           Icons.airline_seat_legroom_normal,
         ),
-        _buildSlider(
+        _buildSensitivitySlider(
           label: 'Warning',
-          severityColor: Colors.amber,
+          severityColor: theme.feedbackWarning,
           value: s.kneeValgusWarnRatio * 100,
           min: 3,
           max: 15,
@@ -405,9 +499,9 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
             );
           }),
         ),
-        _buildSlider(
+        _buildSensitivitySlider(
           label: 'Bad',
-          severityColor: Colors.red,
+          severityColor: theme.feedbackBad,
           value: s.kneeValgusBadRatio * 100,
           min: 8,
           max: 25,
@@ -422,11 +516,10 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
         ),
         const SizedBox(height: 12),
 
-        // --- Trunk Lean ---
         _buildSectionHeader('Trunk Lean', Icons.accessibility_new),
-        _buildSlider(
+        _buildSensitivitySlider(
           label: 'Warning',
-          severityColor: Colors.amber,
+          severityColor: theme.feedbackWarning,
           value: s.trunkLeanWarnAngle,
           min: 15,
           max: 45,
@@ -440,9 +533,9 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
             );
           }),
         ),
-        _buildSlider(
+        _buildSensitivitySlider(
           label: 'Bad',
-          severityColor: Colors.red,
+          severityColor: theme.feedbackBad,
           value: s.trunkLeanBadAngle,
           min: 25,
           max: 60,
@@ -457,11 +550,10 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
         ),
         const SizedBox(height: 12),
 
-        // --- Depth ---
         _buildSectionHeader('Squat Depth', Icons.arrow_downward),
-        _buildSlider(
+        _buildSensitivitySlider(
           label: 'Warning',
-          severityColor: Colors.amber,
+          severityColor: theme.feedbackWarning,
           value: s.depthWarnAngle,
           min: 100,
           max: 140,
@@ -475,9 +567,9 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
             );
           }),
         ),
-        _buildSlider(
+        _buildSensitivitySlider(
           label: 'Good',
-          severityColor: Colors.green,
+          severityColor: theme.feedbackGood,
           value: s.depthGoodAngle,
           min: 70,
           max: 130,
@@ -492,7 +584,6 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
         ),
         const SizedBox(height: 12),
 
-        // Reset button
         Center(
           child: TextButton.icon(
             onPressed: () {
@@ -508,19 +599,153 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
     );
   }
 
+  Widget _buildBenchPressSensitivity(BenchPressSensitivity s) {
+    final theme = context.fpTheme;
+
+    return ExpansionTile(
+      title: const Text(
+        'Form Sensitivity',
+        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+      ),
+      initiallyExpanded: false,
+      tilePadding: EdgeInsets.zero,
+      iconColor: Colors.white54,
+      collapsedIconColor: Colors.white54,
+      children: [
+        const SizedBox(height: 8),
+
+        _buildSectionHeader('Elbow Flare', Icons.fitness_center),
+        _buildSensitivitySlider(
+          label: 'Warning',
+          severityColor: theme.feedbackWarning,
+          value: s.flareWarnAngle,
+          min: 55,
+          max: 85,
+          unit: '°',
+          description: 'Shoulder-to-elbow angle for flare warning',
+          effectHint: 'Higher = more lenient',
+          onChanged: (v) => setState(() {
+            sensitivity = s.copyWith(
+              flareWarnAngle: v,
+              flareBadAngle: s.flareBadAngle < v + 5 ? v + 5 : null,
+            );
+          }),
+        ),
+        _buildSensitivitySlider(
+          label: 'Bad',
+          severityColor: theme.feedbackBad,
+          value: s.flareBadAngle,
+          min: 65,
+          max: 100,
+          unit: '°',
+          description: 'Shoulder-to-elbow angle for bad flare',
+          effectHint: 'Higher = more lenient',
+          onChanged: (v) => setState(() {
+            if (v > s.flareWarnAngle + 5) {
+              sensitivity = s.copyWith(flareBadAngle: v);
+            }
+          }),
+        ),
+        const SizedBox(height: 12),
+
+        _buildSectionHeader('Uneven Extension', Icons.balance),
+        _buildSensitivitySlider(
+          label: 'Warning',
+          severityColor: theme.feedbackWarning,
+          value: s.unevenWarnAngle,
+          min: 8,
+          max: 25,
+          unit: '°',
+          description: 'Left-right elbow angle difference for warning',
+          effectHint: 'Higher = more lenient',
+          onChanged: (v) => setState(() {
+            sensitivity = s.copyWith(
+              unevenWarnAngle: v,
+              unevenBadAngle: s.unevenBadAngle < v + 5 ? v + 5 : null,
+            );
+          }),
+        ),
+        _buildSensitivitySlider(
+          label: 'Bad',
+          severityColor: theme.feedbackBad,
+          value: s.unevenBadAngle,
+          min: 15,
+          max: 40,
+          unit: '°',
+          description: 'Left-right elbow angle difference for bad form',
+          effectHint: 'Higher = more lenient',
+          onChanged: (v) => setState(() {
+            if (v > s.unevenWarnAngle + 5) {
+              sensitivity = s.copyWith(unevenBadAngle: v);
+            }
+          }),
+        ),
+        const SizedBox(height: 12),
+
+        _buildSectionHeader('Hip Rise', Icons.airline_seat_flat),
+        _buildSensitivitySlider(
+          label: 'Warning',
+          severityColor: theme.feedbackWarning,
+          value: s.hipRiseWarnDrop * 100,
+          min: 2,
+          max: 15,
+          unit: '%',
+          description: 'Hip rise % of baseline for warning',
+          effectHint: 'Higher = more lenient',
+          onChanged: (v) => setState(() {
+            sensitivity = s.copyWith(
+              hipRiseWarnDrop: v / 100,
+              hipRiseBadDrop: s.hipRiseBadDrop < (v / 100) + 0.03
+                  ? (v / 100) + 0.03
+                  : null,
+            );
+          }),
+        ),
+        _buildSensitivitySlider(
+          label: 'Bad',
+          severityColor: theme.feedbackBad,
+          value: s.hipRiseBadDrop * 100,
+          min: 5,
+          max: 25,
+          unit: '%',
+          description: 'Hip rise % of baseline for bad form',
+          effectHint: 'Higher = more lenient',
+          onChanged: (v) => setState(() {
+            if (v / 100 > s.hipRiseWarnDrop + 0.02) {
+              sensitivity = s.copyWith(hipRiseBadDrop: v / 100);
+            }
+          }),
+        ),
+        const SizedBox(height: 12),
+
+        Center(
+          child: TextButton.icon(
+            onPressed: () {
+              setState(() {
+                sensitivity = const BenchPressSensitivity.defaults();
+              });
+            },
+            icon: const Icon(Icons.restore, size: 16),
+            label: const Text('Reset to Defaults'),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSectionHeader(String title, IconData icon) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: Colors.grey),
+          Icon(icon, size: 16, color: Colors.white38),
           const SizedBox(width: 6),
           Text(
             title,
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Colors.grey,
+              color: Colors.white38,
             ),
           ),
         ],
@@ -528,7 +753,7 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
     );
   }
 
-  Widget _buildSlider({
+  Widget _buildSensitivitySlider({
     required String label,
     required Color severityColor,
     required double value,
@@ -539,16 +764,14 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
     required String effectHint,
     required ValueChanged<double> onChanged,
   }) {
-    // Clamp value into range to prevent slider errors
     final clampedValue = value.clamp(min, max);
-    final divisions = ((max - min) * 2).round(); // 0.5 step precision
+    final divisions = ((max - min) * 2).round();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            // Severity-colored label
             Text(
               '$label: ${clampedValue.toStringAsFixed(1)}$unit',
               style: TextStyle(
@@ -558,13 +781,12 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
               ),
             ),
             const Spacer(),
-            // Directional effect hint
             Text(
               effectHint,
               style: TextStyle(
                 fontSize: 10,
                 fontStyle: FontStyle.italic,
-                color: Colors.grey.shade500,
+                color: Colors.grey.shade600,
               ),
             ),
           ],
@@ -573,6 +795,7 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
           data: SliderTheme.of(context).copyWith(
             activeTrackColor: severityColor.withValues(alpha: 0.7),
             thumbColor: severityColor,
+            inactiveTrackColor: const Color(0xFF3A3A3C),
           ),
           child: Slider(
             value: clampedValue,
@@ -587,7 +810,7 @@ class _ThresholdSettingsDialogState extends State<ThresholdSettingsDialog> {
           padding: const EdgeInsets.only(bottom: 8),
           child: Text(
             description,
-            style: const TextStyle(fontSize: 10, color: Colors.grey),
+            style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
           ),
         ),
       ],

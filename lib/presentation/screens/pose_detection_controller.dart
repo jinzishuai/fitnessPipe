@@ -45,7 +45,7 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   // Bench Press
   double _benchPressTopThreshold = 150.0;
   double _benchPressBottomThreshold = 90.0;
-  final BenchPressSensitivity _benchPressSensitivity =
+  BenchPressSensitivity _benchPressSensitivity =
       const BenchPressSensitivity.defaults();
 
   // UI state

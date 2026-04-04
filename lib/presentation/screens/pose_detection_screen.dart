@@ -24,14 +24,12 @@ import '../../domain/interfaces/pose_detector.dart';
 import '../../domain/models/exercise_type.dart';
 import '../../domain/models/pose.dart';
 import '../../domain/models/pose_landmark.dart';
-import '../widgets/exercise_selector.dart';
-import '../widgets/form_feedback_overlay.dart';
+import '../widgets/camera_overlay.dart';
 import '../widgets/guides/exercise_guide.dart';
 import '../widgets/guides/lateral_raise_guide.dart';
 import '../widgets/guides/bench_press_guide.dart';
 import '../widgets/guides/single_squat_guide.dart';
 
-import '../widgets/rep_counter_overlay.dart';
 import '../widgets/skeleton_painter.dart';
 import '../widgets/threshold_settings_dialog.dart';
 import '../widgets/exercise_demo_dialog.dart';

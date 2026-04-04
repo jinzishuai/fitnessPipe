@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/models/exercise_type.dart';
+import '../theme/app_theme.dart';
 
 /// Dropdown widget for selecting an exercise.
+///
+/// Uses a PopupMenuButton for an iOS-native feel while preserving
+/// the Semantics label required by Maestro tests.
 class ExerciseSelectorDropdown extends StatelessWidget {
   final ExerciseType? selectedExercise;
   final ValueChanged<ExerciseType?> onChanged;
@@ -15,35 +19,65 @@ class ExerciseSelectorDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final label = selectedExercise?.displayName ?? 'Select Exercise';
+
     return Semantics(
-      label: selectedExercise?.displayName ?? 'Select Exercise',
+      label: label,
       excludeSemantics: true,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.black87,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white24),
-        ),
-        child: DropdownButton<ExerciseType>(
-          value: selectedExercise,
-          hint: const Text(
-            'Select Exercise',
-            style: TextStyle(color: Colors.white70),
+      child: GlassContainer(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        borderRadius: 12,
+        child: PopupMenuButton<ExerciseType>(
+          initialValue: selectedExercise,
+          onSelected: onChanged,
+          offset: const Offset(0, 48),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
           ),
-          dropdownColor: Colors.black87,
-          underline: const SizedBox.shrink(), // Remove default underline
-          icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-          items: ExerciseType.values.map((type) {
-            return DropdownMenuItem<ExerciseType>(
+          color: const Color(0xF02C2C2E),
+          itemBuilder: (context) => ExerciseType.values.map((type) {
+            final isSelected = type == selectedExercise;
+            return PopupMenuItem<ExerciseType>(
               value: type,
-              child: Text(
-                type.displayName,
-                style: const TextStyle(color: Colors.white),
+              child: Row(
+                children: [
+                  Icon(
+                    isSelected ? Icons.check_circle : Icons.radio_button_off,
+                    size: 18,
+                    color: isSelected
+                        ? context.fpTheme.accentGreen
+                        : Colors.white54,
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    type.displayName,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                    ),
+                  ),
+                ],
               ),
             );
           }).toList(),
-          onChanged: onChanged,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 6),
+              const Icon(Icons.chevron_right, color: Colors.white54, size: 18),
+            ],
+          ),
         ),
       ),
     );

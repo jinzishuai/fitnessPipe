@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// Overlay widget displaying rep counter information.
+import '../theme/app_theme.dart';
+
+/// Overlay widget displaying rep counter information with glass-morphism styling.
 class RepCounterOverlay extends StatelessWidget {
   final int repCount;
   final String phaseLabel;
@@ -24,51 +26,62 @@ class RepCounterOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.fpTheme;
+
     return Positioned(
-      top: 80, // Below exercise selector
+      top: 80,
       left: 16,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.black54,
-          borderRadius: BorderRadius.circular(12),
-        ),
+      child: GlassContainer(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Guidance prompt (Only when inactive)
+            // Guidance prompt (only when inactive)
             if (!isActive && startPrompt.isNotEmpty) ...[
-              Text(
-                startPrompt,
-                style: const TextStyle(
-                  color: Colors.redAccent,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: theme.poseNotDetectedColor,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    startPrompt,
+                    style: TextStyle(
+                      color: theme.poseNotDetectedColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
             ],
 
-            // Rep count (large)
+            // Rep count row
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
-              textBaseline: TextBaseline.alphabetic,
               children: [
-                // Status Indicator (Red/Green)
+                // Status indicator
                 Container(
-                  width: 12,
-                  height: 12,
+                  width: 10,
+                  height: 10,
                   margin: const EdgeInsets.only(right: 8, top: 4),
                   decoration: BoxDecoration(
-                    color: isActive ? Colors.greenAccent : Colors.redAccent,
+                    color: isActive
+                        ? theme.poseDetectedColor
+                        : theme.poseNotDetectedColor,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: isActive
-                            ? Colors.greenAccent.withValues(alpha: 0.6)
-                            : Colors.redAccent.withValues(alpha: 0.6),
-                        blurRadius: 4,
+                        color:
+                            (isActive
+                                    ? theme.poseDetectedColor
+                                    : theme.poseNotDetectedColor)
+                                .withValues(alpha: 0.6),
+                        blurRadius: 6,
                         spreadRadius: 1,
                       ),
                     ],
@@ -83,6 +96,7 @@ class RepCounterOverlay extends StatelessWidget {
                       fontSize: 48,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
+                      letterSpacing: -1.0,
                     ),
                   ),
                 ),
@@ -92,22 +106,26 @@ class RepCounterOverlay extends StatelessWidget {
                   excludeSemantics: true,
                   child: const Text(
                     'reps',
-                    style: TextStyle(fontSize: 18, color: Colors.white70),
+                    style: TextStyle(
+                      fontSize: 17,
+                      color: Colors.white70,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
 
-            // Phase indicator
+            // Phase chip
             _buildPhaseChip(),
 
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
 
-            // Debug: current angle
+            // Debug angle
             Text(
               'Angle: ${currentAngle.toStringAsFixed(1)}°',
-              style: const TextStyle(fontSize: 12, color: Colors.white54),
+              style: const TextStyle(fontSize: 11, color: Colors.white38),
             ),
           ],
         ),
@@ -119,7 +137,7 @@ class RepCounterOverlay extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: phaseColor,
+        color: phaseColor.withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
@@ -127,7 +145,7 @@ class RepCounterOverlay extends StatelessWidget {
         style: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.w600,
-          fontSize: 14,
+          fontSize: 13,
         ),
       ),
     );

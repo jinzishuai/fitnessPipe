@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'presentation/screens/pose_detection_screen.dart';
+import 'presentation/theme/app_theme.dart';
 
 void main() {
   runApp(const FitnessPipeApp());
@@ -14,13 +15,7 @@ class FitnessPipeApp extends StatelessWidget {
     return MaterialApp(
       title: 'FitnessPipe',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.green,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
+      theme: buildAppTheme(),
       home: const PoseDetectionScreen(),
     );
   }
