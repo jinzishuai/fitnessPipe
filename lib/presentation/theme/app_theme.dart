@@ -40,8 +40,8 @@ class FitnessPipeTheme extends ThemeExtension<FitnessPipeTheme> {
   });
 
   static const dark = FitnessPipeTheme(
-    overlayBackground: Color(0xCC1C1C1E),
-    overlayBorder: Color(0x33FFFFFF),
+    overlayBackground: Color(0x801C1C1E),
+    overlayBorder: Color(0x40FFFFFF),
     accentGreen: Color(0xFF30D158),
     poseDetectedColor: Color(0xFF30D158),
     poseNotDetectedColor: Color(0xFFFF453A),
@@ -53,7 +53,7 @@ class FitnessPipeTheme extends ThemeExtension<FitnessPipeTheme> {
     phaseTransition: Color(0xFFFF9F0A),
     phaseComplete: Color(0xFF30D158),
     overlayRadius: 16.0,
-    overlayBlurSigma: 20.0,
+    overlayBlurSigma: 25.0,
     overlayPadding: EdgeInsets.all(16.0),
   );
 
@@ -223,7 +223,7 @@ ThemeData buildAppTheme() {
       ),
     ),
     popupMenuTheme: PopupMenuThemeData(
-      color: const Color(0xF02C2C2E),
+      color: const Color(0xD92C2C2E),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       textStyle: const TextStyle(color: Colors.white, fontSize: 15),
     ),

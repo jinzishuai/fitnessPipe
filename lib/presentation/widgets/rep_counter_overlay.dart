@@ -145,7 +145,7 @@ class RepCounterOverlay extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: phaseColor.withValues(alpha: 0.85),
+        color: phaseColor.withValues(alpha: 0.70),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
