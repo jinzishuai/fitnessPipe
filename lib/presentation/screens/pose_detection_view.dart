@@ -2,91 +2,90 @@ part of 'pose_detection_screen.dart';
 
 extension _PoseDetectionScreenView on _PoseDetectionScreenState {
   Widget _buildScaffold() {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: const Text('FitnessPipe'),
-        actions: [
-          if (_canShowInputSelector)
-            PopupMenuButton<PoseDetectionInputMode>(
-              initialValue: _currentInputMode,
-              icon: const Icon(Icons.cameraswitch),
-              tooltip: 'Switch Input',
-              onSelected: _handleInputModeSelection,
-              itemBuilder: (context) => _availableInputModes
-                  .map(
-                    (mode) => PopupMenuItem<PoseDetectionInputMode>(
-                      value: mode,
-                      child: Row(
-                        children: [
-                          Icon(
-                            _currentInputMode == mode
-                                ? Icons.radio_button_checked
-                                : Icons.radio_button_off,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(mode.label),
-                        ],
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
-          IconButton(
-            icon: Icon(
-              _currentPose != null ? Icons.visibility : Icons.visibility_off,
-            ),
-            onPressed: () {},
-            tooltip: _currentPose != null ? 'Pose Detected' : 'No Pose',
-          ),
-        ],
-      ),
-      body: _buildBody(),
-    );
+    return Scaffold(backgroundColor: Colors.black, body: _buildBody());
   }
 
   Widget _buildBody() {
     if (_isLoading) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(
-              color: Theme.of(context).colorScheme.primary,
+      return Stack(
+        children: [
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Initializing camera...',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              'Initializing camera...',
-              style: Theme.of(context).textTheme.bodyLarge,
+          ),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            left: 0,
+            right: 0,
+            child: const Center(
+              child: Text(
+                'FitnessPipe',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.4,
+                ),
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       );
     }
 
     if (_errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, color: Colors.red, size: 64),
-              const SizedBox(height: 16),
-              Text(
-                _errorMessage!,
-                style: Theme.of(context).textTheme.bodyLarge,
-                textAlign: TextAlign.center,
+      return Stack(
+        children: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 64),
+                  const SizedBox(height: 16),
+                  Text(
+                    _errorMessage!,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _initializeCamera,
+                    child: const Text('Retry'),
+                  ),
+                ],
               ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _initializeCamera,
-                child: const Text('Retry'),
-              ),
-            ],
+            ),
           ),
-        ),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            left: 0,
+            right: 0,
+            child: const Center(
+              child: Text(
+                'FitnessPipe',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.4,
+                ),
+              ),
+            ),
+          ),
+        ],
       );
     }
 
@@ -123,6 +122,10 @@ extension _PoseDetectionScreenView on _PoseDetectionScreenState {
       poseLabel: _filePreviewPoseLabel,
       badgeLabel: _filePreviewBadgeLabel,
       badgeColor: _filePreviewBadgeColor,
+      showInputSelector: _canShowInputSelector,
+      currentInputMode: _currentInputMode,
+      availableInputModes: _availableInputModes,
+      onInputModeSelected: _handleInputModeSelection,
     );
   }
 
@@ -137,38 +140,46 @@ extension _PoseDetectionScreenView on _PoseDetectionScreenState {
             ? _cameraImageSize!.width / _cameraImageSize!.height
             : 16 / 9;
 
-        return Center(
-          child: AspectRatio(
-            aspectRatio: aspectRatio,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Image.file(
-                  _currentPreviewFrameFile!,
-                  fit: BoxFit.cover,
-                  gaplessPlayback: true,
-                  excludeFromSemantics: true,
-                ),
-                if (_currentPose != null)
-                  AspectRatio(
-                    aspectRatio: aspectRatio,
-                    child: CustomPaint(
-                      painter: SkeletonPainter(
-                        pose: _currentPose,
-                        rotationDegrees: 0,
-                        imageSize: _cameraImageSize,
-                        inputsAreRotated: false,
-                        skeletonColor: Colors.greenAccent,
-                        visibleLandmarks: _visibleLandmarks,
-                        visibleBones: _visibleBones,
-                        guide: _currentGuide,
-                      ),
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            FittedBox(
+              fit: BoxFit.cover,
+              clipBehavior: Clip.hardEdge,
+              child: SizedBox(
+                width: constraints.maxWidth,
+                height: constraints.maxWidth / aspectRatio,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Image.file(
+                      _currentPreviewFrameFile!,
+                      fit: BoxFit.cover,
+                      gaplessPlayback: true,
+                      excludeFromSemantics: true,
                     ),
-                  ),
-                _buildOverlay(),
-              ],
+                    if (_currentPose != null)
+                      AspectRatio(
+                        aspectRatio: aspectRatio,
+                        child: CustomPaint(
+                          painter: SkeletonPainter(
+                            pose: _currentPose,
+                            rotationDegrees: 0,
+                            imageSize: _cameraImageSize,
+                            inputsAreRotated: false,
+                            skeletonColor: Colors.greenAccent,
+                            visibleLandmarks: _visibleLandmarks,
+                            visibleBones: _visibleBones,
+                            guide: _currentGuide,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
-          ),
+            _buildOverlay(),
+          ],
         );
       },
     );
@@ -187,22 +198,22 @@ extension _PoseDetectionScreenView on _PoseDetectionScreenState {
     final selectedCamera = _macOSCameras![_selectedMacOSCameraIndex];
 
     return Stack(
+      fit: StackFit.expand,
       children: [
-        Center(
-          child: CameraMacOSView(
-            key: _macOSCameraKey,
-            deviceId: selectedCamera.deviceId,
-            fit: BoxFit.contain,
-            cameraMode: CameraMacOSMode.video,
-            onCameraInizialized: _onMacOSCameraInitialized,
-            onCameraDestroyed: () {
-              _macOSCameraController = null;
-              return const SizedBox.shrink();
-            },
-          ),
+        CameraMacOSView(
+          key: _macOSCameraKey,
+          deviceId: selectedCamera.deviceId,
+          fit: BoxFit.cover,
+          cameraMode: CameraMacOSMode.video,
+          onCameraInizialized: _onMacOSCameraInitialized,
+          onCameraDestroyed: () {
+            _macOSCameraController = null;
+            return const SizedBox.shrink();
+          },
         ),
+        _buildOverlay(),
         Positioned(
-          bottom: 16,
+          bottom: MediaQuery.of(context).padding.bottom + 48,
           left: 16,
           right: 16,
           child: Container(
@@ -277,33 +288,41 @@ extension _PoseDetectionScreenView on _PoseDetectionScreenState {
               ? landscapeAspectRatio
               : portraitAspectRatio;
 
-          return Center(
-            child: AspectRatio(
-              aspectRatio: aspectRatio,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  mobile_camera.CameraPreview(controller),
-                  if (_currentPose != null)
-                    AspectRatio(
-                      aspectRatio: aspectRatio,
-                      child: CustomPaint(
-                        painter: SkeletonPainter(
-                          pose: _currentPose,
-                          rotationDegrees: _sensorOrientation,
-                          imageSize: null,
-                          inputsAreRotated: false,
-                          skeletonColor: Colors.greenAccent,
-                          visibleLandmarks: _visibleLandmarks,
-                          visibleBones: _visibleBones,
-                          guide: _currentGuide,
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              FittedBox(
+                fit: BoxFit.cover,
+                clipBehavior: Clip.hardEdge,
+                child: SizedBox(
+                  width: constraints.maxWidth,
+                  height: constraints.maxWidth / aspectRatio,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      mobile_camera.CameraPreview(controller),
+                      if (_currentPose != null)
+                        AspectRatio(
+                          aspectRatio: aspectRatio,
+                          child: CustomPaint(
+                            painter: SkeletonPainter(
+                              pose: _currentPose,
+                              rotationDegrees: _sensorOrientation,
+                              imageSize: null,
+                              inputsAreRotated: false,
+                              skeletonColor: Colors.greenAccent,
+                              visibleLandmarks: _visibleLandmarks,
+                              visibleBones: _visibleBones,
+                              guide: _currentGuide,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  _buildOverlay(),
-                ],
+                    ],
+                  ),
+                ),
               ),
-            ),
+              _buildOverlay(),
+            ],
           );
         },
       );
@@ -355,60 +374,74 @@ extension _PoseDetectionScreenView on _PoseDetectionScreenState {
         }
         final needsRotation = newDeviceRotation == 270;
 
-        Widget previewWidget = Center(
-          child: AspectRatio(
-            aspectRatio: aspectRatio,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Builder(
-                  builder: (context) {
-                    try {
-                      final activeController = _mobileInputSource?.controller;
-                      if (activeController == null ||
-                          !activeController.value.isInitialized) {
-                        return const SizedBox.shrink();
-                      }
-                      return mobile_camera.CameraPreview(activeController);
-                    } catch (e) {
-                      return const SizedBox.shrink();
-                    }
-                  },
-                ),
-                if (_currentPose != null)
-                  AspectRatio(
-                    aspectRatio: aspectRatio,
-                    child: CustomPaint(
-                      painter: SkeletonPainter(
-                        pose: _currentPose,
-                        rotationDegrees:
-                            (_sensorOrientation -
-                                (newDeviceRotation == 180
-                                    ? 0
-                                    : newDeviceRotation) +
-                                360) %
-                            360,
-                        imageSize: _cameraImageSize,
-                        inputsAreRotated:
-                            _getMobileImageRotation() !=
-                            InputImageRotation.rotation0deg,
-                        skeletonColor: Colors.greenAccent,
-                        visibleLandmarks: _visibleLandmarks,
-                        visibleBones: _visibleBones,
-                        guide: _currentGuide,
-                      ),
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            Widget cameraContent = FittedBox(
+              fit: BoxFit.cover,
+              clipBehavior: Clip.hardEdge,
+              child: SizedBox(
+                width: constraints.maxWidth,
+                height: constraints.maxWidth / aspectRatio,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Builder(
+                      builder: (context) {
+                        try {
+                          final activeController =
+                              _mobileInputSource?.controller;
+                          if (activeController == null ||
+                              !activeController.value.isInitialized) {
+                            return const SizedBox.shrink();
+                          }
+                          return mobile_camera.CameraPreview(activeController);
+                        } catch (e) {
+                          return const SizedBox.shrink();
+                        }
+                      },
                     ),
-                  ),
-                _buildOverlay(),
-              ],
-            ),
-          ),
-        );
+                    if (_currentPose != null)
+                      AspectRatio(
+                        aspectRatio: aspectRatio,
+                        child: CustomPaint(
+                          painter: SkeletonPainter(
+                            pose: _currentPose,
+                            rotationDegrees:
+                                (_sensorOrientation -
+                                    (newDeviceRotation == 180
+                                        ? 0
+                                        : newDeviceRotation) +
+                                    360) %
+                                360,
+                            imageSize: _cameraImageSize,
+                            inputsAreRotated:
+                                _getMobileImageRotation() !=
+                                InputImageRotation.rotation0deg,
+                            skeletonColor: Colors.greenAccent,
+                            visibleLandmarks: _visibleLandmarks,
+                            visibleBones: _visibleBones,
+                            guide: _currentGuide,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
 
-        if (needsRotation) {
-          return Transform.rotate(angle: 3.14159265359, child: previewWidget);
-        }
-        return previewWidget;
+            if (needsRotation) {
+              cameraContent = Transform.rotate(
+                angle: 3.14159265359,
+                child: cameraContent,
+              );
+            }
+
+            return Stack(
+              fit: StackFit.expand,
+              children: [cameraContent, _buildOverlay()],
+            );
+          },
+        );
       },
     );
   }

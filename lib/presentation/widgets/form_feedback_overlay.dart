@@ -6,8 +6,15 @@ import '../theme/app_theme.dart';
 /// Overlay widget displaying real-time form feedback.
 class FormFeedbackOverlay extends StatelessWidget {
   final FormFeedback feedback;
+  final double topOffset;
+  final double rightOffset;
 
-  const FormFeedbackOverlay({super.key, required this.feedback});
+  const FormFeedbackOverlay({
+    super.key,
+    required this.feedback,
+    this.topOffset = 80,
+    this.rightOffset = 16,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -15,8 +22,8 @@ class FormFeedbackOverlay extends StatelessWidget {
 
     if (feedback.status == FormStatus.good) {
       return Positioned(
-        top: 80,
-        right: 16,
+        top: topOffset,
+        right: rightOffset,
         child: Semantics(
           label: 'Good form',
           child: GlassContainer(
@@ -48,8 +55,8 @@ class FormFeedbackOverlay extends StatelessWidget {
     final title = isBad ? 'Bad Form' : 'Warning';
 
     return Positioned(
-      top: 80,
-      right: 16,
+      top: topOffset,
+      right: rightOffset,
       child: Semantics(
         label: '$title: ${feedback.issues.map((i) => i.message).join(', ')}',
         child: GlassContainer(
