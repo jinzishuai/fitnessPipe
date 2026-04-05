@@ -319,21 +319,23 @@ class CameraOverlay extends StatelessWidget {
         borderRadius: 14,
         borderColor: color.withValues(alpha: 0.6),
         child: SizedBox(
-          width: 200,
+          width: 140,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               Row(
                 children: [
-                  Icon(icon, color: color, size: 22),
-                  const SizedBox(width: 8),
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: color,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
+                  Icon(icon, color: color, size: 20),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ],
