@@ -52,7 +52,7 @@ class LateralRaiseCounter implements ExerciseCounter {
   LateralRaiseCounter({
     double? bottomThreshold,
     double? topThreshold,
-    double smoothingAlpha = 0.3,
+    double smoothingAlpha = 0.5,
     int smoothingWarmupFrames = 5,
     Duration? readyHoldTime,
     Duration? minRepDuration,

@@ -3,10 +3,11 @@ part of 'pose_detection_screen.dart';
 extension _PoseDetectionScreenExercise on _PoseDetectionScreenState {
   void _processPoseWithCounter(Pose pose) {
     if (_selectedExercise == null) return;
-    if (_isDemoShowing) return;
+    if (_isDemoShowing || _isSettingsShowing) return;
 
     final poseFrame = _poseAdapter.convert(pose);
     RepEvent? event;
+    bool isWaiting = false;
 
     _updateState(() {
       if (_selectedExercise == ExerciseType.lateralRaise &&
@@ -15,30 +16,7 @@ extension _PoseDetectionScreenExercise on _PoseDetectionScreenState {
         final state = _lateralRaiseCounter!.state;
         _repCount = state.repCount;
         _currentAngle = state.smoothedAngle;
-
-        if (_lateralRaiseFormAnalyzer != null) {
-          _currentFeedback = _lateralRaiseFormAnalyzer!.analyzeFrame(
-            poseFrame.landmarks,
-          );
-
-          if (_currentFeedback != null && _feedbackCooldownManager != null) {
-            final filtered = _feedbackCooldownManager!.processFeedback(
-              _currentFeedback!,
-            );
-            if (filtered != null) {
-              _displayedFeedback = filtered;
-              _voiceGuidanceService.speak(filtered);
-              _feedbackClearTimer?.cancel();
-              _feedbackClearTimer = Timer(const Duration(seconds: 3), () {
-                if (mounted) {
-                  _updateState(() {
-                    _displayedFeedback = null;
-                  });
-                }
-              });
-            }
-          }
-        }
+        isWaiting = state.phase == LateralRaisePhase.waiting;
 
         final (label, color) = switch (state.phase) {
           LateralRaisePhase.waiting => ('Ready...', Colors.grey),
@@ -49,36 +27,19 @@ extension _PoseDetectionScreenExercise on _PoseDetectionScreenState {
         };
         _phaseLabel = label;
         _phaseColor = color;
+
+        if (!isWaiting) {
+          _processFormFeedback(
+            _lateralRaiseFormAnalyzer?.analyzeFrame(poseFrame.landmarks),
+          );
+        }
       } else if (_selectedExercise == ExerciseType.singleSquat &&
           _singleSquatCounter != null) {
         event = _singleSquatCounter!.processPose(poseFrame);
         final state = _singleSquatCounter!.state;
         _repCount = state.repCount;
         _currentAngle = state.smoothedAngle;
-
-        if (_singleSquatFormAnalyzer != null) {
-          _currentFeedback = _singleSquatFormAnalyzer!.analyzeFrame(
-            poseFrame.landmarks,
-          );
-
-          if (_currentFeedback != null && _feedbackCooldownManager != null) {
-            final filtered = _feedbackCooldownManager!.processFeedback(
-              _currentFeedback!,
-            );
-            if (filtered != null) {
-              _displayedFeedback = filtered;
-              _voiceGuidanceService.speak(filtered);
-              _feedbackClearTimer?.cancel();
-              _feedbackClearTimer = Timer(const Duration(seconds: 3), () {
-                if (mounted) {
-                  _updateState(() {
-                    _displayedFeedback = null;
-                  });
-                }
-              });
-            }
-          }
-        }
+        isWaiting = state.phase == SingleSquatPhase.waiting;
 
         final (label, color) = switch (state.phase) {
           SingleSquatPhase.waiting => ('Ready...', Colors.grey),
@@ -89,36 +50,19 @@ extension _PoseDetectionScreenExercise on _PoseDetectionScreenState {
         };
         _phaseLabel = label;
         _phaseColor = color;
+
+        if (!isWaiting) {
+          _processFormFeedback(
+            _singleSquatFormAnalyzer?.analyzeFrame(poseFrame.landmarks),
+          );
+        }
       } else if (_selectedExercise == ExerciseType.benchPress &&
           _benchPressCounter != null) {
         event = _benchPressCounter!.processPose(poseFrame);
         final state = _benchPressCounter!.state;
         _repCount = state.repCount;
         _currentAngle = state.smoothedAngle;
-
-        if (_benchPressFormAnalyzer != null) {
-          _currentFeedback = _benchPressFormAnalyzer!.analyzeFrame(
-            poseFrame.landmarks,
-          );
-
-          if (_currentFeedback != null && _feedbackCooldownManager != null) {
-            final filtered = _feedbackCooldownManager!.processFeedback(
-              _currentFeedback!,
-            );
-            if (filtered != null) {
-              _displayedFeedback = filtered;
-              _voiceGuidanceService.speak(filtered);
-              _feedbackClearTimer?.cancel();
-              _feedbackClearTimer = Timer(const Duration(seconds: 3), () {
-                if (mounted) {
-                  _updateState(() {
-                    _displayedFeedback = null;
-                  });
-                }
-              });
-            }
-          }
-        }
+        isWaiting = state.phase == BenchPressPhase.waiting;
 
         final (label, color) = switch (state.phase) {
           BenchPressPhase.waiting => ('Ready...', Colors.grey),
@@ -129,6 +73,12 @@ extension _PoseDetectionScreenExercise on _PoseDetectionScreenState {
         };
         _phaseLabel = label;
         _phaseColor = color;
+
+        if (!isWaiting) {
+          _processFormFeedback(
+            _benchPressFormAnalyzer?.analyzeFrame(poseFrame.landmarks),
+          );
+        }
       }
     });
 
@@ -136,10 +86,34 @@ extension _PoseDetectionScreenExercise on _PoseDetectionScreenState {
       HapticFeedback.mediumImpact();
     }
 
-    if (_phaseColor == Colors.grey && _selectedExercise != null) {
+    if (isWaiting && _selectedExercise != null) {
       _voiceGuidanceService.speakStartPrompt(
         _selectedExercise!.config.startPositionPrompt,
       );
+    }
+  }
+
+  /// Shared form feedback processing: filters through cooldown, updates
+  /// displayed feedback, triggers voice guidance, and schedules auto-clear.
+  /// Called only when the exercise is actively counting (not in waiting phase).
+  void _processFormFeedback(FormFeedback? feedback) {
+    _currentFeedback = feedback;
+    if (_currentFeedback == null || _feedbackCooldownManager == null) return;
+
+    final filtered = _feedbackCooldownManager!.processFeedback(
+      _currentFeedback!,
+    );
+    if (filtered != null) {
+      _displayedFeedback = filtered;
+      _voiceGuidanceService.speak(filtered);
+      _feedbackClearTimer?.cancel();
+      _feedbackClearTimer = Timer(const Duration(seconds: 3), () {
+        if (mounted) {
+          _updateState(() {
+            _displayedFeedback = null;
+          });
+        }
+      });
     }
   }
 
@@ -242,6 +216,13 @@ extension _PoseDetectionScreenExercise on _PoseDetectionScreenState {
   Future<void> _showThresholdSettings() async {
     if (_selectedExercise == null) return;
 
+    _updateState(() {
+      _isSettingsShowing = true;
+      _displayedFeedback = null;
+      _feedbackClearTimer?.cancel();
+    });
+    _voiceGuidanceService.stop();
+
     double currentTop;
     double currentBottom;
     if (_selectedExercise == ExerciseType.lateralRaise) {
@@ -256,24 +237,31 @@ extension _PoseDetectionScreenExercise on _PoseDetectionScreenState {
     }
 
     final exerciseType = _selectedExercise!;
-    final result = await showThresholdSettingsSheet(
-      context: context,
-      initialTopThreshold: currentTop,
-      initialBottomThreshold: currentBottom,
-      exerciseType: exerciseType,
-      initialSensitivity: exerciseType == ExerciseType.lateralRaise
-          ? _currentSensitivity
-          : exerciseType == ExerciseType.singleSquat
-          ? _singleSquatSensitivity
-          : exerciseType == ExerciseType.benchPress
-          ? _benchPressSensitivity
-          : null,
-      onShowDemo: () => _showExerciseDemo(exerciseType),
-    );
+    ThresholdDialogResult? result;
+    try {
+      result = await showThresholdSettingsSheet(
+        context: context,
+        initialTopThreshold: currentTop,
+        initialBottomThreshold: currentBottom,
+        exerciseType: exerciseType,
+        initialSensitivity: exerciseType == ExerciseType.lateralRaise
+            ? _currentSensitivity
+            : exerciseType == ExerciseType.singleSquat
+            ? _singleSquatSensitivity
+            : exerciseType == ExerciseType.benchPress
+            ? _benchPressSensitivity
+            : null,
+        onShowDemo: () => _showExerciseDemo(exerciseType),
+      );
+    } finally {
+      if (mounted) {
+        _updateState(() => _isSettingsShowing = false);
+      }
+    }
 
     if (result != null) {
       _updateState(() {
-        final newTop = result.topThreshold;
+        final newTop = result!.topThreshold;
         final newBottom = result.bottomThreshold;
 
         if (_selectedExercise == ExerciseType.lateralRaise) {

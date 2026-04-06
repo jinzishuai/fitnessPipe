@@ -28,13 +28,14 @@ class _PoseDetectionScreenState extends State<PoseDetectionScreen>
   FeedbackCooldownManager? _feedbackCooldownManager;
   Timer? _feedbackClearTimer;
 
-  // Exercise demo tracking
+  // Exercise demo / settings tracking
   final ExerciseDemoService _exerciseDemoService = ExerciseDemoService();
   bool _isDemoShowing = false;
+  bool _isSettingsShowing = false;
 
   // Threshold configuration
-  double _topThreshold = 70.0;
-  double _bottomThreshold = 25.0;
+  double _topThreshold = 60.0;
+  double _bottomThreshold = 30.0;
   double _squatTopThreshold = 170.0;
   double _squatBottomThreshold = 160.0;
   SingleSquatSensitivity _singleSquatSensitivity =
