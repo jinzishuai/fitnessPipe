@@ -71,7 +71,6 @@ class RepCounterOverlay extends StatelessWidget {
               ],
 
               Row(
-                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Container(
@@ -89,36 +88,48 @@ class RepCounterOverlay extends StatelessWidget {
                               (isActive
                                       ? theme.poseDetectedColor
                                       : theme.poseNotDetectedColor)
-                                  .withValues(alpha: 0.6),
+                                  // EXPERIMENT: revert to 0.42
+                                  .withValues(alpha: 0.21),
                           blurRadius: 6,
                           spreadRadius: 1,
                         ),
                       ],
                     ),
                   ),
-                  Semantics(
-                    label: '$repCount',
-                    excludeSemantics: true,
-                    child: Text(
-                      '$repCount',
-                      style: const TextStyle(
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: -1.0,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Semantics(
-                    label: 'reps',
-                    excludeSemantics: true,
-                    child: const Text(
-                      'reps',
-                      style: TextStyle(
-                        fontSize: 17,
-                        color: Colors.white70,
-                        fontWeight: FontWeight.w500,
+                  Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Semantics(
+                            label: '$repCount',
+                            excludeSemantics: true,
+                            child: Text(
+                              '$repCount',
+                              style: const TextStyle(
+                                fontSize: 48,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                letterSpacing: -1.0,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Semantics(
+                            label: 'reps',
+                            excludeSemantics: true,
+                            child: const Text(
+                              'reps',
+                              style: TextStyle(
+                                fontSize: 17,
+                                color: Colors.white70,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -145,7 +156,8 @@ class RepCounterOverlay extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: phaseColor.withValues(alpha: 0.70),
+        // EXPERIMENT: revert to 0.49
+        color: phaseColor.withValues(alpha: 0.245),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(

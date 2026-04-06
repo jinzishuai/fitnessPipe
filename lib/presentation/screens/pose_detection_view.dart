@@ -140,11 +140,19 @@ extension _PoseDetectionScreenView on _PoseDetectionScreenState {
             ? _cameraImageSize!.width / _cameraImageSize!.height
             : 16 / 9;
 
+        // Simulator / library replay: portrait + cover over-zooms tall fixture videos.
+        // Contain shows the full frame (letterboxing); landscape stays edge-to-edge.
+        final bool isLandscapeLayout =
+            constraints.maxWidth > constraints.maxHeight;
+        final BoxFit previewFit = isLandscapeLayout
+            ? BoxFit.cover
+            : BoxFit.contain;
+
         return Stack(
           fit: StackFit.expand,
           children: [
             FittedBox(
-              fit: BoxFit.cover,
+              fit: previewFit,
               clipBehavior: Clip.hardEdge,
               child: SizedBox(
                 width: constraints.maxWidth,

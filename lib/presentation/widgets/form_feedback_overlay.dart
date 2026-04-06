@@ -62,7 +62,8 @@ class FormFeedbackOverlay extends StatelessWidget {
         child: GlassContainer(
           padding: const EdgeInsets.all(14),
           borderRadius: 14,
-          borderColor: color.withValues(alpha: 0.6),
+          // EXPERIMENT: revert to 0.42
+          borderColor: color.withValues(alpha: 0.21),
           child: SizedBox(
             width: 200,
             child: Column(

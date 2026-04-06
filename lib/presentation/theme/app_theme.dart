@@ -40,8 +40,11 @@ class FitnessPipeTheme extends ThemeExtension<FitnessPipeTheme> {
   });
 
   static const dark = FitnessPipeTheme(
-    overlayBackground: Color(0x801C1C1E),
-    overlayBorder: Color(0x40FFFFFF),
+    // EXPERIMENT: +50% transparency (alphas ×0.5) + stronger blur (38 vs 28).
+    // Revert FitnessPipeTheme.dark to: overlayBackground 0x3E1C1C1E,
+    // overlayBorder 0x24FFFFFF, overlayBlurSigma 28.0.
+    overlayBackground: Color(0x1F1C1C1E),
+    overlayBorder: Color(0x12FFFFFF),
     accentGreen: Color(0xFF30D158),
     poseDetectedColor: Color(0xFF30D158),
     poseNotDetectedColor: Color(0xFFFF453A),
@@ -53,7 +56,9 @@ class FitnessPipeTheme extends ThemeExtension<FitnessPipeTheme> {
     phaseTransition: Color(0xFFFF9F0A),
     phaseComplete: Color(0xFF30D158),
     overlayRadius: 16.0,
-    overlayBlurSigma: 25.0,
+    // EXPERIMENT: stronger frost (was 28) so text stays readable on very light fill.
+    // Revert to 28.0 with the alpha revert above.
+    overlayBlurSigma: 38.0,
     overlayPadding: EdgeInsets.all(16.0),
   );
 
@@ -139,13 +144,15 @@ extension FitnessPipeThemeExtension on BuildContext {
       Theme.of(this).extension<FitnessPipeTheme>() ?? FitnessPipeTheme.dark;
 }
 
-/// Builds a glass-morphism container with blur backdrop.
+/// Builds a glass-morphism container with blur backdrop and a subtle
+/// liquid-glass specular highlight along the top edge.
 class GlassContainer extends StatelessWidget {
   final Widget child;
   final EdgeInsets? padding;
   final double? borderRadius;
   final Color? backgroundColor;
   final Color? borderColor;
+  final bool showSpecular;
 
   const GlassContainer({
     super.key,
@@ -154,32 +161,81 @@ class GlassContainer extends StatelessWidget {
     this.borderRadius,
     this.backgroundColor,
     this.borderColor,
+    this.showSpecular = true,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = context.fpTheme;
     final radius = borderRadius ?? theme.overlayRadius;
+    final borderRadiusGeometry = BorderRadius.circular(radius);
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: theme.overlayBlurSigma,
-          sigmaY: theme.overlayBlurSigma,
-        ),
-        child: Container(
-          padding: padding ?? theme.overlayPadding,
-          decoration: BoxDecoration(
-            color: backgroundColor ?? theme.overlayBackground,
-            borderRadius: BorderRadius.circular(radius),
-            border: Border.all(
-              color: borderColor ?? theme.overlayBorder,
-              width: 0.5,
+      borderRadius: borderRadiusGeometry,
+      child: Stack(
+        clipBehavior: Clip.hardEdge,
+        children: [
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(
+                sigmaX: theme.overlayBlurSigma,
+                sigmaY: theme.overlayBlurSigma,
+              ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: backgroundColor ?? theme.overlayBackground,
+                  borderRadius: borderRadiusGeometry,
+                  border: Border.all(
+                    color: borderColor ?? theme.overlayBorder,
+                    width: 0.5,
+                  ),
+                ),
+              ),
             ),
           ),
-          child: child,
-        ),
+          if (showSpecular) ...[
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: borderRadiusGeometry,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      // EXPERIMENT: specular ×0.5 — revert to 0.18 / 0.05
+                      colors: [
+                        Colors.white.withValues(alpha: 0.09),
+                        Colors.white.withValues(alpha: 0.025),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.22, 0.52],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: borderRadiusGeometry,
+                    gradient: RadialGradient(
+                      center: const Alignment(-0.82, -0.88),
+                      radius: 1.05,
+                      // EXPERIMENT: specular ×0.5 — revert to 0.10
+                      colors: [
+                        Colors.white.withValues(alpha: 0.05),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.48],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+          Padding(padding: padding ?? theme.overlayPadding, child: child),
+        ],
       ),
     );
   }
@@ -200,8 +256,9 @@ ThemeData buildAppTheme() {
     colorScheme: colorScheme,
     useMaterial3: true,
     scaffoldBackgroundColor: Colors.black,
+    // EXPERIMENT: ×0.5 — revert AppBar to 0xA11C1C1E
     appBarTheme: const AppBarTheme(
-      backgroundColor: Color(0xE61C1C1E),
+      backgroundColor: Color(0x511C1C1E),
       foregroundColor: Colors.white,
       elevation: 0,
       centerTitle: true,
@@ -213,17 +270,19 @@ ThemeData buildAppTheme() {
       ),
     ),
     iconTheme: const IconThemeData(color: Colors.white, size: 22),
+    // EXPERIMENT: FAB ×0.5 — revert bg 0x8F1C1C1E, side 0x24FFFFFF
     floatingActionButtonTheme: FloatingActionButtonThemeData(
-      backgroundColor: const Color(0xCC1C1C1E),
+      backgroundColor: const Color(0x481C1C1E),
       foregroundColor: Colors.white,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(22),
-        side: const BorderSide(color: Color(0x33FFFFFF), width: 0.5),
+        side: const BorderSide(color: Color(0x12FFFFFF), width: 0.5),
       ),
     ),
+    // EXPERIMENT: ×0.5 — revert popup 0x7D2C2C2E
     popupMenuTheme: PopupMenuThemeData(
-      color: const Color(0xD92C2C2E),
+      color: const Color(0x3E2C2C2E),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       textStyle: const TextStyle(color: Colors.white, fontSize: 15),
     ),
@@ -233,8 +292,9 @@ ThemeData buildAppTheme() {
       overlayColor: seedColor.withValues(alpha: 0.2),
       inactiveTrackColor: const Color(0xFF3A3A3C),
     ),
+    // EXPERIMENT: ×0.5 — revert dialog 0x982C2C2E
     dialogTheme: DialogThemeData(
-      backgroundColor: const Color(0xF02C2C2E),
+      backgroundColor: const Color(0x4C2C2C2E),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       titleTextStyle: const TextStyle(
         color: Colors.white,
@@ -242,8 +302,9 @@ ThemeData buildAppTheme() {
         fontWeight: FontWeight.w600,
       ),
     ),
+    // EXPERIMENT: ×0.5 — revert sheet 0x982C2C2E
     bottomSheetTheme: const BottomSheetThemeData(
-      backgroundColor: Color(0xF02C2C2E),
+      backgroundColor: Color(0x4C2C2C2E),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
       ),

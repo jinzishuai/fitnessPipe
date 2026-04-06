@@ -34,7 +34,8 @@ class ExerciseSelectorDropdown extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
-          color: const Color(0xF02C2C2E),
+          // EXPERIMENT +50% transparency: revert to 0xA82C2C2E
+          color: const Color(0x542C2C2E),
           itemBuilder: (context) => ExerciseType.values.map((type) {
             final isSelected = type == selectedExercise;
             return PopupMenuItem<ExerciseType>(

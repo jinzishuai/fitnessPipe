@@ -169,7 +169,8 @@ class CameraOverlay extends StatelessWidget {
                     vertical: 6,
                   ),
                   borderRadius: 8,
-                  backgroundColor: badgeColor?.withValues(alpha: 0.65),
+                  // EXPERIMENT +50% transparency: revert alpha to 0.455
+                  backgroundColor: badgeColor?.withValues(alpha: 0.2275),
                   child: Text(
                     badgeLabel,
                     style: const TextStyle(
@@ -253,7 +254,8 @@ class CameraOverlay extends StatelessWidget {
                               (hasPose
                                       ? theme.poseDetectedColor
                                       : theme.poseNotDetectedColor)
-                                  .withValues(alpha: 0.6),
+                                  // EXPERIMENT: revert to 0.42
+                                  .withValues(alpha: 0.21),
                           blurRadius: 4,
                           spreadRadius: 1,
                         ),
@@ -317,7 +319,8 @@ class CameraOverlay extends StatelessWidget {
       child: GlassContainer(
         padding: const EdgeInsets.all(14),
         borderRadius: 14,
-        borderColor: color.withValues(alpha: 0.5),
+        // EXPERIMENT: revert to 0.35
+        borderColor: color.withValues(alpha: 0.175),
         child: SizedBox(
           width: 140,
           child: Column(
